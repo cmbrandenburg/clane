@@ -85,8 +85,12 @@ namespace clane {
 
 		void mux_signal::set_timeout(std::chrono::steady_clock::time_point const &timeout) {
 			std::unique_lock<std::mutex> sig_lock(mutex);
-			if (mux_owner)
+			if (mux_owner) {
 				mux_owner->set_signal_timeout(this, timeout, sig_lock);
+			} else {
+				this->timeout = timeout;
+				std::atomic_thread_fence(std::memory_order_release);
+			}
 		}
 
 		void mux_signal::timed_out() {
@@ -104,11 +108,12 @@ namespace clane {
 			sig->timeout_readiness = true;
 			sig->closing = false;
 			sig->gc_cnt = 0;
-			sig->timeout = std::chrono::steady_clock::time_point();
 
 			{
-				std::lock_guard<std::mutex> lock(sig_map_mutex);
+				std::unique_lock<std::mutex> sig_lock(sig_map_mutex);
 				sig_map[sig.get()] = sig;
+				if (sig->is_timeout_set())
+					set_signal_timeout(sig.get(), sig->timeout, sig_lock);
 			}
 
 			// The lock guard, above, ensures a memory barrier so that the signal's

@@ -1,5 +1,5 @@
-AM_CXXFLAGS=-Wall -Werror -std=c++11 -I../../check
-libcheck=../../check/libcheck.la
+AM_CXXFLAGS = -Wall -Werror -std=c++11 -I../../check
+libcheck = ../../check/libcheck.la
 
 leak-check: check
 	../../leak_check $(TESTS)
@@ -18,8 +18,10 @@ TESTS = \
 	check_shared_mux_one_client \
 	check_unique_mux_many_clients \
 	check_shared_mux_many_clients \
-	check_unique_mux_timeout \
-	check_shared_mux_timeout
+	check_unique_mux_timeout_after_add \
+	check_shared_mux_timeout_after_add \
+	check_unique_mux_timeout_before_add \
+	check_shared_mux_timeout_before_add
 
 check_LTLIBRARIES = libincserver.la
 
@@ -37,8 +39,10 @@ check_PROGRAMS = \
 	check_unique_mux_empty \
 	check_unique_mux_many_clients \
 	check_unique_mux_one_client \
-	check_unique_mux_timeout \
-	check_shared_mux_timeout
+	check_unique_mux_timeout_after_add \
+	check_shared_mux_timeout_after_add \
+	check_unique_mux_timeout_before_add \
+	check_shared_mux_timeout_before_add
 
 check_fd_SOURCES = check_fd.cpp
 check_fd_LDADD = $(libcheck) ../libnet.la
@@ -54,6 +58,12 @@ check_shared_mux_many_clients_LDADD = $(libcheck) ../libnet.la libincserver.la
 
 check_shared_mux_one_client_SOURCES = check_shared_mux_one_client.cpp
 check_shared_mux_one_client_LDADD = $(libcheck) ../libnet.la libincserver.la
+
+check_shared_mux_timeout_after_add_SOURCES = check_shared_mux_timeout_after_add.cpp
+check_shared_mux_timeout_after_add_LDADD = $(libcheck) ../libnet.la libincserver.la
+
+check_shared_mux_timeout_before_add_SOURCES = check_shared_mux_timeout_before_add.cpp
+check_shared_mux_timeout_before_add_LDADD = $(libcheck) ../libnet.la libincserver.la
 
 check_split_ipvx_host_port_SOURCES = check_split_ipvx_host_port.cpp
 check_split_ipvx_host_port_LDADD = $(libcheck)
@@ -79,11 +89,11 @@ check_unique_mux_many_clients_LDADD = $(libcheck) ../libnet.la libincserver.la
 check_unique_mux_one_client_SOURCES = check_unique_mux_one_client.cpp
 check_unique_mux_one_client_LDADD = $(libcheck) ../libnet.la libincserver.la
 
-check_shared_mux_timeout_SOURCES = check_shared_mux_timeout.cpp
-check_shared_mux_timeout_LDADD = $(libcheck) ../libnet.la libincserver.la
+check_unique_mux_timeout_after_add_SOURCES = check_unique_mux_timeout_after_add.cpp
+check_unique_mux_timeout_after_add_LDADD = $(libcheck) ../libnet.la libincserver.la
 
-check_unique_mux_timeout_SOURCES = check_unique_mux_timeout.cpp
-check_unique_mux_timeout_LDADD = $(libcheck) ../libnet.la libincserver.la
+check_unique_mux_timeout_before_add_SOURCES = check_unique_mux_timeout_before_add.cpp
+check_unique_mux_timeout_before_add_LDADD = $(libcheck) ../libnet.la libincserver.la
 
 libincserver_la_SOURCES = inc_server.cpp
 libincserver_la_LIBADD = $(libcheck) ../libnet.la

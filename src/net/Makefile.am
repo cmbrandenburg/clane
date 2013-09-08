@@ -1,10 +1,10 @@
-SUBDIRS=. tests
+SUBDIRS = . tests
 
-AM_CXXFLAGS=-Wall -Werror -std=c++11
+AM_CXXFLAGS = -Wall -Werror -std=c++11
 
-noinst_LTLIBRARIES=libnet.la
-libnet_la_LDFLAGS=-lpthread
-libnet_la_SOURCES= \
+noinst_LTLIBRARIES = libnet.la
+libnet_la_LDFLAGS = -lpthread
+libnet_la_SOURCES = \
 	net.h \
 	net_common.cpp \
 	net_common.h \
@@ -21,7 +21,7 @@ libnet_la_SOURCES= \
 	net_socket.cpp \
 	net_socket.h
 
-EXTRA_DIST=\
+EXTRA_DIST = \
 	net.cpp
 
 leak-check: libnet.la
