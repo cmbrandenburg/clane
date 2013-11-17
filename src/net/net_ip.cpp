@@ -143,8 +143,12 @@ namespace clane {
 			//
 			// If the host string is empty then resolve to the loopback address.
 			//
+			// XXX: On Debian Squeeze, the AI_ALL flag is needed for name lookup not
+			// to fail ("No address associated with hostname"). Why? The man page
+			// makes it seem that AI_ALL isn't needed.
+			//
 			addrinfo addr_hints{}, *addr_res{};
-			addr_hints.ai_flags = AI_V4MAPPED;
+			addr_hints.ai_flags = AI_V4MAPPED | AI_ALL;
 			addr_hints.ai_family = domain_N;
 			addr_hints.ai_socktype = SOCK_STREAM;
 			addr_hints.ai_protocol = IPPROTO_TCP;
@@ -235,8 +239,12 @@ namespace clane {
 			// If the host string is empty then bind to all local addresses. If the
 			// port string is empty then bind to an arbitrary port.
 			//
+			// XXX: On Debian Squeeze, the AI_ALL flag is needed for name lookup not
+			// to fail ("No address associated with hostname"). Why? The man page
+			// makes it seem that AI_ALL isn't needed.
+			//
 			addrinfo addr_hints{}, *addr_res{};
-			addr_hints.ai_flags = AI_PASSIVE | AI_V4MAPPED;
+			addr_hints.ai_flags = AI_PASSIVE | AI_V4MAPPED | AI_ALL;
 			addr_hints.ai_family = pf->domain();
 			addr_hints.ai_socktype = SOCK_STREAM;
 			addr_hints.ai_protocol = IPPROTO_TCP;
