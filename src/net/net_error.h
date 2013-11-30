@@ -14,7 +14,7 @@ namespace clane {
 	namespace net {
 
 		/** @brief Thread-safe `strerror` */
-		std::string safe_strerror(int e);
+		std::string errno_to_string(int e);
 	}
 }
 

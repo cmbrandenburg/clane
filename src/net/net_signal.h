@@ -16,7 +16,7 @@ namespace clane {
 		// FIXME: unit test
 		// FIXME: remove? General-purpose signal timeouts seem to make this class
 		// superfluous.
-		class mux_timer: public mux_signal {
+		class mux_timer: public signal {
 			file_descriptor fd_;
 			std::function<void()> signalee;
 		public:
@@ -35,7 +35,7 @@ namespace clane {
 			virtual ready_result write_ready();
 		};
 
-		class mux_socket: public mux_signal {
+		class mux_socket: public signal {
 			net::socket sock_;
 		protected:
 			net::socket const &socket() const { return sock_; }
@@ -63,12 +63,12 @@ namespace clane {
 		protected:
 			struct mux_accept_result {
 				bool aborted;
-				std::shared_ptr<mux_signal> conn;
+				std::shared_ptr<signal> conn;
 			};
 			virtual mux_accept_result accept() = 0;
 
 		private:
-			virtual int initial_readiness() const;
+			virtual int initial_event_flags() const;
 			virtual ready_result read_ready();
 			virtual ready_result write_ready();
 		};
@@ -105,7 +105,7 @@ namespace clane {
 			virtual void dealloc_ibuffer();
 
 		private:
-			virtual int initial_readiness() const;
+			virtual int initial_event_flags() const;
 			virtual ready_result read_ready();
 		};
 

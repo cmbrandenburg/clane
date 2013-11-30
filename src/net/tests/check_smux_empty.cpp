@@ -6,9 +6,9 @@
 #include <list>
 
 int main() {
-	clane::net::unique_mux mux;
-	auto fut = std::async(std::launch::async, &clane::net::unique_mux::run, &mux);
-	mux.cancel();
+	clane::net::smux mux;
+	auto fut = std::async(std::launch::async, &clane::net::smux::run, &mux);
+	mux.terminate();
 	fut.wait();
 	return 0;
 }

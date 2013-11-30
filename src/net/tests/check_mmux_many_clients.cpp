@@ -9,12 +9,12 @@
 int main() {
 
 	// run multiplexer:
-	clane::net::shared_mux mux;
+	clane::net::mmux mux;
 	auto listener = std::make_shared<clane::inc_server_listener>(clane::net::listen_tcp("localhost:", 16));
-	mux.add_signal(listener);
+	mux.attach_signal(listener);
 	std::list<std::future<void>> futs;
 	for (int i = 0; i < 10; ++i)
-		futs.push_back(std::async(std::launch::async, &clane::net::shared_mux::run, &mux));
+		futs.push_back(std::async(std::launch::async, &clane::net::mmux::run, &mux));
 
 	// run clients:
 	std::list<std::future<void>> client_futs;
@@ -27,7 +27,7 @@ int main() {
 		client_futs.front().wait();
 		client_futs.pop_front();
 	}
-	mux.cancel();
+	mux.terminate();
 	while (!futs.empty()) {
 		futs.front().wait();
 		futs.pop_front();

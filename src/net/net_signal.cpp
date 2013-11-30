@@ -25,14 +25,14 @@ namespace clane {
 			ibuf = nullptr;
 		}
 
-		int mux_conn::initial_readiness() const {
+		int mux_conn::initial_event_flags() const {
 			return read_flag;
 		}
 
 		mux_conn::mux_conn(net::socket &&that_sock): mux_socket(std::move(that_sock)), ibuf(nullptr) {
 		}
 
-		mux_signal::ready_result mux_conn::read_ready() {
+		signal::ready_result mux_conn::read_ready() {
 			static recv_options const recv_opts{true};
 			if (!ibuf) {
 				alloc_ibuffer();
@@ -74,7 +74,7 @@ namespace clane {
 			socket().shut_down(socket::shutdown_how::write);
 		}
 
-		int mux_listener::initial_readiness() const {
+		int mux_listener::initial_event_flags() const {
 			return read_flag;
 		}
 
@@ -82,24 +82,24 @@ namespace clane {
 			socket().set_nonblocking();
 		}
 
-		mux_signal::ready_result mux_listener::read_ready() {
+		signal::ready_result mux_listener::read_ready() {
 			auto astat = accept();
 			if (astat.aborted)
 				return ready_result::op_incomplete;
 			if (!astat.conn)
 				return ready_result::op_complete; // accept blocked
-			mux_owner->add_signal(astat.conn);
+			owner->attach_signal(astat.conn);
 			return ready_result::op_incomplete;
 		}
 
-		mux_signal::ready_result mux_listener::write_ready() {
+		signal::ready_result mux_listener::write_ready() {
 			throw std::runtime_error("write event on listening socket");
 		}
 
 		mux_server_conn::mux_server_conn(net::socket &&that_sock): mux_conn(std::move(that_sock)) {
 		}
 
-		mux_signal::ready_result mux_server_conn::write_ready() {
+		signal::ready_result mux_server_conn::write_ready() {
 			// Server connections are always in a connected state, and send operations
 			// always block, so there's nothing to do for write-readiness.
 			return ready_result::op_complete;
@@ -120,12 +120,12 @@ namespace clane {
 			fd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
 			if (-1 == fd_) {
 				std::ostringstream ss;
-				ss << "error creating timer object: " << safe_strerror(errno);
+				ss << "error creating timer object: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 		}
 
-		mux_signal::ready_result mux_timer::read_ready() {
+		signal::ready_result mux_timer::read_ready() {
 			itimerspec t;
 			int status;
 			do {
@@ -135,7 +135,7 @@ namespace clane {
 				return ready_result::op_complete;
 			if (-1 == status) {
 				std::ostringstream ss;
-				ss << "error reading timer object: " << safe_strerror(errno);
+				ss << "error reading timer object: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 			signalee();
@@ -149,12 +149,12 @@ namespace clane {
 			int status = timerfd_settime(fd_, 0, &t, nullptr);
 			if (-1 == status) {
 				std::ostringstream ss;
-				ss << "error setting timer object: " << safe_strerror(errno);
+				ss << "error setting timer object: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 		}
 
-		mux_signal::ready_result mux_timer::write_ready() {
+		signal::ready_result mux_timer::write_ready() {
 			return ready_result::op_complete;
 		}
 

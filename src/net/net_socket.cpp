@@ -23,7 +23,7 @@ namespace clane {
 			}
 			if (-1 == astat.conn) {
 				std::ostringstream ss;
-				ss << "error accepting connection: " << safe_strerror(errno);
+				ss << "error accepting connection: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 			return astat;
@@ -33,7 +33,7 @@ namespace clane {
 			int status = ::bind(fd, addr, addr_len);
 			if (-1 == status) {
 				std::ostringstream ss;
-				ss << "error binding socket: " << safe_strerror(errno);
+				ss << "error binding socket: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 		}
@@ -43,7 +43,7 @@ namespace clane {
 			while (-1 == (status = ::connect(fd, addr, addr_len)) && EINTR == errno);
 			if (-1 == status) {
 				std::ostringstream ss;
-				ss << "error connecting: " << safe_strerror(errno);
+				ss << "error connecting: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 		}
@@ -52,7 +52,7 @@ namespace clane {
 			int status = ::listen(fd, backlog);
 			if (-1 == status) {
 				std::ostringstream ss;
-				ss << "error initiating socket listening: " << safe_strerror(errno);
+				ss << "error initiating socket listening: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 		}
@@ -75,7 +75,7 @@ namespace clane {
 					while (-1 == (status = poll(&po, 1, -1)) && EINTR == errno);
 					if (-1 == status) {
 						std::ostringstream ss;
-						ss << "error polling socket: " << safe_strerror(errno);
+						ss << "error polling socket: " << errno_to_string(errno);
 						throw std::runtime_error(ss.str());
 					}
 				}
@@ -90,7 +90,7 @@ namespace clane {
 			int status = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &arg, sizeof(arg));
 			if (-1 == status) {
 				std::ostringstream ss;
-				ss << "error setting SO_REUSEADDR option: " << safe_strerror(errno);
+				ss << "error setting SO_REUSEADDR option: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 		}
@@ -98,7 +98,7 @@ namespace clane {
 		void socket::shut_down(shutdown_how how) const {
 			if (-1 == shutdown(*this, static_cast<int>(how))) {
 				std::ostringstream ss;
-				ss << "error shutting down socket: " << safe_strerror(errno);
+				ss << "error shutting down socket: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 		}
@@ -108,7 +108,7 @@ namespace clane {
 			while (-1 == (fd = ::socket(pf->domain(), type, protocol)) && EINTR == errno);
 			if (-1 == fd) {
 				std::ostringstream ss;
-				ss << "error creating socket: " << safe_strerror(errno);
+				ss << "error creating socket: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 		}

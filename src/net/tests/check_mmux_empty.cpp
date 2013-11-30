@@ -6,15 +6,15 @@
 #include <list>
 
 int main() {
-	clane::net::shared_mux mux;
+	clane::net::mmux mux;
 	std::list<std::future<void>> futs;
 
 	// start multiplexer threads:
 	for (int i = 0; i < 10; ++i)
-		futs.push_back(std::async(std::launch::async, &clane::net::shared_mux::run, &mux));
+		futs.push_back(std::async(std::launch::async, &clane::net::mmux::run, &mux));
 
 	// notify multiplexer to stop:
-	mux.cancel();
+	mux.terminate();
 
 	// wait for multiplexer threads to finish:
 	while (!futs.empty()) {

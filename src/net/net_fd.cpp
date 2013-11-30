@@ -20,7 +20,7 @@ namespace clane {
 			while (-1 == (status = ::close(fd)) && EINTR == errno);
 			if (-1 == status) {
 				std::ostringstream ss;
-				ss << "error closing file descriptor: " << safe_strerror(errno);
+				ss << "error closing file descriptor: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 			fd = -1;
@@ -32,14 +32,14 @@ namespace clane {
 			int flags = ::fcntl(fd, F_GETFL);
 			if (-1 == flags) {
 				std::ostringstream ss;
-				ss << "error setting nonblocking mode: error getting file descriptor flags: " << safe_strerror(errno);
+				ss << "error setting nonblocking mode: error getting file descriptor flags: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 			flags |= O_NONBLOCK;
 			int status = ::fcntl(fd, F_SETFL, flags);
 			if (-1 == status) {
 				std::ostringstream ss;
-				ss << "error setting nonblocking mode: error setting file descriptor flags: " << safe_strerror(errno);
+				ss << "error setting nonblocking mode: error setting file descriptor flags: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 		}

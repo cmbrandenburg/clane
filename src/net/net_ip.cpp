@@ -86,7 +86,7 @@ namespace clane {
 			int status = getsockname(sock, reinterpret_cast<sockaddr *>(&sa), &sa_len);
 			if (-1 == status) {
 				std::ostringstream ss;
-				ss << "error getting IP socket's local address: " << safe_strerror(errno);
+				ss << "error getting IP socket's local address: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 			return translate_addr(&sa);
@@ -122,7 +122,7 @@ namespace clane {
 			int status = getpeername(sock, reinterpret_cast<sockaddr *>(&sa), &sa_len);
 			if (-1 == status) {
 				std::ostringstream ss;
-				ss << "error getting IP socket's remote address: " << safe_strerror(errno);
+				ss << "error getting IP socket's remote address: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 			return translate_addr(&sa);
@@ -200,7 +200,7 @@ namespace clane {
 					port_buf, sizeof(port_buf), NI_NUMERICHOST | NI_NUMERICSERV);
 			if (status) {
 				std::ostringstream ss;
-				ss << "error translating socket address to name: " << safe_strerror(errno);
+				ss << "error translating socket address to name: " << errno_to_string(errno);
 				throw std::runtime_error(ss.str());
 			}
 			return host_and_port(host_buf, port_buf);
@@ -309,7 +309,7 @@ namespace clane {
 				int status = inet_pton(AF_INET, host, &dummy_ipv4_addr);
 				if (-1 == status) {
 					std::ostringstream ss;
-					ss << "error converting from IPv4 dotted decimal notation: " << safe_strerror(errno);
+					ss << "error converting from IPv4 dotted decimal notation: " << errno_to_string(errno);
 					throw std::runtime_error(ss.str());
 				}
 				if (1 == status) {

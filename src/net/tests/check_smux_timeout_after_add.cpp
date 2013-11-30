@@ -37,19 +37,17 @@ void simple_timeout::timed_out() {
 }
 
 void simple_timeout::set_timeout(std::chrono::steady_clock::time_point const &timeout) {
-	mux_signal::set_timeout(timeout);
+	signal::set_timer(timeout);
 }
 
 int main() {
 
 	// run multiplexer:
-	clane::net::shared_mux mux;
+	clane::net::smux mux;
 	std::shared_ptr<simple_timeout> sig(new simple_timeout);
-	mux.add_signal(sig);
+	mux.attach_signal(sig);
 	sig->set_timeout(std::chrono::steady_clock::now()); // timeout before mux begins
-	std::list<std::future<void>> futs;
-	for (int i = 0; i < 10; ++i)
-		futs.push_back(std::async(std::launch::async, &clane::net::shared_mux::run, &mux));
+	auto fut = std::async(std::launch::async, &clane::net::smux::run, &mux);
 
 	// wait for the timeout to occur:
 	{
@@ -59,11 +57,8 @@ int main() {
 	}
 
 	// cleanup:
-	mux.cancel();
-	while (!futs.empty()) {
-		futs.front().wait();
-		futs.pop_front();
-	}
+	mux.terminate();
+	fut.wait();
 
 	return 0;
 }

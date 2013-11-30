@@ -53,7 +53,7 @@ namespace clane {
 	}
 
 	void inc_server_conn::finished() {
-		mark_for_close(); // reset connection
+		detach(); // reset connection
 	}
 
 	bool inc_server_conn::recv_some(char *buf, size_t cap, size_t offset, size_t size) {

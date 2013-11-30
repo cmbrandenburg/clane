@@ -18,7 +18,7 @@ namespace check {
 			return false;
 		if (-1 == status) {
 			std::ostringstream ss;
-			ss << "error getting file descriptor flags: " << clane::net::safe_strerror(errno);
+			ss << "error getting file descriptor flags: " << clane::net::errno_to_string(errno);
 			throw std::runtime_error(ss.str());
 		}
 		return true;
@@ -28,7 +28,7 @@ namespace check {
 		int fd = eventfd(0, 0);
 		if (-1 == fd) {
 			std::ostringstream ss;
-			ss << "error opening event file descriptor: " << clane::net::safe_strerror(errno);
+			ss << "error opening event file descriptor: " << clane::net::errno_to_string(errno);
 			throw std::runtime_error(ss.str());
 		}
 		return fd;

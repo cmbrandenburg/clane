@@ -8,7 +8,7 @@
 namespace clane {
 	namespace net {
 
-		std::string safe_strerror(int e) {
+		std::string errno_to_string(int e) {
 			char buf[256];
 			return strerror_r(e, buf, sizeof(buf));
 		}
