@@ -15,8 +15,8 @@
 #define check_true(cond) clane::check::check_true_(__FILE__, __LINE__, cond)
 #define check_false(cond) clane::check::check_false_(__FILE__, __LINE__, cond)
 #define check_null(p) clane::check::check_null_(__FILE__, __LINE__, p)
-#define check_eq(a, b) clane::check::check_eq_(__FILE__, __LINE__, a, b)
-#define check_cstr_eq(a, b) clane::check::check_cstr_eq_(__FILE__, __LINE__, a, b)
+#define check_eq(exp, got) clane::check::check_eq_(__FILE__, __LINE__, exp, got)
+#define check_cstr_eq(exp, got) clane::check::check_cstr_eq_(__FILE__, __LINE__, exp, got)
 
 #define check_throw(type, expr) \
 	do { \
