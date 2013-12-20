@@ -32,6 +32,8 @@ namespace clane {
 		}
 
 		mmux::~mmux() noexcept {
+			// FIXME: What happens if all multiplexer threads exit due to
+			// nonrecoverable error? Do some signals not detach?
 			terminate();
 		}
 
@@ -196,7 +198,6 @@ namespace clane {
 				~thread_decrement() {
 					std::lock_guard<std::mutex> term_lock(mux->term_mutex);
 					--mux->thrd_cnt;
-					mux->term_cond.notify_all();
 				}
 			} thrd_cnt_dec{this};
 
@@ -431,17 +432,8 @@ namespace clane {
 					ready_lock.lock();
 					term_lock.lock();
 				}
-				// Now the multiplexer is terminated.
-				term_cond.notify_all();
 			} else {
 				wake_one(); // multiplexer must shut down
-			}
-		}
-
-		void mmux::wait() {
-			std::unique_lock<std::mutex> term_lock(term_mutex);
-			while (!term_start || thrd_cnt) {
-				term_cond.wait(term_lock);
 			}
 		}
 

@@ -98,20 +98,10 @@ namespace clane {
 			 *
 			 * Termination causes a multiplexer to detach all of its signals and to
 			 * have all invocations of its run() function return. The terminate()
-			 * function may return before these conditions are met. Use the wait()
-			 * function to wait until termination has completed.
+			 * function may return before these conditions are met.			 *
 			 *
-			 * @sa run(), wait() */
+			 * @sa run() */
 			virtual void terminate() = 0;
-
-			/** @brief Waits for the multiplexer's termination to complete
-			 *
-			 * The wait() function waits for the multiplexer to detach all of its
-			 * signals and have all invocations of its run() function either return or
-			 * be in an imminently returnable state.
-			 *
-			 * @sa terminate() */
-			virtual void wait() = 0;
 
 		private:
 
@@ -178,7 +168,6 @@ namespace clane {
 			std::mutex term_mutex;
 			int thrd_cnt;
 			bool term_start;
-			std::condition_variable term_cond;
 
 			// Signal Map:
 			std::mutex sig_map_mutex;
@@ -214,7 +203,6 @@ namespace clane {
 			virtual void detach_signal(signal *sig);
 			virtual void run();
 			virtual void terminate();
-			virtual void wait();
 
 		private:
 			virtual void set_signal_timer(signal *sig, std::chrono::steady_clock::time_point const &new_timeout);
