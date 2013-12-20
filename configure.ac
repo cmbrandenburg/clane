@@ -15,6 +15,8 @@ AC_CONFIG_FILES(
 	Makefile
 	src/Makefile
 	src/check/Makefile
+	src/http/Makefile
+	src/http/tests/Makefile
 	src/net/Makefile
 	src/net/tests/Makefile
 	src/uri/Makefile
