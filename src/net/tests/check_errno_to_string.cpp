@@ -1,6 +1,6 @@
 // vim: set noet:
 
-#include "../net.h"
+#include "../net_error.h"
 #include "../../check/check.h"
 
 int main() {

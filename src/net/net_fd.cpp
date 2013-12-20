@@ -13,35 +13,53 @@
 namespace clane {
 	namespace net {
 
+		void close_fd(int fd) {
+			int status = TEMP_FAILURE_RETRY(::close(fd));
+			if (-1 == status) {
+				std::ostringstream ess;
+				ess << "file descriptor close error: " << errno_to_string(errno);
+				throw std::runtime_error(ess.str());
+			}
+		}
+
+		int fd_flags(int fd) {
+			int flags = ::fcntl(fd, F_GETFL);
+			if (-1 == flags) {
+				std::ostringstream ess;
+				ess << "error getting file descriptor flags: " << errno_to_string(errno);
+				throw std::runtime_error(ess.str());
+			}
+			return flags;
+		}
+
+		void fd_flags(int fd, int flags) {
+			int stat = ::fcntl(fd, F_SETFL, flags);
+			if (-1 == stat) {
+				std::ostringstream ess;
+				ess << "error setting file descriptor flags: " << errno_to_string(errno);
+				throw std::runtime_error(ess.str());
+			};
+		}
+
+		void set_nonblocking(int fd) {
+			int flags = fd_flags(fd);
+			fd_flags(fd, flags | O_NONBLOCK);
+		}
+
+		void set_blocking(int fd) {
+			int flags = fd_flags(fd);
+			fd_flags(fd, flags & ~O_NONBLOCK);
+		}
+
 		void file_descriptor::close() {
 			if (-1 == fd)
 				return;
-			int status;
-			while (-1 == (status = ::close(fd)) && EINTR == errno);
-			if (-1 == status) {
-				std::ostringstream ss;
-				ss << "error closing file descriptor: " << errno_to_string(errno);
-				throw std::runtime_error(ss.str());
-			}
-			fd = -1;
-		}
-
-		void file_descriptor::set_nonblocking() const {
-			if (-1 == fd)
-				return;
-			int flags = ::fcntl(fd, F_GETFL);
-			if (-1 == flags) {
-				std::ostringstream ss;
-				ss << "error setting nonblocking mode: error getting file descriptor flags: " << errno_to_string(errno);
-				throw std::runtime_error(ss.str());
-			}
-			flags |= O_NONBLOCK;
-			int status = ::fcntl(fd, F_SETFL, flags);
-			if (-1 == status) {
-				std::ostringstream ss;
-				ss << "error setting nonblocking mode: error setting file descriptor flags: " << errno_to_string(errno);
-				throw std::runtime_error(ss.str());
-			}
+			struct reset_fd {
+				file_descriptor *fd;
+				reset_fd(file_descriptor *fd): fd(fd) {}
+				~reset_fd() { fd->fd = -1; }
+			} fd_resetter(this);
+			close_fd(fd);
 		}
 	}
 }

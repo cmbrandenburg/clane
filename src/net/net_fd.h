@@ -13,6 +13,11 @@
 namespace clane {
 	namespace net {
 
+		void close_fd(int fd);
+
+		void set_nonblocking(int fd);
+		void set_blocking(int fd);
+
 		/** @brief Wraps a Linux file descriptor with RAII semantics */
 		class file_descriptor {
 
@@ -58,13 +63,7 @@ namespace clane {
 			void close();
 
 			/** @brief Drops ownership of and returns the underlying file descriptor */
-			int detach();
-
-			/** @brief Sets the file descriptor to nonblocking mode
-			 *
-			 * @return Returns true if and only if the file descriptor was previously
-			 * set to blocking mode. */
-			void set_nonblocking() const;
+			int release();
 
 			friend void swap(file_descriptor &a, file_descriptor &b);
 		};
@@ -105,10 +104,10 @@ namespace clane {
 			return fd;
 		}
 
-		inline int file_descriptor::detach() {
-			int detached_fd = fd;
+		inline int file_descriptor::release() {
+			int released_fd = fd;
 			fd = -1;
-			return detached_fd;
+			return released_fd;
 		}
 
 		inline void swap(file_descriptor &a, file_descriptor &b) {

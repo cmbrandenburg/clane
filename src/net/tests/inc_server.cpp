@@ -1,118 +1,52 @@
 // vim: set noet:
 
 #include "inc_server.h"
-#include "../../check/check.h"
 
-namespace clane {
-		
-	void inc_client(int client_no, std::string const &server_addr, int num_requests)
-	{
-		// connect to server:
-		auto cconn = clane::net::dial_tcp(server_addr);
+using namespace clane;
 
-		// do some requests:
-		for (int i = 1; i <= num_requests; ++i) {
-			std::stringstream ss;
-
-			// send:
-			ss.str("");
-			ss << i << "\n";
-			auto ostat = cconn.send_all(ss.str().c_str(), ss.str().size());
-			check_false(ostat.reset);
-			check_eq(ss.str().size(), ostat.size);
-
-			// receive:
-			char ibuf[100];
-			size_t size = 0;
-			while (!size || !memchr(ibuf, '\n', size)) {
-				auto istat = cconn.recv(&ibuf[size], sizeof(ibuf) - size - 1);
-				check_false(istat.shutdown);
-				check_false(istat.reset);
-				size += istat.size;
-			}
-			ibuf[size] = 0; // null terminator
-			ss.str(ibuf);
-			int got;
-			ss >> got;
-#if 0
-			{
-				std::ostringstream tss;
-				tss << "client " << client_no << ": recv " << got << "\n";
-				std::cerr << tss.str();
-			}
-#endif
-			check_true(ss);
-			check_eq(i + 1, got);
+void inc_connection::received(char *p, size_t n) {
+	line.append(p, n);
+	while (line.npos != line.find('\n')) {
+		std::istringstream iss(line.substr(0, line.find('\n')+1));
+		line.erase(0, line.find('\n')+1);
+		int req;
+		iss >> req;
+		char ch;
+		if (!iss || !iss.get(ch) || ch != '\n' || iss.get(ch)) {
+			detach(); // hang up
+			return;
 		}
-
-		// disconnect from server:
-		cconn.close();
-	}
-
-	inc_server_conn::inc_server_conn(net::socket &&that_sock): net::mux_server_conn(std::move(that_sock)) {
-	}
-
-	void inc_server_conn::finished() {
-		detach(); // reset connection
-	}
-
-	bool inc_server_conn::recv_some(char *buf, size_t cap, size_t offset, size_t size) {
-
-		buf_strm.write(&buf[offset], size);
-		std::string line;
-		std::getline(buf_strm, line);
-		while (buf_strm) {
-
-			// undo partial line extraction, wait for more data
-			if (buf_strm.eof()) {
-				buf_strm.str(line);
-				buf_strm.seekp(0, std::ios_base::end);
-				break;
-			}
-
-			std::istringstream iss(line);
-			int n;
-			iss >> n;
-			if (!iss) {
-				std::ostringstream tss;
-				tss << "server received invalid line: " << line << "\n";
-				std::cerr << tss.str();
-				continue; // ignore line
-			}
-
-#if 0
-			{
-				std::ostringstream tss;
-				tss << "server: recv " << n << "\n";
-				std::cerr << tss.str();
-			}
-#endif
-
-			std::ostringstream oss;
-			oss << n + 1 << "\n";
-			send_all(oss.str().c_str(), oss.str().size());
-			std::getline(buf_strm, line);
+		std::ostringstream oss;
+		oss << req+1 << '\n';
+		std::string m = oss.str();
+		auto send_result = send(m.data(), m.size(), net::op_all);
+		if (net::status::ok != send_result.stat) {
+			std::ostringstream ess;
+			ess << "non-OK send result: " << net::what(send_result.stat);
+			throw std::runtime_error(ess.str());
 		}
-		buf_strm.clear(); // clear eof
-
-		return false; // don't take ownership of buffer
+		if (m.size() != send_result.size) {
+			std::ostringstream ess;
+			ess << "incomplete send: sent " << send_result.size << " bytes out of " << m.size();
+			throw std::runtime_error(ess.str());
+		}
 	}
+}
 
-	inc_server_listener::mux_accept_result inc_server_listener::accept() {
-		mux_accept_result ret_result{};
-		net::accept_result astat = socket().accept();
-		if (astat.aborted)
-			ret_result.aborted = true;
-		else if (astat.conn)
-			ret_result.conn.reset(new inc_server_conn(std::move(astat.conn)));
-		return ret_result;
-	}
+void inc_connection::finished() {
+}
 
-	inc_server_listener::inc_server_listener(net::socket &&that_sock): net::mux_listener(std::move(that_sock)) {
-	}
+void inc_connection::ialloc() {
+	size_t constexpr n = 4096;
+	ibuf.reset(new char[n]);
+	set_ibuf(ibuf.get(), n);
+}
 
-	std::string inc_server_listener::local_addr() const {
-		return socket().local_addr();
-	}
+inc_connection::ready_result inc_connection::send_ready() {
+	return ready_result::op_complete;
+}
+
+std::shared_ptr<net::signal> inc_listener::new_connection(net::socket &&sock) {
+	return std::make_shared<inc_connection>(std::move(sock));
 }
 

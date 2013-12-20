@@ -1,29 +1,31 @@
 // vim: set noet:
 
-#ifndef INC_SERVER_H
-#define INC_SERVER_H
+#ifndef CLANE_NET_TESTS_INC_SERVER_H
+#define CLANE_NET_TESTS_INC_SERVER_H
 
-#include "../net.h"
+#include "../net_conn.h"
 #include <sstream>
 
-namespace clane {
+class inc_connection: public clane::net::connection {
+	std::unique_ptr<char[]> ibuf;
+	std::string line;
+public:
+	virtual ~inc_connection() noexcept {}
+	inc_connection(clane::net::socket &&sock): connection(std::move(sock)) {}
+private:
+	virtual void received(char *p, size_t n);
+	virtual void finished();
+	virtual void ialloc();
+	virtual ready_result send_ready();
+};
 
-	class inc_server_conn: public net::mux_server_conn {
-		std::stringstream buf_strm;
-	public:
-		inc_server_conn(net::socket &&that_sock);
-		virtual void finished();
-		virtual bool recv_some(char *buf, size_t cap, size_t offset, size_t size);
-	};
+class inc_listener: public clane::net::listener {
+public:
+	inc_listener(clane::net::protocol_family const *pf, char const *addr): listener(pf, addr) {}	
+	inc_listener(inc_listener &&) = default;
+	inc_listener &operator=(inc_listener &&) = default;
+private:
+	virtual std::shared_ptr<clane::net::signal> new_connection(clane::net::socket &&sock);
+};
 
-	class inc_server_listener: public net::mux_listener {
-	public:
-		inc_server_listener(net::socket &&that_sock);
-		virtual mux_accept_result accept();
-		std::string local_addr() const;
-	};
-
-	void inc_client(int client_no, std::string const &server_addr, int num_requests);
-}
-
-#endif // #ifndef INC_SERVER_H
+#endif // #ifndef CLANE_NET_TESTS_INC_SERVER_H

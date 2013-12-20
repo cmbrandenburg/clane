@@ -25,15 +25,6 @@ namespace clane {
 			check_eq_(sname, sline, std::string(exp), got);
 		}
 
-		void check_false_(char const *sname, int sline, bool cond) {
-			if (cond) {
-				std::ostringstream ss;
-				ss << sname << ":" << sline << ": boolean check failed\n";
-				std::cerr << ss.str();
-				std::abort();
-			}
-		}
-
 		void check_null_(char const *sname, int sline, void const *p) {
 			if (p) {
 				std::ostringstream ss;
@@ -43,8 +34,26 @@ namespace clane {
 			}
 		}
 
+		void check_nonnull_(char const *sname, int sline, void const *p) {
+			if (!p) {
+				std::ostringstream ss;
+				ss << sname << ":" << sline << ": non-null pointer check failed\n";
+				std::cerr << ss.str();
+				std::abort();
+			}
+		}
+
 		void check_true_(char const *sname, int sline, bool cond) {
 			if (!cond) {
+				std::ostringstream ss;
+				ss << sname << ":" << sline << ": boolean check failed\n";
+				std::cerr << ss.str();
+				std::abort();
+			}
+		}
+
+		void check_false_(char const *sname, int sline, bool cond) {
+			if (cond) {
 				std::ostringstream ss;
 				ss << sname << ":" << sline << ": boolean check failed\n";
 				std::cerr << ss.str();

@@ -539,9 +539,6 @@ namespace clane {
 			timeout_queue.insert(std::multimap<std::chrono::steady_clock::time_point, sig_entry *>::value_type(ent->sig->timeout, ent));
 		}
 
-		signal::~signal() noexcept(false) {
-		}
-
 		signal::signal(): owner(nullptr) {
 		}
 

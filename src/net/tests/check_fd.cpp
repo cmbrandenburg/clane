@@ -1,6 +1,7 @@
 // vim: set noet:
 
-#include "../net.h"
+#include "../net_error.h"
+#include "../net_fd.h"
 #include "../../check/check.h"
 #include <sstream>
 #include <stdexcept>
@@ -83,10 +84,10 @@ int main() {
 		check_false(is_file_descriptor_open(sys_fd));
 	}
 
-	// detach:
+	// release:
 	{
 		file_descriptor fd(open_file_descriptor());
-		int sys_fd = fd.detach();
+		int sys_fd = fd.release();
 		check_eq(-1, int{fd});
 		fd = sys_fd;
 	}

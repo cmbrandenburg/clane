@@ -8,7 +8,7 @@
  * @brief I/O multiplexing */
 
 #include "net_common.h"
-#include "net_socket.h"
+#include "net_fd.h"
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -322,7 +322,7 @@ namespace clane {
 			std::chrono::steady_clock::time_point timeout;
 
 		public:
-			virtual ~signal() noexcept(false);
+			virtual ~signal() = default;
 
 			/** @brief Constructs an unattached signal with no timeout */
 			signal();
@@ -392,7 +392,7 @@ namespace clane {
 			 *
 			 * @par Availability
 			 * Linux */
-			virtual file_descriptor const &fd() const = 0;
+			virtual int fd() const = 0;
 
 			/** @brief Returns the signal's initial event flags
 			 *

@@ -5,219 +5,156 @@
 
 /** @file
  *
- * @brief Socket */
+ * @brief Socket type and system socket routines */
 
 #include "net_common.h"
-#include "net_fd.h"
-#include <string>
+#include <ostream>
 #include <sys/socket.h>
 
 namespace clane {
 	namespace net {
 
-		class accept_result;
 		class protocol_family;
 
-		/** @brief Socket receive operation result */
-		struct recv_result {
+		int sys_socket(int domain, int type, int protocol);
+		void sys_bind(int sock, sockaddr const *addr, socklen_t addr_len);
+		void sys_listen(int sock, int backlog);
+		void sys_getsockname(int sock, sockaddr *addr, socklen_t addr_len);
+		void sys_getpeername(int sock, sockaddr *addr, socklen_t addr_len);
+		void sys_shutdown(int sock, int how);
+		int sys_getsockopt(int sock, int level, int optname);
+		void sys_setsockopt(int sock, int level, int optname, int val);
 
-			/** @brief Number of bytes received */
-			size_t size;
-
-			/** @brief Whether a connection reset occurred */
-			bool reset;
-
-			/** @brief Whether the peer shut down its endpoint for sending */
-			bool shutdown;
+		enum class status {
+			ok,
+			would_block,
+			in_progress,
+			timed_out,
+			conn_refused,
+			net_unreachable,
+			reset,
+			aborted,
+			no_resource
 		};
 
-		/** @brief Options for a receive operation */
-		struct recv_options {
+		char const *what(status stat);
 
-			/** @brief Whether to force the receive operation to be nonblocking, even
-			 * if the socket is blocking */
-			bool nonblocking;
+		template <class CharT, class Traits>
+	 	std::basic_ostream<CharT, Traits> &operator<<(std::basic_ostream<CharT, Traits> &os, status stat) {
+			return os << what(stat);
+		}
+
+		// Operation flags
+		enum {
+			op_nonblock = 1<<0,
+			op_fin = 1<<1,
+			op_all = 1<<2
 		};
 
-		/** @brief Socket send operation result */
+		struct protocol_family;
+
+		struct connect_result {
+			status stat;
+			protocol_family const *pf;
+		};
+
+		struct accept_result;
+
 		struct send_result {
-
-			/** @brief Number of bytes received */
+			status stat;
 			size_t size;
-
-			/** @brief Whether a connection reset occurred */
-			bool reset;
 		};
 
-		/** @brief Options for a send operation */
-		struct send_options {
-
-			/** @brief Whether to force the send operation to be nonblocking, even if
-			 * the socket is blocking */
-			bool nonblocking;
+		struct recv_result {
+			status stat;
+			size_t size;
 		};
 
-		/** @brief Low-level socket object */
-		class socket: public file_descriptor {
-		public:
-
-			/** @brief Connection shutdown directions */
-			enum class shutdown_how {
-				read = SHUT_RD,
-				write = SHUT_WR,
-				read_write = SHUT_RDWR
+		struct protocol_family {
+			union instance {
+				int n;
+				void *ptr;
 			};
+			char const *(*name)();
+			void (*construct_instance)(instance &pi);
+			void (*destruct_instance)(instance &pi);
+			std::string (*local_address)(instance &pi);
+			std::string (*remote_address)(instance &pi);
+			connect_result (*connect)(instance &pi, std::string &addr);
+			send_result (*send)(instance &pi, void const *p, size_t n, int flags);
+			recv_result (*recv)(instance &pi, void *p, size_t n, int flags);
+			protocol_family const *(*listen)(instance &pi, std::string &addr, int backlog);
+			accept_result (*accept)(instance &pi, std::string *oaddr, int flags);
+			int (*domain)();
+		};
 
+		class socket {
+			friend void swap(socket &, socket &) noexcept;
 		private:
 			protocol_family const *pf;
+			protocol_family::instance pi;
 		public:
-
-			/** @brief Closes the underlying socket */
-			~socket() = default;
-
-			/** @brief Constructs by creating an underlying socket */
-			socket(protocol_family const *pf, int type, int protocol);
-
+			~socket() noexcept;
+			socket() noexcept: pf{}, pi{} {}
+			socket(protocol_family const *pf, char const *addr, int backlog): socket(pf, std::string(addr), backlog) {}
+			socket(protocol_family const *pf, std::string addr, int backlog);
+			socket(protocol_family const *pf, char const *addr): socket(pf, std::string(addr)) {}
+			socket(protocol_family const *pf, std::string addr);
+			socket(protocol_family const *pf, protocol_family::instance &&that_inst) noexcept;
 			socket(socket const &) = delete;
-
-			/** @brief Constructs by transferring ownership of `that`'s underlying
-			 * socket to `this` */
-			socket(socket &&) = default;
-
+			socket(socket &&that) noexcept: pf{}, pi{} { swap(*this, that); }
 			socket &operator=(socket const &) = delete;
-
-			/** @brief Assigns by transferring ownership of `that`'s underlying socket
-			 * to `this` */
-			socket &operator=(socket &&) = default;
-
-			/** @brief Binds the socket */
-			void bind(sockaddr const *addr, socklen_t addr_len) const;
-
-			/** @brief Initiates listening on the socket */
-			void listen(int backlog) const;
-
-			/** @brief Accepts an incoming connection on the socket */
-			accept_result accept(sockaddr *addr = nullptr, socklen_t *addr_len = nullptr) const;
-
-			/** @brief Accepts an incoming connection on the socket
-			 *
-			 * @param oaddr If the connection is successfully accepted then `oaddr` is
-			 * assigned the remote address of the new connection. */
-			accept_result accept(std::string &oaddr) const;
-
-			/** @brief Initiates a connection attempt on the socket */
-			void connect(sockaddr const *addr, socklen_t addr_len) const;
-
-			/** @brief Initiates a connection attempt on the socket */
-			void connect(std::string const &addr) const;
-
-			/** @brief Initiates a connection attempt on the socket */
-			void connect(char const *addr, size_t addr_len) const;
-
-			/** @brief Sets the socket to reuse addresses, if possible */
-			void set_reuseaddr() const;
-
-			/** @brief Returns the socket's local address */
-			std::string local_addr() const;
-
-			/** @brief Returns the socket's peer's address */
-			std::string remote_addr() const;
-
-			/** @brief Receives on a socket */
-			recv_result recv(void *buf, size_t cap, recv_options const *opts = nullptr) const;
-
-			/** @brief Sends on a socket */
-			send_result send(void const *buf, size_t cnt, send_options const *opts = nullptr) const;
-
-			/** @brief Sends all bytes on a socket
-			 *
-			 * This blocks as necessary, even if the socket is nonblocking. */
-			send_result send_all(void const *buf, size_t cnt) const;
-
-			/** @brief Shuts down one or both halves of a connection */
-			void shut_down(shutdown_how how) const;
-
+			socket &operator=(socket &&that) noexcept { swap(*this, that); return *this; }
+			void listen(protocol_family const *pf, char const *addr, int backlog = -1) { listen(pf, std::string(addr)); }
+			void listen(protocol_family const *pf, std::string addr, int backlog = -1);
+			status connect(protocol_family const *pf, char const *addr) { return connect(pf, std::string(addr)); }
+			status connect(protocol_family const *pf, std::string addr);
+			protocol_family const *protocol() const { return pf; }
+			std::string local_address() { return pf->local_address(pi); }
+			std::string remote_address() { return pf->remote_address(pi); }
+			send_result send(void const *p, size_t n, int flags = 0) { return pf->send(pi, p, n, flags); }
+			recv_result recv(void *p, size_t n, int flags = 0) { return pf->recv(pi, p, n, flags); }
+			accept_result accept(int flags = 0);
+			accept_result accept(std::string &oaddr, int flags = 0);
+			int fd() const { return pi.n; }
 		private:
-
-			/** @brief Constructs by taking ownership of the `that_fd` file descriptor
-			 * */
-			socket(protocol_family const *pf, int that_fd);
+			status connect_(protocol_family const *pf, std::string &addr);
 		};
 
-		/** @brief Socket accept operation result */
+		inline socket::socket(protocol_family const *pf, protocol_family::instance &&that_inst) noexcept: pf(pf), pi{} {
+			std::swap(pi, that_inst);
+		}
+
+		inline void swap(socket &a, socket &b) noexcept {
+			std::swap(a.pf, b.pf);
+			std::swap(a.pi, b.pi);
+		}
+
 		struct accept_result {
-
-			/** @brief Whether the accept operation aborted */
-			bool aborted;
-
-			/** @brief Accepted connection, if any */
-			socket conn;
+			status stat;
+			socket sock;
 		};
 
-		/** @brief Socket protocol family */
-		class protocol_family {
-		public:
-			~protocol_family() = default;
-			protocol_family() = default;
-			protocol_family(protocol_family const &) = delete;
-			protocol_family(protocol_family &&) = default;
-			protocol_family &operator=(protocol_family const &) = delete;
-			protocol_family &operator=(protocol_family &&) = default;
+		inline accept_result socket::accept(int flags) {
+			return pf->accept(pi, nullptr, flags);
+	 	}
 
-			/** @brief Returns the domain (e.g., `AF_INET`) */
-			virtual int domain() const = 0;
+		inline accept_result socket::accept(std::string &oaddr, int flags) {
+		 	return pf->accept(pi, &oaddr, flags);
+	 	}
 
-			/** @brief Returns the local address of the socket
-			 *
-			 * A socket has a local address if it's connected or has been bound. */
-			virtual std::string local_addr(socket const &sock) const = 0;
+		// stand-ins for unsupported operations:
+		void pf_unsupported_construct_instance(protocol_family::instance &);
+		void pf_unsupported_destruct_instance(protocol_family::instance &);
+		std::string pf_unsupported_local_address(protocol_family::instance &);
+		std::string pf_unsupported_remote_address(protocol_family::instance &);
+		connect_result pf_unsupported_connect(protocol_family::instance &, std::string &);
+		send_result pf_unsupported_send(protocol_family::instance &, void const *, size_t , int);
+		recv_result pf_unsupported_recv(protocol_family::instance &, void *, size_t , int);
+		protocol_family const *pf_unsupported_listen(protocol_family::instance &, std::string &, int);
+		accept_result pf_unsupported_accept(protocol_family::instance &, std::string *, int);
+		int pf_unsupported_domain();
 
-			/** @brief Returns the remote address of the socket
-			 *
-			 * A socket has a remote address if and only if it's connected */
-			virtual std::string remote_addr(socket const &sock) const = 0;
-
-			/** @brief Accepts a connection on a socket and gets the connection's
-			 * remote address */
-			virtual accept_result accept(socket const &lis, std::string &oname) const = 0;
-
-			/** @brief Initiates a connection attempt on a socket */
-			virtual void connect(socket const &conn, char const *addr, size_t addr_len) const = 0;
-
-			/** @brief Receives on a socket */
-			virtual recv_result recv(socket const &conn, void *buf, size_t cap, recv_options const *opts) const = 0;
-
-			/** @brief Sends on a socket */
-			virtual send_result send(socket const &conn, void const *buf, size_t cnt, send_options const *opts) const = 0;
-		};
-
-		inline accept_result socket::accept(std::string &oaddr) const {
-			return pf->accept(*this, oaddr);
-		}
-
-		inline void socket::connect(std::string const &addr) const {
-			connect(addr.c_str(), addr.size());
-		}
-
-		inline void socket::connect(char const *addr, size_t addr_len) const {
-			pf->connect(*this, addr, addr_len);
-		}
-
-		inline std::string socket::local_addr() const {
-			return pf->local_addr(*this);
-		}
-
-		inline recv_result socket::recv(void *buf, size_t cap, recv_options const *opts) const {
-			return pf->recv(*this, buf, cap, opts);
-		}
-
-		inline std::string socket::remote_addr() const {
-			return pf->remote_addr(*this);
-		}
-
-		inline send_result socket::send(void const *buf, size_t cnt, send_options const *opts) const {
-			return pf->send(*this, buf, cnt, opts);
-		}
 	}
 }
 
