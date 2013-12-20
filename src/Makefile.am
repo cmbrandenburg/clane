@@ -1,4 +1,4 @@
-SUBDIRS = check net
+SUBDIRS = check net uri
 
 EXTRA_DIST = \
 	leak_check

@@ -17,6 +17,8 @@ AC_CONFIG_FILES(
 	src/check/Makefile
 	src/net/Makefile
 	src/net/tests/Makefile
+	src/uri/Makefile
+	src/uri/tests/Makefile
 	)
 AC_OUTPUT
 
