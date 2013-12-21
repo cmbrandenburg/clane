@@ -17,7 +17,7 @@ namespace clane {
 
 		class parser {
 		private:
-			enum state {
+			enum {
 				ready, // ready to parse (more) data
 				ok,    // parsing completed with success
 				error  // parsing completed with error
@@ -28,7 +28,7 @@ namespace clane {
 			/** Length limit, if any */
 			size_t len_limit;
 
-			status_code stat_code;
+			status error_stat;
 
 		private:
 			size_t cur_len;
@@ -42,10 +42,10 @@ namespace clane {
 			parser &operator=(parser const &) = default;
 			parser &operator=(parser &&) = default;
 
-			/** Returns true if and only if the parser is in a non-error state */
-			operator bool() const { return stat != state::error; }
+			// Returns true if and only if the parser is in a non-error state
+			operator bool() const { return stat != error; }
 
-			/** Resets the parser state so that it may begin parsing anew */
+			// Resets the parser state so that it may begin parsing anew
 			void reset();
 
 			char const *what() const { return what_; }
@@ -57,7 +57,7 @@ namespace clane {
 			 * the current length limit is not set or not exceeded */
 			bool increase_length(size_t n);
 
-			void set_error(status_code stat_code, char const *what);
+			void set_error(status error_stat, char const *what);
 		};
 
 		class headers_parser: public parser {

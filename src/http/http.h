@@ -8,5 +8,8 @@
  * @brief Master header file */
 
 #include "http_common.h"
+#include "http_header.h"
+#include "http_parse.h"
+#include "http_status.h"
 
 #endif // #ifndef CLANE_HTTP_H

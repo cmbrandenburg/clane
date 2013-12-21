@@ -10,6 +10,8 @@ libhttp_la_SOURCES = \
 	http_common.h \
 	http_header.cpp \
 	http_header.h \
+	http_parse.cpp \
+	http_parse.h \
 	http_status.cpp \
 	http_status.h
 

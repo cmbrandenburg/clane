@@ -7,15 +7,15 @@ int main() {
 
 	std::string s;
 	clane::http::rtrim(s);
-	check_eq("", s);
+	check("" == s);
 
 	s = "alpha bravo";
 	clane::http::rtrim(s);
-	check_eq("alpha bravo", s);
+	check("alpha bravo" == s);
 
 	s = "alpha bravo \t\r\n";
 	clane::http::rtrim(s);
-	check_eq("alpha bravo", s);
+	check("alpha bravo" == s);
 
 	return 0;
 }

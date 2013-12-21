@@ -1,4 +1,0 @@
-check_*
-test-suite.log
-!*.cpp
-!*.h
