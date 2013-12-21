@@ -12,51 +12,51 @@ int main() {
 
 	// empty string:
 	std::string s = "";
-	check_true(clane::uri::percent_decode(s, char_test));
+	check(clane::uri::percent_decode(s, char_test));
 
 	// no percent sign, valid characters:
 	s = "abcdef";
-	check_true(clane::uri::percent_decode(s, char_test));
-	check_eq("abcdef", s);
+	check(clane::uri::percent_decode(s, char_test));
+	check("abcdef" == s);
 
 	// no percent sign, invalid characters:
 	s = "0123456789";
-	check_false(clane::uri::percent_decode(s, char_test));
+	check(!clane::uri::percent_decode(s, char_test));
 
 	// valid percent:
 	s = "%20alpha";
-	check_true(clane::uri::percent_decode(s, char_test));
-	check_eq(" alpha", s);
+	check(clane::uri::percent_decode(s, char_test));
+	check(" alpha" == s);
 
 	// multiple valid percents:
 	s = "%61%6c%70%68%61";
-	check_true(clane::uri::percent_decode(s, char_test));
-	check_eq("alpha", s);
+	check(clane::uri::percent_decode(s, char_test));
+	check("alpha" == s);
 
 	// upper case hex:
 	s = "%61%6C%70%68%61";
-	check_true(clane::uri::percent_decode(s, char_test));
-	check_eq("alpha", s);
+	check(clane::uri::percent_decode(s, char_test));
+	check("alpha" == s);
 
 	// percents decode to "invalid" chars, still tests okay:
 	s = "%31%32%33%34%35";
-	check_true(clane::uri::percent_decode(s, char_test));
-	check_eq("12345", s);
+	check(clane::uri::percent_decode(s, char_test));
+	check("12345" == s);
 
 	// error: incomplete percent
 	s = "%";
-	check_false(clane::uri::percent_decode(s, char_test));
+	check(!clane::uri::percent_decode(s, char_test));
 	s = "%0";
-	check_false(clane::uri::percent_decode(s, char_test));
+	check(!clane::uri::percent_decode(s, char_test));
 	s = "%0a";
-	check_true(clane::uri::percent_decode(s, char_test));
-	check_eq("\n", s);
+	check(clane::uri::percent_decode(s, char_test));
+	check("\n" == s);
 
 	// error: invalid hex digit
 	s = "%z12345";
-	check_false(clane::uri::percent_decode(s, char_test));
+	check(!clane::uri::percent_decode(s, char_test));
 	s = "%z12345";
-	check_false(clane::uri::percent_decode(s, char_test));
+	check(!clane::uri::percent_decode(s, char_test));
 
 	return 0;
 }

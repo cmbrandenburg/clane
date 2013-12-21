@@ -48,15 +48,15 @@ int main() {
 	// set-ownership constructor: */
 	{
 		file_descriptor fd(open_file_descriptor());
-		check_true(is_file_descriptor_open(fd));
+		check(is_file_descriptor_open(fd));
 	}
 
 	// move constructor:
 	{
 		file_descriptor fd1(open_file_descriptor());
 		file_descriptor fd2 = std::move(fd1);
-		check_false(is_file_descriptor_open(fd1));
-		check_true(is_file_descriptor_open(fd2));
+		check(!is_file_descriptor_open(fd1));
+		check(is_file_descriptor_open(fd2));
 	}
 
 	// move assignment:
@@ -64,8 +64,8 @@ int main() {
 		file_descriptor fd1(open_file_descriptor());
 		file_descriptor fd2;
 		fd2 = std::move(fd1);
-		check_false(is_file_descriptor_open(fd1));
-		check_true(is_file_descriptor_open(fd2));
+		check(!is_file_descriptor_open(fd1));
+		check(is_file_descriptor_open(fd2));
 	}
 
 	// set-ownership assignment: */
@@ -73,7 +73,7 @@ int main() {
 		file_descriptor fd;
 		int sys_fd = open_file_descriptor();
 		fd = sys_fd;
-		check_true(is_file_descriptor_open(fd));
+		check(is_file_descriptor_open(fd));
 	}
 
 	// explicit close:
@@ -81,14 +81,14 @@ int main() {
 		int sys_fd = open_file_descriptor();
 		file_descriptor fd(sys_fd);
 		fd.close();
-		check_false(is_file_descriptor_open(sys_fd));
+		check(!is_file_descriptor_open(sys_fd));
 	}
 
 	// release:
 	{
 		file_descriptor fd(open_file_descriptor());
 		int sys_fd = fd.release();
-		check_eq(-1, int{fd});
+		check(-1 == int{fd});
 		fd = sys_fd;
 	}
 
