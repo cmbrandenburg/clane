@@ -12,7 +12,9 @@
 
 #include "http_common.cpp"
 #include "http_header.cpp"
+#include "http_message.cpp"
 #include "http_parse.cpp"
+#include "http_server.cpp"
 #include "http_status.cpp"
 
 #endif // #ifndef CLANE_HTTP_CPP
