@@ -15,25 +15,19 @@
 namespace clane {
 	namespace http {
 
+		// Base class for all parsers.
 		class parser {
-		private:
-			enum {
+		protected:
+			enum class status {
 				ready, // ready to parse (more) data
 				ok,    // parsing completed with success
 				error  // parsing completed with error
 			} stat;
-
-		public:
-
-			/** Length limit, if any */
-			size_t len_limit;
-
-			status error_stat;
-
 		private:
+			size_t len_limit; // length limit, if any
 			size_t cur_len;
-			char const *what_;
-
+			status_code error_code_; // HTTP response status, in case an error occurred
+			char const *what_;       // error description, in case an error occurred
 		public:
 			~parser() = default;
 			parser();
@@ -42,22 +36,29 @@ namespace clane {
 			parser &operator=(parser const &) = default;
 			parser &operator=(parser &&) = default;
 
-			// Returns true if and only if the parser is in a non-error state
-			operator bool() const { return stat != error; }
+			// Returns true if and only if the parser is in a non-error state.
+			operator bool() const { return stat != status::error; }
 
-			// Resets the parser state so that it may begin parsing anew
+			// Returns the HTTP response status, if an error occurred.
+			status_code error_code() const { return error_code_; }
+
+			// Returns the error description, if an error occurred.
+			char const *what() const { return what_; }
+
+			// Resets the parser state so that it may begin parsing anew.
 			void reset();
 
-			char const *what() const { return what_; }
-			size_t parse_size() const { return cur_len; }
+			// Returns the number of bytes consumed from parsing.
+			size_t parse_length() const { return cur_len; }
 
 		protected:
 
-			/** @brief Increases the current length and returns true if and only if
-			 * the current length limit is not set or not exceeded */
+			// Increases the current length and returns true if and only if the
+			// current length limit is not set or not exceeded.
 			bool increase_length(size_t n);
 
-			void set_error(status error_stat, char const *what);
+			// Sets the parser into the error state, with a description of the error.
+			void set_error(status_code error_stat, char const *what);
 		};
 
 		class headers_parser: public parser {

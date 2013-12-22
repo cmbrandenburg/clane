@@ -16,7 +16,6 @@ libhttp_la_SOURCES = \
 	http_parse.h \
 	http_server.cpp \
 	http_server.h \
-	http_status.cpp \
 	http_status.h
 
 EXTRA_DIST = \

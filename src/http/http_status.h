@@ -13,7 +13,7 @@
 namespace clane {
 	namespace http {
 
-		enum class status {
+		enum class status_code {
 
 			cont = 100,
 			switching_protocols = 101,
@@ -61,7 +61,11 @@ namespace clane {
 			http_version_not_supported = 505
 		};
 
-		std::ostream &operator<<(std::ostream &ostrm, status stat_code);
+		std::ostream &operator<<(std::ostream &ostrm, status_code n);
+
+		inline std::ostream &operator<<(std::ostream &ostrm, status_code n) {
+			return ostrm << static_cast<typename std::underlying_type<status_code>::type>(n);
+		}
 	}
 }
 
