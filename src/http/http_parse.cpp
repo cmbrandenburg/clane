@@ -154,7 +154,7 @@ namespace clane {
 					set_error(status_code::bad_request, error_invalid);
 					return false;
 				}
-				// FIXME: replace 'insert' with 'emplace'?
+				// FIXME: Replace 'insert' with 'emplace' when compilers support it.
 				hdrs.insert(header_map::value_type(std::move(hdr_name), std::move(hdr_val)));
 				return true;
 			};
@@ -216,8 +216,13 @@ namespace clane {
 						if (!colon)
 							colon = end;
 						hdr_name.append(cur, colon);
-						if (colon == end)
+						if (colon == end) {
+							if (newline != end) {
+								set_error(status_code::bad_request, error_invalid);
+								return false;
+							}
 							return false; // incomplete
+						}
 						rtrim(hdr_name);
 						if (!is_header_name_valid(hdr_name)) {
 							set_error(status_code::bad_request, error_invalid);

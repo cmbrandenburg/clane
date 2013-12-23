@@ -31,6 +31,15 @@ void check_ok(char const *content, http::header_map const &exp_hdrs) {
 	check(exp_hdrs == p.headers());
 }
 
+void check_nok(size_t len_limit, char const *s, http::status_code exp_error_code) {
+	// single pass:
+	http::headers_parser p;
+	p.set_length_limit(len_limit);
+	check(!p.parse(s, strlen(s)));
+	check(!p);
+	check(exp_error_code == p.error_code());
+}
+
 int main() {
 
 	http::headers_parser p;
@@ -61,6 +70,22 @@ int main() {
 		http::header_map::value_type("alpha", "bravo charlie delta")}));
 	check_ok("alpha: bravo\r\n\tcharlie delta\r\n\r\n", http::header_map({
 		http::header_map::value_type("alpha", "bravo charlie delta")}));
+
+	// not-OK: missing colon between name and value
+	check_nok(0, "alpha bravo\r\n\r\n", http::status_code::bad_request);
+
+	// not-OK: invalid header name
+	check_nok(0, "al\tpha: bravo\r\n\r\n", http::status_code::bad_request);
+	check_nok(0, "alpha: bravo\r\ncha\trlie: delta\r\n\r\n", http::status_code::bad_request);
+
+	// not-OK: invalid header value
+	check_nok(0, "alpha: bra\rvo\r\n\r\n", http::status_code::bad_request);
+
+	// not-OK: line too long
+	check_nok(3, "alpha: bravo\r\n\r\n", http::status_code::bad_request);
+	check_nok(7, "alpha: bravo\r\n\r\n", http::status_code::bad_request);
+	check_nok(12, "alpha: bravo\r\n\r\n", http::status_code::bad_request);
+	check_nok(13, "alpha: bravo\r\n\r\n", http::status_code::bad_request);
 
 	return 0;
 }
