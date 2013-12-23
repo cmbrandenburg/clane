@@ -19,7 +19,7 @@ namespace clane {
 			virtual void received(char *p, size_t n);
 			virtual void finished();
 			virtual void ialloc();
-			virtual ready_result send_ready();
+			virtual void sent();
 		};
 
 		void server_connection::received(char *p, size_t n) {
@@ -36,9 +36,8 @@ namespace clane {
 			set_ibuf(ibuf.get(), cap);
 		}
 
-		server_connection::ready_result server_connection::send_ready() {
+		void server_connection::sent() {
 			// TODO: implement
-			return ready_result::op_complete;
 		}
 
 		std::shared_ptr<net::signal> listener::new_connection(net::socket &&sock) {
