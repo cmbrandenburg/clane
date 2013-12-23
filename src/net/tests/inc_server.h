@@ -14,9 +14,9 @@ public:
 	inc_connection(clane::net::socket &&sock): connection(std::move(sock)) {}
 private:
 	virtual void received(char *p, size_t n);
-	virtual void finished();
+	virtual void finished() {}
 	virtual void ialloc();
-	virtual ready_result send_ready();
+	virtual void sent() {}
 };
 
 class inc_listener: public clane::net::listener {

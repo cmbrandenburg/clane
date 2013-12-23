@@ -15,16 +15,24 @@ namespace clane {
 	namespace net {
 
 		class connection: public signal {
+			struct send_node {
+				send_node *next;
+				std::unique_ptr<char> p;
+				size_t offset;
+				size_t size;
+			};
+			using signal::owner;
 			socket sock;
 			bool connected;
 			char *ibuf;
 			size_t icap;
 			size_t ioffset;
-		private:
-			using signal::owner;
+			std::mutex send_mutex;
+			send_node *send_head;
+			send_node *send_tail;
 		public:
-			virtual ~connection() noexcept = default;
-			connection(socket &&sock): sock(std::move(sock)), connected(true), ibuf{} {}
+			virtual ~connection() noexcept;
+			connection(socket &&sock): sock(std::move(sock)), connected(true), ibuf{}, send_head{} {}
 			connection(connection const &) = delete;
 			connection(connection &&) = default;
 			connection &operator=(connection const &) = delete;
@@ -34,8 +42,10 @@ namespace clane {
 			std::string remote_address() { return sock.remote_address(); }
 		protected:
 			void set_ibuf(char *p, size_t cap) { ibuf = p; icap = cap; ioffset = 0; }
-			send_result send(void const *p, size_t n, int flags = 0) { return sock.send(p, n, flags); }
+			status send(void const *p, size_t n);
+			void finish();
 		private:
+			void send_append(char const *p, size_t n);
 			virtual int fd() const { return sock.fd(); }
 			virtual int initial_event_flags() const { return read_flag | write_flag; }
 			virtual ready_result read_ready();
@@ -44,7 +54,7 @@ namespace clane {
 			virtual void received(char *p, size_t n) = 0;
 			virtual void finished() = 0;
 			virtual void ialloc() = 0;
-			virtual ready_result send_ready() = 0;
+			virtual void sent() = 0;
 		};
 
 		class listener: public signal {
