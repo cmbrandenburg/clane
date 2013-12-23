@@ -12,7 +12,8 @@ TESTS = \
 	check_is_header_name_valid \
 	check_is_header_value_valid \
 	check_parser \
-	check_headers_parser
+	check_headers_parser \
+	check_request_line_parser
 
 check_PROGRAMS = \
 	check_find_newline \
@@ -23,6 +24,7 @@ check_PROGRAMS = \
 	check_header_name_less \
 	check_headers_parser \
 	check_parser \
+	check_request_line_parser \
 	check_rtrim
 
 check_find_newline_SOURCES = check_find_newline.cpp
@@ -48,6 +50,9 @@ check_is_header_value_valid_LDADD = ../libhttp.la
 
 check_parser_SOURCES = check_parser.cpp
 check_parser_LDADD = ../libhttp.la
+
+check_request_line_parser_SOURCES = check_request_line_parser.cpp
+check_request_line_parser_LDADD = ../libhttp.la
 
 check_rtrim_SOURCES = check_rtrim.cpp
 check_rtrim_LDADD = ../libhttp.la

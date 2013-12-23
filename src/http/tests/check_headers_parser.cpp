@@ -42,8 +42,6 @@ void check_nok(size_t len_limit, char const *s, http::status_code exp_error_code
 
 int main() {
 
-	http::headers_parser p;
-
 	check_ok("\r\n", http::header_map({}));
 	check_ok("alpha: bravo\r\n\r\n", http::header_map({http::header_map::value_type("alpha", "bravo")}));
 	check_ok("alpha: bravo\r\ncharlie: delta\r\n\r\n", http::header_map({
