@@ -49,6 +49,34 @@ void check_nok(size_t len_limit, char const *s, http::status_code exp_error_code
 int main() {
 
 	check_ok("GET / HTTP/1.1\r\n", "GET", "/", 1, 1);
+	check_ok("GET /foo?bar HTTP/1.1\r\n", "GET", "/foo?bar", 1, 1);
+	check_ok("GET /foo?bar HTTP/1.0\r\n", "GET", "/foo?bar", 1, 0);
+
+	// not-OK: empty line
+	check_nok(0, "\r\n", http::status_code::bad_request);
+
+	// not-OK: missing version
+	check_nok(0, "GET /foo \r\n", http::status_code::bad_request);
+	check_nok(0, "GET /foo\r\n", http::status_code::bad_request);
+
+	// not-OK: missing URI
+	check_nok(0, "GET \r\n", http::status_code::bad_request);
+	check_nok(0, "GET\r\n", http::status_code::bad_request);
+
+	// not-OK: invalid method
+	check_nok(0, "GE\tT /foo HTTP/1.1\r\n", http::status_code::bad_request);
+
+	// not-OK: invalid URI
+	check_nok(0, "GET /fo\to HTTP/1.1\r\n", http::status_code::bad_request);
+
+	// not-OK: invalid version
+	check_nok(0, "GET /foo blah/1.1\r\n", http::status_code::bad_request);
+	check_nok(0, "GET /foo http/1.1\r\n", http::status_code::bad_request);
+	check_nok(0, "GET /foo HTTP/a.1\r\n", http::status_code::bad_request);
+	check_nok(0, "GET /foo HTTP/1.a\r\n", http::status_code::bad_request);
+	check_nok(0, "GET /foo HTTP/-1.1\r\n", http::status_code::bad_request);
+	check_nok(0, "GET /foo HTTP/1.-1\r\n", http::status_code::bad_request);
+	check_nok(0, "GET /foo HTTP/1.1 \r\n", http::status_code::bad_request);
 
 	return 0;
 }

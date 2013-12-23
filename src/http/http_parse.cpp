@@ -431,10 +431,10 @@ namespace clane {
 			std::stringstream pss(version_str);
 			pss.unsetf(std::ios_base::skipws);
 			pss >> major_ver;
-			if (!pss || pss.get() != '.')
+			if (!pss || pss.get() != '.' || major_ver < 0)
 				return false;
 			pss >> minor_ver;
-			if (!pss || pss.get() != std::char_traits<char>::eof())
+			if (!pss || pss.get() != std::char_traits<char>::eof() || minor_ver < 0)
 				return false;
 			return true;
 		}
