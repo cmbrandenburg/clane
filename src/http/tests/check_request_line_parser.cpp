@@ -15,7 +15,7 @@ void check_ok(char const *content, char const *exp_method, char const *exp_uri, 
 	check(p.parse(s.data(), s.size()));
 	check(strlen(content) == p.parse_length());
 	check(p.method() == exp_method);
-	check(static_cast<std::string>(p.uri()) == exp_uri);
+	check(p.uri().to_string() == exp_uri);
 	check(p.major_version() == exp_major);
 	check(p.minor_version() == exp_minor);
 
@@ -32,7 +32,7 @@ void check_ok(char const *content, char const *exp_method, char const *exp_uri, 
 	check(p.parse(s.data()+strlen(content)-1, 1));
 	check(strlen(content) == p.parse_length());
 	check(p.method() == exp_method);
-	check(static_cast<std::string>(p.uri()) == exp_uri);
+	check(p.uri().to_string() == exp_uri);
 	check(p.major_version() == exp_major);
 	check(p.minor_version() == exp_minor);
 }
