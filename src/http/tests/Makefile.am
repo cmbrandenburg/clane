@@ -11,7 +11,8 @@ TESTS = \
 	check_is_method_valid \
 	check_is_header_name_valid \
 	check_is_header_value_valid \
-	check_parser
+	check_parser \
+	check_headers_parser
 
 check_PROGRAMS = \
 	check_find_newline \
@@ -20,6 +21,7 @@ check_PROGRAMS = \
 	check_is_header_value_valid \
 	check_header_map_compare \
 	check_header_name_less \
+	check_headers_parser \
 	check_parser \
 	check_rtrim
 
@@ -31,6 +33,9 @@ check_header_map_compare_LDADD = ../libhttp.la
 
 check_header_name_less_SOURCES = check_header_name_less.cpp
 check_header_name_less_LDADD = ../libhttp.la
+
+check_headers_parser_SOURCES = check_headers_parser.cpp
+check_headers_parser_LDADD = ../libhttp.la
 
 check_is_method_valid_SOURCES = check_is_method_valid.cpp
 check_is_method_valid_LDADD = ../libhttp.la

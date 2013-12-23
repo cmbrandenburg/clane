@@ -239,7 +239,7 @@ namespace clane {
 						hdr_val.append(cur, newline);
 						cur = newline;
 						if (cur == end)
-							break;
+							return false; // incomplete
 						if (*cur == '\r') {
 							if (!increase_length(1)) {
 								set_error(status_code::bad_request, error_too_long);

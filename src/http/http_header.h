@@ -19,17 +19,7 @@ namespace clane {
 			bool operator()(std::string const &a, std::string const &b) const;
 		};
 
-		class header_map: public std::multimap<std::string, std::string, header_name_less> {
-		public:
-			~header_map() = default;
-			header_map() = default;
-			header_map(header_map const &) = default;
-			header_map(header_map &&) = default;
-			header_map &operator=(header_map const &) = default;
-			header_map &operator=(header_map &&) = default;
-		};
-
-		std::ostream &operator<<(std::ostream &ostrm, header_map const &hdrs);
+		typedef std::multimap<std::string, std::string, header_name_less> header_map;
 
 		bool operator==(header_map const &a, header_map const &b);
 		inline bool operator!=(header_map const &a, header_map const &b) { return !(a == b); }
