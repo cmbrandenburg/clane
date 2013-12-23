@@ -51,6 +51,9 @@ namespace clane {
 			// Returns the number of bytes consumed from parsing.
 			size_t parse_length() const { return cur_len; }
 
+			// Sets the parser's length limit.
+			void set_length_limit(size_t n) { len_limit = n; }
+
 		protected:
 
 			// Increases the current length and returns true if and only if the
@@ -62,7 +65,6 @@ namespace clane {
 		};
 
 		class headers_parser: public parser {
-		private:
 			enum class phase {
 				start_line,   // after consuming newline, expecting header name or linear whitespace
 				end_newline,  // expecting newline character to end headers
@@ -71,9 +73,7 @@ namespace clane {
 				value,        // consuming a header value
 				value_newline // expecting newline character to end value line
 			} cur_phase;
-		public:
 			header_map hdrs;
-		private:
 			std::string hdr_name;
 			std::string hdr_val;
 		public:
@@ -84,21 +84,20 @@ namespace clane {
 			headers_parser &operator=(headers_parser const &) = default;
 			headers_parser &operator=(headers_parser &&) = default;
 			bool parse(char const *buf, size_t size);
-
 			void reset();
+			header_map const &headers() const { return hdrs; }
+			header_map &headers() { return hdrs; }
 		};
 
 		class request_line_parser: public parser {
-		private:
 			enum class phase {
 				method,
 				uri,
 				version,
 				newline
 			} cur_phase;
-		public:
-			std::string method;
-			uri::uri uri;
+			std::string method_;
+			uri::uri uri_;
 			std::string uri_str;
 			int major_ver;
 			int minor_ver;
@@ -111,25 +110,25 @@ namespace clane {
 			request_line_parser(request_line_parser &&) = default;
 			request_line_parser &operator=(request_line_parser const &) = default;
 			request_line_parser &operator=(request_line_parser &&) = default;
-
-			/** Parses
-			 *
-			 * @return Returns true if and only if parsing completes without error */
 			bool parse(char const *buf, size_t size);
-
 			void reset();
-
+			std::string const &method() const { return method_; }
+			std::string &method() { return method_; }
+			uri::uri const &uri() const { return uri_; }
+			uri::uri &uri() { return uri_; }
+			std::string const &uri_string() const { return uri_str; }
+			std::string &uri_string() { return uri_str; }
+			int major_version() const { return major_ver; }
+			int minor_version() const { return minor_ver; }
 		private:
 			bool parse_version();
 		};
 
 		class request_1x_parser: public parser {
-		private:
 			enum class phase {
 				request_line,
 				headers
 			} cur_phase;
-		public:
 			request_line_parser req_line_parser;
 			headers_parser hdrs_parser;
 		public:
@@ -141,6 +140,16 @@ namespace clane {
 			request_1x_parser &operator=(request_1x_parser &&) = default;
 			bool parse(char const *buf, size_t size);
 			void reset();
+			header_map const &headers() const { return hdrs_parser.headers(); }
+			header_map &headers() { return hdrs_parser.headers(); }
+			std::string const &method() const { return req_line_parser.method(); }
+			std::string &method() { return req_line_parser.method(); }
+			uri::uri const &uri() const { return req_line_parser.uri(); }
+			uri::uri &uri() { return req_line_parser.uri(); }
+			std::string const &uri_string() const { return req_line_parser.uri_string(); }
+			std::string &uri_string() { return req_line_parser.uri_string(); }
+			int major_version() const { return req_line_parser.major_version(); }
+			int minor_version() const { return req_line_parser.minor_version(); }
 		};
 	}
 }

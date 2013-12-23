@@ -327,10 +327,10 @@ namespace clane {
 						set_error(status_code::bad_request, error_too_long);
 						return false;
 					}
-					method.append(cur, method_len);
+					method_.append(cur, method_len);
 					if (!space)
 						return false; // incomplete
-					if (!is_method_valid(method)) {
+					if (!is_method_valid(method_)) {
 						set_error(status_code::bad_request, "invalid request method");
 						return false;
 					}
@@ -353,7 +353,7 @@ namespace clane {
 					uri_str.append(cur, uri_len);
 					if (!space)
 						return false; // incomplete
-					if (!uri::parse_uri_reference(uri, uri_str)) {
+					if (!uri::parse_uri_reference(uri_, uri_str)) {
 						set_error(status_code::bad_request, "invalid request line URI reference");
 						return false;
 					}
@@ -413,8 +413,8 @@ namespace clane {
 		void request_line_parser::reset() {
 			parser::reset();
 			cur_phase = phase::method;
-			method.clear();
-			uri.clear();
+			method_.clear();
+			uri_.clear();
 			uri_str.clear();
 			version_str.clear();
 		}
