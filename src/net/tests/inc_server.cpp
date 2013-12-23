@@ -19,31 +19,14 @@ void inc_connection::received(char *p, size_t n) {
 		std::ostringstream oss;
 		oss << req+1 << '\n';
 		std::string m = oss.str();
-		auto send_result = send(m.data(), m.size(), net::op_all);
-		if (net::status::ok != send_result.stat) {
-			std::ostringstream ess;
-			ess << "non-OK send result: " << net::what(send_result.stat);
-			throw std::runtime_error(ess.str());
-		}
-		if (m.size() != send_result.size) {
-			std::ostringstream ess;
-			ess << "incomplete send: sent " << send_result.size << " bytes out of " << m.size();
-			throw std::runtime_error(ess.str());
-		}
+		send(m.data(), m.size());
 	}
-}
-
-void inc_connection::finished() {
 }
 
 void inc_connection::ialloc() {
 	size_t constexpr n = 4096;
 	ibuf.reset(new char[n]);
 	set_ibuf(ibuf.get(), n);
-}
-
-inc_connection::ready_result inc_connection::send_ready() {
-	return ready_result::op_complete;
 }
 
 std::shared_ptr<net::signal> inc_listener::new_connection(net::socket &&sock) {

@@ -15,7 +15,7 @@ public:
 	virtual void received(char *p, size_t n) {}
 	virtual void finished() {}
 	virtual void ialloc() {}
-	virtual ready_result send_ready() { return ready_result::op_complete; }
+	virtual void sent() {}
 };
 
 class timer_listener: public net::listener {
