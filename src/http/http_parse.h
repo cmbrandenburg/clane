@@ -64,7 +64,7 @@ namespace clane {
 			void set_error(status_code error_stat, char const *what);
 		};
 
-		class headers_parser: public parser {
+		class headers_parser: virtual public parser {
 			enum class phase {
 				start_line,   // after consuming newline, expecting header name or linear whitespace
 				end_newline,  // expecting newline character to end headers
@@ -89,7 +89,7 @@ namespace clane {
 			header_map &headers() { return hdrs; }
 		};
 
-		class request_line_parser: public parser {
+		class request_line_parser: virtual public parser {
 			enum class phase {
 				method,
 				uri,
@@ -124,13 +124,11 @@ namespace clane {
 			bool parse_version();
 		};
 
-		class request_1x_parser: public parser {
+		class request_1x_parser: virtual public parser, private request_line_parser, private headers_parser {
 			enum class phase {
 				request_line,
 				headers
 			} cur_phase;
-			request_line_parser req_line_parser;
-			headers_parser hdrs_parser;
 		public:
 			~request_1x_parser() = default;
 			request_1x_parser();
@@ -140,16 +138,12 @@ namespace clane {
 			request_1x_parser &operator=(request_1x_parser &&) = default;
 			bool parse(char const *buf, size_t size);
 			void reset();
-			header_map const &headers() const { return hdrs_parser.headers(); }
-			header_map &headers() { return hdrs_parser.headers(); }
-			std::string const &method() const { return req_line_parser.method(); }
-			std::string &method() { return req_line_parser.method(); }
-			uri::uri const &uri() const { return req_line_parser.uri(); }
-			uri::uri &uri() { return req_line_parser.uri(); }
-			std::string const &uri_string() const { return req_line_parser.uri_string(); }
-			std::string &uri_string() { return req_line_parser.uri_string(); }
-			int major_version() const { return req_line_parser.major_version(); }
-			int minor_version() const { return req_line_parser.minor_version(); }
+			using request_line_parser::method;
+			using request_line_parser::uri;
+			using request_line_parser::uri_string;
+			using request_line_parser::major_version;
+			using request_line_parser::minor_version;
+			using headers_parser::headers;
 		};
 	}
 }

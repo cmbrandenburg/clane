@@ -445,37 +445,23 @@ namespace clane {
 		bool request_1x_parser::parse(char const *buf, size_t size) {
 			char const *cur = buf;
 			char const *const end = buf + size;
-			size_t delta;
 			while (true) {
 				switch (cur_phase) {
-					case phase::request_line:
-						if (!req_line_parser.parse(cur, end - cur)) {
-							if (!req_line_parser)
-								set_error(req_line_parser.error_code(), req_line_parser.what());
+					case phase::request_line: {
+						size_t len = parse_length();
+						if (!request_line_parser::parse(cur, end - cur))
 							return false;
-						}
-						delta = req_line_parser.parse_length();
-						if (!increase_length(delta)) {
-							set_error(status_code::bad_request, error_too_long);
-							return false;
-						}
-						cur += delta;
+						cur += parse_length() - len;
 						cur_phase = phase::headers;
 						break;
-					case phase::headers:
-						if (!hdrs_parser.parse(cur, end - cur)) {
-							if (!hdrs_parser)
-								set_error(hdrs_parser.error_code(), hdrs_parser.what());
+					}
+					case phase::headers: {
+						size_t len = parse_length();
+						if (!headers_parser::parse(cur, end - cur))
 							return false;
-						}
-						delta = hdrs_parser.parse_length();
-						if (!increase_length(delta)) {
-							set_error(status_code::bad_request, error_too_long);
-							return false;
-						}
-						cur += delta;
+						cur += parse_length() - len;
 						return true; // success
-						break;
+					}
 				}
 			}
 		};
@@ -486,10 +472,9 @@ namespace clane {
 		void request_1x_parser::reset() {
 			parser::reset();
 			cur_phase = phase::request_line;
-			req_line_parser.reset();
-			hdrs_parser.reset();
+			request_line_parser::reset();
+			headers_parser::reset();
 		}
-
 	}
 }
 
