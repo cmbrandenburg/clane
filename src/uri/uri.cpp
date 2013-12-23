@@ -348,7 +348,7 @@ namespace clane {
 		}
 
 		std::ostream &operator<<(std::ostream &ostrm, uri const &uri) {
-			ostrm << static_cast<std::string>(uri);
+			ostrm << uri.to_string();
 			return ostrm;
 		}
 
@@ -539,7 +539,7 @@ namespace clane {
 				fragment == that.fragment;
 		}
 
-		uri::operator std::string() const {
+		std::string uri::to_string() const {
 
 			bool authority = !user_info.empty() || !host.empty() || !port.empty();
 

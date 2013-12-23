@@ -59,9 +59,9 @@ namespace clane {
 			uri(uri &&) = default;
 			uri &operator=(uri const &) = default;
 			uri &operator=(uri &&) = default;
-			operator std::string() const;
 			bool operator==(uri const &that) const;
 			bool operator!=(uri const &that) const { return !(*this == that); }
+			std::string to_string() const;
 			void clear();
 		};
 
