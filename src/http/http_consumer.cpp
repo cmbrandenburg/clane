@@ -2,7 +2,7 @@
 
 /** @file */
 
-#include "http_parse.h"
+#include "http_consumer.h"
 #include <algorithm>
 #include <cctype>
 #include <cstring>
@@ -139,10 +139,10 @@ namespace clane {
 			return p;
 		}
 
-		parser::parser(): stat(status::ready), len_limit{}, cur_len{} {
+		consumer::consumer(): stat(status::ready), len_limit{}, cur_len{} {
 		}
 
-		bool parser::increase_length(size_t n) {
+		bool consumer::increase_length(size_t n) {
 			size_t new_len = cur_len + n;
 			if (new_len < cur_len)
 				return false; // overflow
@@ -152,19 +152,19 @@ namespace clane {
 			return true;
 		}
 
-		void parser::reset() {
+		void consumer::reset() {
 			stat = status::ready;
 			cur_len = 0;
 			// The length limit is preserved.
 		}
 
-		void parser::set_error(status_code n, char const *what) {
+		void consumer::set_error(status_code n, char const *what) {
 			stat = status::error;
 			error_code_ = n;
 			what_ = what;
 		}
 
-		bool headers_parser::parse(char const *buf, size_t size) {
+		bool headers_consumer::consume(char const *buf, size_t size) {
 			static char const *const error_invalid = "invalid message header";
 
 			auto store_header = [&]() -> bool {
@@ -302,7 +302,7 @@ namespace clane {
 			return false; // incomplete
 		}
 
-		bool request_line_parser::parse(char const *buf, size_t size) {
+		bool request_line_consumer::consume(char const *buf, size_t size) {
 			static char const *const error_invalid_version = "invalid HTTP version";
 
 			char const *cur = buf;
@@ -404,7 +404,7 @@ namespace clane {
 			return true; // complete and successful
 		}
 
-		bool request_line_parser::parse_version() {
+		bool request_line_consumer::parse_version() {
 			if (version_str.size() < 5 || memcmp(version_str.c_str(), "HTTP/", 5))
 				return false;
 			version_str.erase(0, 5);
@@ -419,24 +419,24 @@ namespace clane {
 			return true;
 		}
 
-		bool request_1x_parser::parse(char const *buf, size_t size) {
+		bool request_1x_consumer::consume(char const *buf, size_t size) {
 			char const *cur = buf;
 			char const *const end = buf + size;
 			while (true) {
 				switch (cur_phase) {
 					case phase::request_line: {
-						size_t len = parse_length();
-						if (!request_line_parser::parse(cur, end - cur))
+						size_t len = length();
+						if (!request_line_consumer::consume(cur, end - cur))
 							return false;
-						cur += parse_length() - len;
+						cur += length() - len;
 						cur_phase = phase::headers;
 						break;
 					}
 					case phase::headers: {
-						size_t len = parse_length();
-						if (!headers_parser::parse(cur, end - cur))
+						size_t len = length();
+						if (!headers_consumer::consume(cur, end - cur))
 							return false;
-						cur += parse_length() - len;
+						cur += length() - len;
 						return true; // success
 					}
 				}

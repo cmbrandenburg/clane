@@ -11,9 +11,9 @@
  * */
 
 #include "http_common.cpp"
+#include "http_consumer.cpp"
 #include "http_header.cpp"
 #include "http_message.cpp"
-#include "http_parse.cpp"
 #include "http_server.cpp"
 
 #endif // #ifndef CLANE_HTTP_CPP

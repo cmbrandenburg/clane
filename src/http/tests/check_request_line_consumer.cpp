@@ -1,6 +1,6 @@
 // vim: set noet:
 
-#include "../http_parse.h"
+#include "../http_consumer.h"
 #include "../../check/check.h"
 #include <cstring>
 
@@ -15,9 +15,9 @@ void check_ok(char const *content, char const *exp_method, char const *exp_uri, 
 	int got_minor{};
 
 	// single pass:
-	http::request_line_parser p(got_method, got_uri, got_major, got_minor);
-	check(p.parse(s.data(), s.size()));
-	check(strlen(content) == p.parse_length());
+	http::request_line_consumer cons(got_method, got_uri, got_major, got_minor);
+	check(cons.consume(s.data(), s.size()));
+	check(strlen(content) == cons.length());
 	check(got_method == exp_method);
 	check(got_uri.to_string() == exp_uri);
 	check(got_major == exp_major);
@@ -28,17 +28,17 @@ void check_ok(char const *content, char const *exp_method, char const *exp_uri, 
 	got_uri.clear();
 	got_major = 0;
 	got_minor = 0;
-	p.reset(got_method, got_uri, got_major, got_minor);
+	cons.reset(got_method, got_uri, got_major, got_minor);
 	for (size_t i = 0; i < strlen(content)-1; ++i) {
-		check(!p.parse("", 0));
-		check(p);
-		check(!p.parse(s.data()+i, 1));
-		check(p);
+		check(!cons.consume("", 0));
+		check(cons);
+		check(!cons.consume(s.data()+i, 1));
+		check(cons);
 	}
-	check(!p.parse("", 0));
-	check(p);
-	check(p.parse(s.data()+strlen(content)-1, 1));
-	check(strlen(content) == p.parse_length());
+	check(!cons.consume("", 0));
+	check(cons);
+	check(cons.consume(s.data()+strlen(content)-1, 1));
+	check(strlen(content) == cons.length());
 	check(got_method == exp_method);
 	check(got_uri.to_string() == exp_uri);
 	check(got_major == exp_major);
@@ -51,11 +51,11 @@ void check_nok(size_t len_limit, char const *s, http::status_code exp_error_code
 	int got_major{};
 	int got_minor{};
 	// single pass:
-	http::request_line_parser p(got_method, got_uri, got_major, got_minor);
-	p.set_length_limit(len_limit);
-	check(!p.parse(s, strlen(s)));
-	check(!p);
-	check(exp_error_code == p.error_code());
+	http::request_line_consumer cons(got_method, got_uri, got_major, got_minor);
+	cons.set_length_limit(len_limit);
+	check(!cons.consume(s, strlen(s)));
+	check(!cons);
+	check(exp_error_code == cons.error_code());
 }
 
 int main() {
