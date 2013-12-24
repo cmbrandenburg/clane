@@ -5,34 +5,50 @@
 
 /** @file
  *
- * @brief HTTP request and response types */
+ * @brief HTTP irequest and response types */
 
 #include "http_common.h"
+#include "http_header.h"
+#include "../uri/uri.h"
 #include <istream>
 #include <ostream>
 
 namespace clane {
 	namespace http {
 
-		class response_ostream: public std::ostream {
+		class oresponse: public std::ostream {
 		public:
-			virtual ~response_ostream() = default;
-			response_ostream() = default;
-			response_ostream(response_ostream const &) = delete;
-			response_ostream(response_ostream &&) = default;
-			response_ostream &operator=(response_ostream const &) = delete;
-			response_ostream &operator=(response_ostream &&) = default;
+			virtual ~oresponse() = default;
+			oresponse() = default;
+			oresponse(oresponse const &) = delete;
+			oresponse(oresponse &&) = default;
+			oresponse &operator=(oresponse const &) = delete;
+			oresponse &operator=(oresponse &&) = default;
 		};
 
 		class request {
 		public:
-			virtual ~request() = default;
+			std::string method;
+			uri::uri uri;
+			int major_version;
+			int minor_version;
+			header_map headers;
+			~request() = default;
 			request() = default;
-			request(request const &) = delete;
+			request(request const &) = default;
 			request(request &&) = default;
-			request &operator=(request const &) = delete;
+			request &operator=(request const &) = default;
 			request &operator=(request &&) = default;
-			//std::istream &body();
+		};
+
+		class irequest: public request, public std::istream {
+		public:
+			virtual ~irequest() = default;
+			irequest() = default;
+			irequest(irequest const &) = delete;
+			irequest(irequest &&) = default;
+			irequest &operator=(irequest const &) = delete;
+			irequest &operator=(irequest &&) = default;
 		};
 
 	}

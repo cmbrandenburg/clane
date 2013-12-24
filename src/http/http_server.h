@@ -14,7 +14,7 @@
 namespace clane {
 	namespace http {
 
-		typedef std::function<void(response_ostream &rs, request &req)> handler;
+		typedef std::function<void(oresponse &rs, irequest &req)> handler;
 
 		class listener: public net::listener {
 			handler h;

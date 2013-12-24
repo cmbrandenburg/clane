@@ -139,7 +139,29 @@ namespace clane {
 			return p;
 		}
 
-		headers_parser::headers_parser(): cur_phase(phase::start_line) {
+		parser::parser(): stat(status::ready), len_limit{}, cur_len{} {
+		}
+
+		bool parser::increase_length(size_t n) {
+			size_t new_len = cur_len + n;
+			if (new_len < cur_len)
+				return false; // overflow
+			if (len_limit && new_len > len_limit)
+				return false; // length limit set and exceeded
+			cur_len = new_len;
+			return true;
+		}
+
+		void parser::reset() {
+			stat = status::ready;
+			cur_len = 0;
+			// The length limit is preserved.
+		}
+
+		void parser::set_error(status_code n, char const *what) {
+			stat = status::error;
+			error_code_ = n;
+			what_ = what;
 		}
 
 		bool headers_parser::parse(char const *buf, size_t size) {
@@ -155,7 +177,7 @@ namespace clane {
 					return false;
 				}
 				// FIXME: Replace 'insert' with 'emplace' when compilers support it.
-				hdrs.insert(header_map::value_type(std::move(hdr_name), std::move(hdr_val)));
+				hdrs->insert(header_map::value_type(std::move(hdr_name), std::move(hdr_val)));
 				return true;
 			};
 
@@ -280,39 +302,6 @@ namespace clane {
 			return false; // incomplete
 		}
 
-		void headers_parser::reset() {
-			parser::reset();
-			cur_phase = phase::start_line;
-			hdrs.clear();
-			hdr_name.clear();
-			hdr_val.clear();
-		}
-
-		bool parser::increase_length(size_t n) {
-			size_t new_len = cur_len + n;
-			if (new_len < cur_len)
-				return false; // overflow
-			if (len_limit && new_len > len_limit)
-				return false; // length limit set and exceeded
-			cur_len = new_len;
-			return true;
-		}
-
-		parser::parser(): stat(status::ready), len_limit{}, cur_len{} {
-		}
-
-		void parser::reset() {
-			stat = status::ready;
-			cur_len = 0;
-			// The length limit is preserved.
-		}
-
-		void parser::set_error(status_code n, char const *what) {
-			stat = status::error;
-			error_code_ = n;
-			what_ = what;
-		}
-
 		bool request_line_parser::parse(char const *buf, size_t size) {
 			static char const *const error_invalid_version = "invalid HTTP version";
 
@@ -332,10 +321,10 @@ namespace clane {
 						set_error(status_code::bad_request, error_too_long);
 						return false;
 					}
-					method_.append(cur, method_len);
+					method->append(cur, method_len);
 					if (!space)
 						return false; // incomplete
-					if (!is_method_valid(method_)) {
+					if (!is_method_valid(*method)) {
 						set_error(status_code::bad_request, "invalid request method");
 						return false;
 					}
@@ -358,7 +347,7 @@ namespace clane {
 					uri_str.append(cur, uri_len);
 					if (!space)
 						return false; // incomplete
-					if (!uri::parse_uri_reference(uri_, uri_str)) {
+					if (!uri::parse_uri_reference(*uri, uri_str)) {
 						set_error(status_code::bad_request, "invalid request line URI reference");
 						return false;
 					}
@@ -415,31 +404,19 @@ namespace clane {
 			return true; // complete and successful
 		}
 
-		void request_line_parser::reset() {
-			parser::reset();
-			cur_phase = phase::method;
-			method_.clear();
-			uri_.clear();
-			uri_str.clear();
-			version_str.clear();
-		}
-
 		bool request_line_parser::parse_version() {
 			if (version_str.size() < 5 || memcmp(version_str.c_str(), "HTTP/", 5))
 				return false;
 			version_str.erase(0, 5);
 			std::stringstream pss(version_str);
 			pss.unsetf(std::ios_base::skipws);
-			pss >> major_ver;
-			if (!pss || pss.get() != '.' || major_ver < 0)
+			pss >> *major_ver;
+			if (!pss || pss.get() != '.' || *major_ver < 0)
 				return false;
-			pss >> minor_ver;
-			if (!pss || pss.get() != std::char_traits<char>::eof() || minor_ver < 0)
+			pss >> *minor_ver;
+			if (!pss || pss.get() != std::char_traits<char>::eof() || *minor_ver < 0)
 				return false;
 			return true;
-		}
-
-		request_line_parser::request_line_parser(): cur_phase(phase::method) {
 		}
 
 		bool request_1x_parser::parse(char const *buf, size_t size) {
@@ -465,16 +442,6 @@ namespace clane {
 				}
 			}
 		};
-
-		request_1x_parser::request_1x_parser(): cur_phase(phase::request_line) {
-		}
-
-		void request_1x_parser::reset() {
-			parser::reset();
-			cur_phase = phase::request_line;
-			request_line_parser::reset();
-			headers_parser::reset();
-		}
 	}
 }
 

@@ -9,6 +9,7 @@
 
 #include "http_common.h"
 #include "http_header.h"
+#include "http_message.h"
 #include "http_status.h"
 #include "../uri/uri.h"
 
@@ -73,20 +74,18 @@ namespace clane {
 				value,        // consuming a header value
 				value_newline // expecting newline character to end value line
 			} cur_phase;
-			header_map hdrs;
+			header_map *hdrs;
 			std::string hdr_name;
 			std::string hdr_val;
 		public:
 			~headers_parser() = default;
-			headers_parser();
+			headers_parser(header_map &hdrs);
 			headers_parser(headers_parser const &) = default;
 			headers_parser(headers_parser &&) = default;
 			headers_parser &operator=(headers_parser const &) = default;
 			headers_parser &operator=(headers_parser &&) = default;
 			bool parse(char const *buf, size_t size);
-			void reset();
-			header_map const &headers() const { return hdrs; }
-			header_map &headers() { return hdrs; }
+			void reset(header_map &hdrs);
 		};
 
 		class request_line_parser: virtual public parser {
@@ -96,30 +95,21 @@ namespace clane {
 				version,
 				newline
 			} cur_phase;
-			std::string method_;
-			uri::uri uri_;
+			std::string *method;
+			uri::uri *uri;
+			int *major_ver;
+			int *minor_ver;
 			std::string uri_str;
-			int major_ver;
-			int minor_ver;
-		private:
 			std::string version_str;
 		public:
 			~request_line_parser() = default;
-			request_line_parser();
+			request_line_parser(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver);
 			request_line_parser(request_line_parser const &) = default;
 			request_line_parser(request_line_parser &&) = default;
 			request_line_parser &operator=(request_line_parser const &) = default;
 			request_line_parser &operator=(request_line_parser &&) = default;
 			bool parse(char const *buf, size_t size);
-			void reset();
-			std::string const &method() const { return method_; }
-			std::string &method() { return method_; }
-			uri::uri const &uri() const { return uri_; }
-			uri::uri &uri() { return uri_; }
-			std::string const &uri_string() const { return uri_str; }
-			std::string &uri_string() { return uri_str; }
-			int major_version() const { return major_ver; }
-			int minor_version() const { return minor_ver; }
+			void reset(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver);
 		private:
 			bool parse_version();
 		};
@@ -131,20 +121,53 @@ namespace clane {
 			} cur_phase;
 		public:
 			~request_1x_parser() = default;
-			request_1x_parser();
+			request_1x_parser(request &req);
 			request_1x_parser(request_1x_parser const &) = default;
 			request_1x_parser(request_1x_parser &&) = default;
 			request_1x_parser &operator=(request_1x_parser const &) = default;
 			request_1x_parser &operator=(request_1x_parser &&) = default;
 			bool parse(char const *buf, size_t size);
-			void reset();
-			using request_line_parser::method;
-			using request_line_parser::uri;
-			using request_line_parser::uri_string;
-			using request_line_parser::major_version;
-			using request_line_parser::minor_version;
-			using headers_parser::headers;
+			void reset(request &req);
 		};
+
+		inline headers_parser::headers_parser(header_map &hdrs): cur_phase(phase::start_line), hdrs(&hdrs) {
+		}
+
+		inline void headers_parser::reset(header_map &hdrs) {
+			parser::reset();
+			cur_phase = phase::start_line;
+			this->hdrs = &hdrs;
+			hdr_name.clear();
+			hdr_val.clear();
+		}
+
+		inline request_line_parser::request_line_parser(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver):
+		  	 	cur_phase(phase::method), method(&method), uri(&uri), major_ver(&major_ver), minor_ver(&minor_ver) {
+		}
+
+		inline void request_line_parser::reset(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver) {
+			parser::reset();
+			cur_phase = phase::method;
+			this->method = &method;
+			this->uri = &uri;
+			this->major_ver = &major_ver;
+			this->minor_ver = &minor_ver;
+			uri_str.clear();
+			version_str.clear();
+		}
+
+		inline request_1x_parser::request_1x_parser(request &req):
+		  	 	request_line_parser(req.method, req.uri, req.major_version, req.minor_version),
+				headers_parser(req.headers), cur_phase(phase::request_line) {
+		}
+
+		inline void request_1x_parser::reset(request &req) {
+			parser::reset();
+			cur_phase = phase::request_line;
+			request_line_parser::reset(req.method, req.uri, req.major_version, req.minor_version);
+			headers_parser::reset(req.headers);
+		}
+
 	}
 }
 

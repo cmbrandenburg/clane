@@ -9,15 +9,17 @@ using namespace clane;
 void check_ok(char const *content, http::header_map const &exp_hdrs) {
 
 	std::string const s = std::string(content) + "extra";
+	http::header_map got_hdrs;
 
 	// single pass:
-	http::headers_parser p;
+	http::headers_parser p(got_hdrs);
 	check(p.parse(s.data(), s.size()));
 	check(strlen(content) == p.parse_length());
-	check(exp_hdrs == p.headers());
+	check(exp_hdrs == got_hdrs);
 
 	// byte-by-byte:
-	p.reset();
+	got_hdrs.clear();
+	p.reset(got_hdrs);
 	for (size_t i = 0; i < strlen(content)-1; ++i) {
 		check(!p.parse("", 0));
 		check(p);
@@ -28,12 +30,13 @@ void check_ok(char const *content, http::header_map const &exp_hdrs) {
 	check(p);
 	check(p.parse(s.data()+strlen(content)-1, 1));
 	check(strlen(content) == p.parse_length());
-	check(exp_hdrs == p.headers());
+	check(exp_hdrs == got_hdrs);
 }
 
 void check_nok(size_t len_limit, char const *s, http::status_code exp_error_code) {
+	http::header_map got_hdrs;
 	// single pass:
-	http::headers_parser p;
+	http::headers_parser p(got_hdrs);
 	p.set_length_limit(len_limit);
 	check(!p.parse(s, strlen(s)));
 	check(!p);
