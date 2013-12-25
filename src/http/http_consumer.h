@@ -32,9 +32,9 @@ namespace clane {
 		public:
 			~consumer() = default;
 			consumer();
-			consumer(consumer const &) = default;
+			consumer(consumer const &) = delete;
 			consumer(consumer &&) = default;
-			consumer &operator=(consumer const &) = default;
+			consumer &operator=(consumer const &) = delete;
 			consumer &operator=(consumer &&) = default;
 
 			// Returns true if and only if the consumer is in a non-error state.
@@ -80,9 +80,9 @@ namespace clane {
 		public:
 			~headers_consumer() = default;
 			headers_consumer(header_map &hdrs);
-			headers_consumer(headers_consumer const &) = default;
+			headers_consumer(headers_consumer const &) = delete;
 			headers_consumer(headers_consumer &&) = default;
-			headers_consumer &operator=(headers_consumer const &) = default;
+			headers_consumer &operator=(headers_consumer const &) = delete;
 			headers_consumer &operator=(headers_consumer &&) = default;
 			bool consume(char const *buf, size_t size);
 			void reset(header_map &hdrs);
@@ -104,9 +104,9 @@ namespace clane {
 		public:
 			~request_line_consumer() = default;
 			request_line_consumer(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver);
-			request_line_consumer(request_line_consumer const &) = default;
+			request_line_consumer(request_line_consumer const &) = delete;
 			request_line_consumer(request_line_consumer &&) = default;
-			request_line_consumer &operator=(request_line_consumer const &) = default;
+			request_line_consumer &operator=(request_line_consumer const &) = delete;
 			request_line_consumer &operator=(request_line_consumer &&) = default;
 			bool consume(char const *buf, size_t size);
 			void reset(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver);
@@ -122,12 +122,34 @@ namespace clane {
 		public:
 			~request_1x_consumer() = default;
 			request_1x_consumer(request &req);
-			request_1x_consumer(request_1x_consumer const &) = default;
+			request_1x_consumer(request_1x_consumer const &) = delete;
 			request_1x_consumer(request_1x_consumer &&) = default;
-			request_1x_consumer &operator=(request_1x_consumer const &) = default;
+			request_1x_consumer &operator=(request_1x_consumer const &) = delete;
 			request_1x_consumer &operator=(request_1x_consumer &&) = default;
 			bool consume(char const *buf, size_t size);
 			void reset(request &req);
+		};
+
+		class chunk_line_consumer: virtual public consumer {
+			static constexpr int max_nibs = 2 * sizeof(size_t);
+			enum class phase {
+				digit,
+				newline
+			} cur_phase;
+			int nibs;
+			size_t val;
+		public:
+			~chunk_line_consumer() = default;
+			chunk_line_consumer();
+			chunk_line_consumer(chunk_line_consumer const &) = delete;
+			chunk_line_consumer(chunk_line_consumer &&) = default;
+			chunk_line_consumer &operator=(chunk_line_consumer const &) = delete;
+			chunk_line_consumer &operator=(chunk_line_consumer &&) = default;
+			// Note: Ignores length limit, uses fixed length limit based of
+			// sizeof(size_t).
+			bool consume(char const *buf, size_t size);
+			void reset();
+			size_t chunk_size() const { return val; }
 		};
 
 		inline headers_consumer::headers_consumer(header_map &hdrs): cur_phase(phase::start_line), hdrs(&hdrs) {
@@ -168,6 +190,14 @@ namespace clane {
 			headers_consumer::reset(req.headers);
 		}
 
+		inline chunk_line_consumer::chunk_line_consumer(): cur_phase(phase::digit), nibs{}, val{} {}
+
+		inline void chunk_line_consumer::reset() {
+			consumer::reset();
+			cur_phase = phase::digit;
+			nibs = 0;
+			val = 0;
+		}
 	}
 }
 

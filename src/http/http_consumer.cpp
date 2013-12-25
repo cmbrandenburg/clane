@@ -441,7 +441,53 @@ namespace clane {
 					}
 				}
 			}
-		};
+		}
+
+		bool chunk_line_consumer::consume(char const *buf, size_t size) {
+			size_t i = 0;
+			while (true) {
+				if (i == size)
+					return false; // incomplete
+				switch (cur_phase) {
+					case phase::digit:
+						if (nibs == max_nibs) {
+							set_error(status_code::bad_request, "chunk size too big");
+							return false;
+						}
+						if ('\r' == buf[i]) {
+							increase_length(1);
+							cur_phase = phase::newline;
+							break;
+						}
+						if ('\n' == buf[i]) {
+							increase_length(1);
+							return true;
+						}
+						if (!isxdigit(buf[i])) {
+							set_error(status_code::bad_request, "invalid chunk size");
+							return false;
+						}
+						val <<= 4;
+						++nibs;
+						increase_length(1);
+						if ('0' <= buf[i] && buf[i] <= '9')
+							val |= buf[i] - '0';
+						else if ('A' <= buf[i] && buf[i] <= 'F')
+							val |= buf[i] - 'A' + 10;
+						else
+							val |= buf[i] - 'a' + 10;
+						break;
+					case phase::newline:
+						if ('\n' != buf[i]) {
+							set_error(status_code::bad_request, "invalid chunk size");
+							return false;
+						}
+						increase_length(1);
+						return true;
+				}
+				++i;
+			}
+		}
 	}
 }
 

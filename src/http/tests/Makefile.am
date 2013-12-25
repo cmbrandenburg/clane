@@ -14,9 +14,11 @@ TESTS = \
 	check_consumer \
 	check_headers_consumer \
 	check_request_line_consumer \
-	check_request_1x_consumer
+	check_request_1x_consumer \
+	check_chunk_line_consumer
 
 check_PROGRAMS = \
+	check_chunk_line_consumer \
 	check_consumer \
 	check_find_newline \
 	check_is_method_valid \
@@ -28,6 +30,9 @@ check_PROGRAMS = \
 	check_request_1x_consumer \
 	check_request_line_consumer \
 	check_rtrim
+
+check_chunk_line_consumer_SOURCES = check_chunk_line_consumer.cpp
+check_chunk_line_consumer_LDADD = ../libhttp.la
 
 check_consumer_SOURCES = check_consumer.cpp
 check_consumer_LDADD = ../libhttp.la
