@@ -65,6 +65,9 @@ int main() {
 	check_ok("alpha:    bravo\r\n\r\n", http::header_map({http::header_map::value_type("alpha", "bravo")}));
 	check_ok("alpha:\t\t\t\tbravo\r\n\r\n", http::header_map({http::header_map::value_type("alpha", "bravo")}));
 	check_ok("alpha: \t \t bravo\r\n\r\n", http::header_map({http::header_map::value_type("alpha", "bravo")}));
+	check_ok("alpha: bravo   \r\n\r\n", http::header_map({http::header_map::value_type("alpha", "bravo")}));
+	check_ok("alpha: bravo\t\t\t\r\n\r\n", http::header_map({http::header_map::value_type("alpha", "bravo")}));
+	check_ok("alpha: bravo \t \r\n\r\n", http::header_map({http::header_map::value_type("alpha", "bravo")}));
 
 	// linear whitespace:
 	check_ok("alpha: bravo\r\n charlie delta\r\n\r\n", http::header_map({
