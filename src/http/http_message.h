@@ -10,21 +10,9 @@
 #include "http_common.h"
 #include "http_header.h"
 #include "../uri/uri.h"
-#include <istream>
-#include <ostream>
 
 namespace clane {
 	namespace http {
-
-		class oresponse: public std::ostream {
-		public:
-			virtual ~oresponse() = default;
-			oresponse() = default;
-			oresponse(oresponse const &) = delete;
-			oresponse(oresponse &&) = default;
-			oresponse &operator=(oresponse const &) = delete;
-			oresponse &operator=(oresponse &&) = default;
-		};
 
 		class request {
 		public:
@@ -39,18 +27,16 @@ namespace clane {
 			request(request &&) = default;
 			request &operator=(request const &) = default;
 			request &operator=(request &&) = default;
+			void clear() noexcept;
 		};
 
-		class irequest: public request, public std::istream {
-		public:
-			virtual ~irequest() = default;
-			irequest() = default;
-			irequest(irequest const &) = delete;
-			irequest(irequest &&) = default;
-			irequest &operator=(irequest const &) = delete;
-			irequest &operator=(irequest &&) = default;
-		};
-
+		inline void request::clear() noexcept {
+			method.clear();
+			uri.clear();
+			major_version = 0;
+			minor_version = 0;
+			headers.clear();
+		}
 	}
 }
 
