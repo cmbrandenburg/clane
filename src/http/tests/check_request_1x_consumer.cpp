@@ -47,7 +47,7 @@ void check_nok(size_t len_limit, char const *s, http::status_code exp_error_code
 	// single pass:
 	http::request_1x_consumer cons(got_req);
 	cons.set_length_limit(len_limit);
-	check(!cons.consume(s, strlen(s)));
+	check(cons.consume(s, strlen(s)));
 	check(!cons);
 	check(exp_error_code == cons.error_code());
 }

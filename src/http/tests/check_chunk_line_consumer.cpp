@@ -35,7 +35,7 @@ void check_nok(size_t len_limit, char const *s, http::status_code exp_error_code
 	// single pass:
 	http::chunk_line_consumer cons;
 	cons.set_length_limit(len_limit);
-	check(!cons.consume(s, strlen(s)));
+	check(cons.consume(s, strlen(s)));
 	check(!cons);
 	check(exp_error_code == cons.error_code());
 }
@@ -51,6 +51,11 @@ int main() {
 	check_ok("abc\r\n", 0xabc);
 	check_ok("abc\n", 0xabc);
 	check_ok("1bC\r\n", 0x1bc);
+
+	//check_nok(0, "\r\n", http::status_code::bad_request);
+	check_nok(0, "12invalid34\r\n", http::status_code::bad_request);
+	check_nok(0, "1234 \r\n", http::status_code::bad_request);
+	check_nok(0, "12 34\r\n", http::status_code::bad_request);
 
 	return 0;
 }

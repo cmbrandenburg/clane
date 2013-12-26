@@ -186,7 +186,7 @@ namespace clane {
 			char const *newline = find_newline(cur, size);
 			if (!increase_length(newline - cur)) {
 				set_error(status_code::bad_request, error_too_long);
-				return false;
+				return true;
 			}
 
 			while (cur < end) {
@@ -197,16 +197,17 @@ namespace clane {
 							cur_phase = phase::end_newline;
 							if (!increase_length(1)) {
 								set_error(status_code::bad_request, error_too_long);
-								return false;
+								return true;
 							}
 							++cur; // consume carriage return
 						} else if (*cur == '\n') {
 							if (!increase_length(1)) {
 								set_error(status_code::bad_request, error_too_long);
-								return false;
+								return true;
 							}
 							++cur; // consume newline
-							return store_header();
+							store_header();
+							return true;
 						} else if (*cur == ' ' || *cur == '\t') {
 							// linear white space: this line is a continuation of the
 							// header value in the previous line
@@ -214,7 +215,7 @@ namespace clane {
 							cur_phase = phase::pre_value;
 						} else {
 							if (!store_header())
-								return false;
+								return true;
 							cur_phase = phase::name;
 						}
 						break;
@@ -223,14 +224,15 @@ namespace clane {
 					case phase::end_newline: {
 						if (*cur != '\n') {
 							set_error(status_code::bad_request, error_invalid);
-							return false;
+							return true;
 						}
 						if (!increase_length(1)) {
 							set_error(status_code::bad_request, error_too_long);
-							return false;
+							return true;
 						}
 						++cur; // consume newline
-						return store_header();
+						store_header();
+						return true;
 					}
 
 					case phase::name: {
@@ -241,14 +243,14 @@ namespace clane {
 						if (colon == end) {
 							if (newline != end) {
 								set_error(status_code::bad_request, error_invalid);
-								return false;
+								return true;
 							}
 							return false; // incomplete
 						}
 						rtrim(hdr_name);
 						if (!is_header_name_valid(hdr_name)) {
 							set_error(status_code::bad_request, error_invalid);
-							return false;
+							return true;
 						}
 						cur_phase = phase::pre_value;
 						cur = colon + 1;
@@ -270,7 +272,7 @@ namespace clane {
 						if (*cur == '\r') {
 							if (!increase_length(1)) {
 								set_error(status_code::bad_request, error_too_long);
-								return false;
+								return true;
 							}
 							++cur; // consume carriage return
 						}
@@ -281,17 +283,17 @@ namespace clane {
 					case phase::value_newline: {
 						if (*cur != '\n') {
 							set_error(status_code::bad_request, error_invalid);
-							return false;
+							return true;
 						}
 						if (!increase_length(1)) {
 							set_error(status_code::bad_request, error_too_long);
-							return false;
+							return true;
 						}
 						++cur; // consume newline
 						newline = find_newline(cur, end - cur);
 						if (!increase_length(newline - cur)) {
 							set_error(status_code::bad_request, error_too_long);
-							return false;
+							return true;
 						}
 						cur_phase = phase::start_line;
 						break;
@@ -314,19 +316,19 @@ namespace clane {
 					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
 					if (newline != end && !space) {
 						set_error(status_code::bad_request, "missing request line URI reference");
-						return false;
+						return true;
 					}
 					size_t method_len = (space ? space : newline) - cur;
 					if (!increase_length(method_len + (space ? 1 : 0))) {
 						set_error(status_code::bad_request, error_too_long);
-						return false;
+						return true;
 					}
 					method->append(cur, method_len);
 					if (!space)
 						return false; // incomplete
 					if (!is_method_valid(*method)) {
 						set_error(status_code::bad_request, "invalid request method");
-						return false;
+						return true;
 					}
 					cur_phase = phase::uri;
 					cur = space + 1;
@@ -337,19 +339,19 @@ namespace clane {
 					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
 					if (newline != end && !space) {
 						set_error(status_code::bad_request, "missing request line HTTP version");
-						return false;
+						return true;
 					}
 					size_t uri_len = (space ? space : newline) - cur;
 					if (!increase_length(uri_len + (space ? 1 : 0))) {
 						set_error(status_code::request_uri_too_long, "");
-						return false;
+						return true;
 					}
 					uri_str.append(cur, uri_len);
 					if (!space)
 						return false; // incomplete
 					if (!uri::parse_uri_reference(*uri, uri_str)) {
 						set_error(status_code::bad_request, "invalid request line URI reference");
-						return false;
+						return true;
 					}
 					cur_phase = phase::version;
 					cur = space + 1;
@@ -364,14 +366,14 @@ namespace clane {
 						// receive a misleading error code, which is acceptable because the
 						// client did something excessively non-standard.
 						set_error(status_code::request_uri_too_long, "");
-						return false;
+						return true;
 					}
 					version_str.append(cur, newline - cur);
 					if (newline == end)
 						return false; // incomplete
 					if (!parse_version()) {
 						set_error(status_code::bad_request, error_invalid_version);
-						return false;
+						return true;
 					}
 					cur = newline;
 					// Invariant: There's at least a carriage return or newline
@@ -379,7 +381,7 @@ namespace clane {
 					if (*cur == '\r') {
 						if (!increase_length(1)) {
 							set_error(status_code::request_uri_too_long, "");
-							return false;
+							return true;
 						}
 						++cur;
 					}
@@ -393,11 +395,11 @@ namespace clane {
 						return false; // incomplete
 					if (*cur != '\n') {
 						set_error(status_code::bad_request, error_invalid_version);
-						return false;
+						return true;
 					}
 					if (!increase_length(1)) {
 						set_error(status_code::request_uri_too_long, "");
-						return false;
+						return true;
 					}
 				}
 			}
@@ -428,6 +430,8 @@ namespace clane {
 						size_t len = length();
 						if (!request_line_consumer::consume(cur, end - cur))
 							return false;
+						if (!request_line_consumer::operator bool())
+							return true;
 						cur += length() - len;
 						cur_phase = phase::headers;
 						break;
@@ -436,6 +440,8 @@ namespace clane {
 						size_t len = length();
 						if (!headers_consumer::consume(cur, end - cur))
 							return false;
+						if (!headers_consumer::operator bool())
+							return true;
 						cur += length() - len;
 						return true; // success
 					}
@@ -444,6 +450,7 @@ namespace clane {
 		}
 
 		bool chunk_line_consumer::consume(char const *buf, size_t size) {
+			static const char *invalid = "invalid chunk size";
 			size_t i = 0;
 			while (true) {
 				if (i == size)
@@ -452,7 +459,7 @@ namespace clane {
 					case phase::digit:
 						if (nibs == max_nibs) {
 							set_error(status_code::bad_request, "chunk size too big");
-							return false;
+							return true;
 						}
 						if ('\r' == buf[i]) {
 							increase_length(1);
@@ -464,8 +471,8 @@ namespace clane {
 							return true;
 						}
 						if (!isxdigit(buf[i])) {
-							set_error(status_code::bad_request, "invalid chunk size");
-							return false;
+							set_error(status_code::bad_request, invalid);
+							return true;
 						}
 						val <<= 4;
 						++nibs;
@@ -479,8 +486,12 @@ namespace clane {
 						break;
 					case phase::newline:
 						if ('\n' != buf[i]) {
-							set_error(status_code::bad_request, "invalid chunk size");
-							return false;
+							set_error(status_code::bad_request, invalid);
+							return true;
+						}
+						if (0 == nibs) {
+							set_error(status_code::bad_request, invalid);
+							return true;
 						}
 						increase_length(1);
 						return true;
