@@ -9,6 +9,19 @@
 namespace clane {
 	namespace http {
 
+		class server_connection;
+
+		class server_streambuf: public std::streambuf {
+			std::shared_ptr<server_connection> conn;
+		public:
+			virtual ~server_streambuf() = default;
+			server_streambuf(std::shared_ptr<server_connection> const &conn): conn(conn) {}
+			server_streambuf(server_streambuf const &) = delete;
+			server_streambuf &operator=(server_streambuf &&) = default;
+			server_streambuf &operator=(server_streambuf const &) = delete;
+			server_streambuf(server_streambuf &&) = default;
+		};
+
 		class server_connection: public net::connection {
 			std::weak_ptr<server_connection> weak_self;
 			enum class phase {
@@ -30,7 +43,7 @@ namespace clane {
 			virtual void finished();
 			virtual void ialloc();
 			virtual void sent();
-			void call_handler(handler const &h, std::unique_ptr<oresponse> &&resp, std::unique_ptr<irequest> &&req);
+			void call_handler(handler const &h, std::unique_ptr<response_ostream> &&resp, std::unique_ptr<request> &&req);
 		};
 
 		server_connection::server_connection(net::socket &&sock, handler const &h): net::connection(std::move(sock)),
@@ -42,27 +55,42 @@ namespace clane {
 			size_t offset = 0;
 			while (true) {
 				switch (cur_phase) {
-					case phase::request_1x:
-						if (!req_1x_cons.consume(&p[offset], n-offset)) {
-							if (!req_1x_cons) {
-								auto shared_self = weak_self.lock();
-								call_handler(error_handler(req_1x_cons.error_code(), req_1x_cons.what()),
-									 	std::unique_ptr<oresponse>(new oresponse(shared_self)),
-										std::unique_ptr<irequest>(new irequest(shared_self, std::move(cur_req))));
-								return;
-							}
-						}
-						auto content_len = look_up_header<size_t>(cur_req->headers, "content-length");
+					case phase::request_1x: {
+						if (!req_1x_cons.consume(&p[offset], n-offset))
+							return; // incomplete
 						auto shared_self = weak_self.lock();
-						std::unique_ptr<oresponse> resp(new oresponse(shared_self));
-						std::unique_ptr<irequest> req(new irequest(shared_self, std::move(cur_req)));
-						if (content_len.stat == content_len.bad_type) {
-							call_handler(error_handler(status_code::bad_request, "invalid content length"), std::move(resp), std::move(req));
+						std::unique_ptr<response_ostream> resp_strm(new response_ostream(shared_self));
+						if (!req_1x_cons) {
+							call_handler(error_handler(req_1x_cons.error_code(), req_1x_cons.what()), std::move(resp_strm), std::move(cur_req));
 							return;
 						}
-						call_handler(h, std::move(resp), std::move(req));
+						auto content_len = look_up_header<size_t>(cur_req->headers, "content-length");
+						if (content_len.stat == content_len.no_exist) {
+							auto xfer_coding_pos = cur_req->headers.find("transfer-coding");
+							if (xfer_coding_pos == cur_req->headers.end()) {
+								// The request has no Content-Length and is not chunked. This
+								// must be the last request for this connection, and the body
+								// comprises all remaining incoming data.
+
+								// TODO: implement
+
+								offset = req_1x_cons.length();
+								cur_phase = phase::
+
+								return;
+							}
+
+
+							// TODO: Request body is either chunked or this is the last 
+						}
+						if (content_len.stat == content_len.bad_type) {
+							call_handler(error_handler(status_code::bad_request, "invalid content length"), std::move(resp_strm), std::move(req));
+							return;
+						}
+						call_handler(h, std::move(resp_strm), std::move(req));
 						// TODO: continue parsing
 						break;
+					}
 				}
 			}
 		}
@@ -81,7 +109,8 @@ namespace clane {
 			// TODO: implement
 		}
 
-		void server_connection::call_handler(handler const &h, std::unique_ptr<oresponse> &&resp, std::unique_ptr<irequest> &&req) {
+		void server_connection::call_handler(handler const &h, std::unique_ptr<response_ostream> &&resp,
+		std::unique_ptr<request> &&req) {
 			h(std::move(resp), std::move(req));
 			// TODO: Send response data.
 		}
@@ -93,7 +122,7 @@ namespace clane {
 			return conn;
 		}
 
-		void error_handler::operator()(std::unique_ptr<oresponse> &&resp, std::unique_ptr<irequest> &&req) {
+		void error_handler::operator()(std::unique_ptr<response_ostream> &&resp, std::unique_ptr<request> &&req) {
 			resp->set_status_code(stat);
 		}
 	}
