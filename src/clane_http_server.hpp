@@ -1,7 +1,7 @@
 // vim: set noet:
 
-#ifndef CLANE__COMMON_SERVER_HPP
-#define CLANE__COMMON_SERVER_HPP
+#ifndef CLANE__HTTP_SERVER_HPP
+#define CLANE__HTTP_SERVER_HPP
 
 #include "clane_common.hpp"
 #include "../include/clane_http.hpp"
@@ -25,4 +25,4 @@ namespace clane {
 	}
 }
 
-#endif // #ifndef CLANE__COMMON_SERVER_HPP
+#endif // #ifndef CLANE__HTTP_SERVER_HPP

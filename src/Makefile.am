@@ -8,6 +8,10 @@ libclane_la_SOURCES = \
 	clane_common.hpp \
 	clane_http_server.cpp \
 	clane_http_server.hpp \
+	clane_inet.cpp \
+	clane_inet.hpp \
 	clane_posix.cpp \
-	clane_posix.hpp
+	clane_posix.hpp \
+	clane_socket.cpp \
+	clane_socket.hpp
 

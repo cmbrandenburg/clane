@@ -12,6 +12,7 @@ namespace clane {
 		std::string errno_to_string(int n);
 
 		void close_fd(int fd);
+		void set_nonblocking(int fd);
 
 		class file_descriptor {
 		protected:

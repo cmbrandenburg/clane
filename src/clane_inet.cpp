@@ -1,0 +1,194 @@
+// vim: set noet:
+
+#include "clane_inet.hpp"
+#include "clane_socket.hpp"
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <sstream>
+#include <stdexcept>
+
+namespace clane {
+	namespace net {
+
+		protocol_family const *tcp_protocol_family_by_domain(int domain) {
+			switch (domain) {
+				case AF_INET: return &tcp4;
+				case AF_INET6: return &tcp6;
+				default: {
+					std::ostringstream ess;
+					ess << "invalid TCP domain " << domain;
+					throw std::logic_error(ess.str());
+				}
+			}
+		}
+
+		std::string tcp4_address_to_string(sockaddr_in const &sa) {
+			std::ostringstream ss;
+			char buf[INET_ADDRSTRLEN];
+			char const *addr = inet_ntop(AF_INET, &sa.sin_addr, buf, sizeof(buf));
+			if (!addr) {
+				std::ostringstream ess;
+				ess << "convert IP address to string: " << posix::errno_to_string(errno);
+				throw std::runtime_error(ess.str());
+			}
+			ss << addr << ':' << be16toh(sa.sin_port);
+			return ss.str();
+		}
+
+		std::string tcp6_address_to_string(sockaddr_in6 const &sa) {
+			std::ostringstream ss;
+			char buf[INET6_ADDRSTRLEN];
+			char const *addr = inet_ntop(AF_INET6, &sa.sin6_addr, buf, sizeof(buf));
+			if (!addr) {
+				std::ostringstream ess;
+				ess << "convert IPv6 address to string: " << posix::errno_to_string(errno);
+				throw std::runtime_error(ess.str());
+			}
+			ss << '[' << addr << "]:" << be16toh(sa.sin6_port);
+			return ss.str();
+		}
+
+		class addrinfo_ptr {
+			addrinfo *ai;
+		public:
+			~addrinfo_ptr() { if (ai) { freeaddrinfo(ai); }}
+			addrinfo_ptr(addrinfo *ai): ai(ai) {}
+			addrinfo_ptr(addrinfo_ptr const &) = delete;
+			addrinfo_ptr(addrinfo_ptr &&) = default;
+			addrinfo_ptr &operator=(addrinfo_ptr const &) = delete;
+			addrinfo_ptr &operator=(addrinfo_ptr &&) = default;
+			addrinfo *operator->() { return ai; }
+			addrinfo const *operator->() const { return ai; }
+		};
+
+		addrinfo_ptr resolve_inet_address(int domain, int type, bool passive, std::string &addr) {
+			// split address host and port:
+			std::string::size_type host{}, port, sep;
+			char saved_sep;
+			if (addr.size() && addr[0] == '[' && (addr.npos != (sep = addr.find(']', 1))) && addr.size() > sep && addr[sep+1] == ':') {
+				// IPv6 literal
+				++host;
+				port = sep + 2;
+			} else if (addr.npos != (sep = addr.find(':', host))) {
+				port = sep + 1;
+			} else {
+				std::ostringstream ess;
+				ess << "missing address-port separator (':') in address \"" << addr << '"';
+				throw std::invalid_argument(ess.str());
+			}
+			saved_sep = addr[sep];
+			addr[sep] = 0; // null terminator for host
+			// resolve:
+			addrinfo hints{};
+			hints.ai_flags = AI_ADDRCONFIG | (passive ? AI_PASSIVE : 0);
+			hints.ai_family = domain;
+			hints.ai_socktype = type;
+			hints.ai_protocol = 0;
+			addrinfo *results{};
+			// FIXME: Does getaddrinfo ever interrupt due to EINTR?
+			int stat = ::getaddrinfo(addr.data() + host, addr.data() + port, &hints, &results);
+			if (stat) {
+				std::ostringstream ess;
+				addr[sep] = saved_sep; // restore address
+				ess << "address translation error: " <<
+				 	((EAI_SYSTEM == stat) ? posix::errno_to_string(errno) : std::string(gai_strerror(stat)));
+				throw std::runtime_error(ess.str());
+			}
+			return results;
+		}
+
+		// = PROTOCOL FAMILY METHODS =
+
+		void pf_tcpx_construct_descriptor(socket_descriptor &sd) {
+			sd.n = -1;
+		}
+
+		void pf_tcpx_destruct_descriptor(socket_descriptor &sd) {
+			if (-1 != sd.n) {
+				posix::close_fd(sd.n);
+			}
+		}
+
+		socket pf_tcp_new_listener(int domain, std::string &addr, int backlog) {
+			auto lookup = resolve_inet_address(domain, SOCK_STREAM, true, addr);
+			auto sock_fd = sys_socket(lookup->ai_family, SOCK_STREAM, 0);
+			set_nonblocking(sock_fd);
+			sys_setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, 1);
+			sys_bind(sock_fd, lookup->ai_addr, lookup->ai_addrlen);
+			sys_listen(sock_fd, backlog < 0 ? 256 : backlog);
+			return socket(tcp_protocol_family_by_domain(lookup->ai_family), std::move(sock_fd));
+		}
+
+		socket pf_tcpx_new_listener(std::string &addr, int backlog) { return pf_tcp_new_listener(AF_UNSPEC, addr, backlog); }
+		socket pf_tcp4_new_listener(std::string &addr, int backlog) { return pf_tcp_new_listener(AF_INET, addr, backlog); }
+		socket pf_tcp6_new_listener(std::string &addr, int backlog) { return pf_tcp_new_listener(AF_INET6, addr, backlog); }
+
+		connect_result pf_tcp_new_connection(int domain, std::string &addr) {
+			auto lookup = resolve_inet_address(domain, SOCK_STREAM, false, addr);
+			auto sock_fd = sys_socket(lookup->ai_family, SOCK_STREAM, 0);
+			connect_result res{};
+			res.stat = sys_connect(sock_fd, lookup->ai_addr, lookup->ai_addrlen);
+			if (status::ok == res.stat || status::in_progress == res.stat) {
+				set_nonblocking(sock_fd);
+				res.sock = socket(tcp_protocol_family_by_domain(lookup->ai_family), std::move(sock_fd));
+			}
+			return res;
+		}
+
+		connect_result pf_tcpx_new_connection(std::string &addr) { return pf_tcp_new_connection(AF_UNSPEC, addr); }
+		connect_result pf_tcp4_new_connection(std::string &addr) { return pf_tcp_new_connection(AF_INET, addr); }
+		connect_result pf_tcp6_new_connection(std::string &addr) { return pf_tcp_new_connection(AF_INET6, addr); }
+
+		std::string pf_tcp4_local_address(socket_descriptor &sd) {
+			sockaddr_in sa;
+			sys_getsockname(sd.n, reinterpret_cast<sockaddr *>(&sa), sizeof(sa));
+			return tcp4_address_to_string(sa);
+		}
+
+		std::string pf_tcp4_remote_address(socket_descriptor &sd) {
+			sockaddr_in sa;
+			sys_getpeername(sd.n, reinterpret_cast<sockaddr *>(&sa), sizeof(sa));
+			return tcp4_address_to_string(sa);
+		}
+
+		std::string pf_tcp6_local_address(socket_descriptor &sd) {
+			sockaddr_in6 sa;
+			sys_getsockname(sd.n, reinterpret_cast<sockaddr *>(&sa), sizeof(sa));
+			return tcp6_address_to_string(sa);
+		}
+
+		std::string pf_tcp6_remote_address(socket_descriptor &sd) {
+			sockaddr_in6 sa;
+			sys_getpeername(sd.n, reinterpret_cast<sockaddr *>(&sa), sizeof(sa));
+			return tcp6_address_to_string(sa);
+		}
+
+		protocol_family const tcp = {
+			pf_tcpx_construct_descriptor,
+			pf_tcpx_destruct_descriptor,
+			pf_tcpx_new_listener,
+			pf_tcpx_new_connection,
+			pf_unimpl_local_address,
+			pf_unimpl_remote_address
+		};
+
+		protocol_family const tcp4 = {
+			pf_tcpx_construct_descriptor,
+			pf_tcpx_destruct_descriptor,
+			pf_tcp4_new_listener,
+			pf_tcp4_new_connection,
+			pf_tcp4_local_address,
+			pf_tcp4_remote_address
+		};
+
+		protocol_family const tcp6 = {
+			pf_tcpx_construct_descriptor,
+			pf_tcpx_destruct_descriptor,
+			pf_tcp6_new_listener,
+			pf_tcp6_new_connection,
+			pf_tcp6_local_address,
+			pf_tcp6_remote_address
+		};
+	}
+}
+
