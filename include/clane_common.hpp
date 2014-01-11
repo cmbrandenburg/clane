@@ -9,7 +9,7 @@
  *
  * This file is included, directly or indirectly, by all other header files. */
 
-/** @brief Main namespace */
+/** @brief Root namespace */
 namespace clane {}
 
 #endif // #ifndef CLANE_COMMON_HPP
