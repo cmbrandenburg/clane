@@ -123,6 +123,7 @@ namespace clane {
 		// unimplemented method placeholders:
 		void pf_unimpl_construct_descriptor(socket_descriptor &) { throw std::logic_error(pf_unsupported); }
 		void pf_unimpl_destruct_destriptor(socket_descriptor &) { throw std::logic_error(pf_unsupported); }
+		int pf_unimpl_descriptor(socket_descriptor const &) { throw std::logic_error(pf_unsupported); }
 		socket pf_unimpl_new_listener(std::string &, int) { throw std::logic_error(pf_unsupported); }
 		connect_result pf_unimpl_new_connection(std::string &) { throw std::logic_error(pf_unsupported); }
 		std::string pf_unimpl_local_address(socket_descriptor &) { throw std::logic_error(pf_unsupported); }

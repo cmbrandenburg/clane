@@ -3,14 +3,19 @@ AM_CXXFLAGS = -Wall -Werror -std=c++11 -I../../check
 TESTS = \
 	check_posix_errno_to_string \
 	check_posix_fd \
+	check_event \
 	check_tcp_connect_accept \
 	check_http_server_run_term
 
 check_PROGRAMS = \
+	check_event \
 	check_http_server_run_term \
 	check_posix_errno_to_string \
 	check_posix_fd \
 	check_tcp_connect_accept
+
+check_event_SOURCES = check_event.cpp
+check_event_LDFLAGS = ../libclane.la
 
 check_http_server_run_term_SOURCES = check_http_server_run_term.cpp
 check_http_server_run_term_LDFLAGS = ../libclane.la

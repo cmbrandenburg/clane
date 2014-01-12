@@ -110,10 +110,13 @@ namespace clane {
 			}
 		}
 
+		int pf_tcpx_descriptor(socket_descriptor const &sd) {
+			return sd.n;
+		}
+
 		socket pf_tcp_new_listener(int domain, std::string &addr, int backlog) {
 			auto lookup = resolve_inet_address(domain, SOCK_STREAM, true, addr);
-			auto sock_fd = sys_socket(lookup->ai_family, SOCK_STREAM, 0);
-			set_nonblocking(sock_fd);
+			auto sock_fd = sys_socket(lookup->ai_family, SOCK_STREAM | SOCK_NONBLOCK, 0);
 			sys_setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, 1);
 			sys_bind(sock_fd, lookup->ai_addr, lookup->ai_addrlen);
 			sys_listen(sock_fd, backlog < 0 ? 256 : backlog);
@@ -253,6 +256,7 @@ namespace clane {
 		protocol_family const tcp = {
 			pf_tcpx_construct_descriptor,
 			pf_tcpx_destruct_descriptor,
+			pf_tcpx_descriptor,
 			pf_tcpx_new_listener,
 			pf_tcpx_new_connection,
 			pf_unimpl_local_address,
@@ -266,6 +270,7 @@ namespace clane {
 		protocol_family const tcp4 = {
 			pf_tcpx_construct_descriptor,
 			pf_tcpx_destruct_descriptor,
+			pf_tcpx_descriptor,
 			pf_tcp4_new_listener,
 			pf_tcp4_new_connection,
 			pf_tcp4_local_address,
@@ -279,6 +284,7 @@ namespace clane {
 		protocol_family const tcp6 = {
 			pf_tcpx_construct_descriptor,
 			pf_tcpx_destruct_descriptor,
+			pf_tcpx_descriptor,
 			pf_tcp6_new_listener,
 			pf_tcp6_new_connection,
 			pf_tcp6_local_address,

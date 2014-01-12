@@ -50,6 +50,7 @@ namespace clane {
 		struct protocol_family {
 			void (*construct_descriptor)(socket_descriptor &sd);
 			void (*destruct_descriptor)(socket_descriptor &sd);
+			int (*descriptor)(socket_descriptor const &sd);
 			socket (*new_listener)(std::string &addr, int backlog);
 			connect_result (*new_connection)(std::string &addr);
 			std::string (*local_address)(socket_descriptor &sd);
@@ -72,6 +73,7 @@ namespace clane {
 			socket &operator=(socket const &) = delete;
 			socket &operator=(socket &&that) noexcept;
 			void swap(socket &that) noexcept;
+			int descriptor() const { return pf->descriptor(sd); }
 			std::string local_address() { return pf->local_address(sd); }
 			std::string remote_address() { return pf->remote_address(sd); }
 			accept_result accept();
@@ -128,6 +130,7 @@ namespace clane {
 		// default protocol family method implementations:
 		void pf_unimpl_construct_descriptor(socket_descriptor &);
 		void pf_unimpl_destruct_destriptor(socket_descriptor &);
+		int pf_unimpl_descriptor(socket_descriptor const &);
 		socket pf_unimpl_new_listener(std::string &, int);
 		connect_result pf_unimpl_new_connection(std::string &);
 		std::string pf_unimpl_local_address(socket_descriptor &);
