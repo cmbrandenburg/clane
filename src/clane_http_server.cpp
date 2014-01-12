@@ -3,7 +3,6 @@
 #include "clane_http_server.hpp"
 #include "clane_inet.hpp"
 #include "clane_poll.hpp"
-#include <iostream> // FIXME: remove
 
 namespace clane {
 	namespace http {
@@ -114,14 +113,11 @@ namespace clane {
 				if (net::status::ok != xfer_res.stat)
 					return;
 				if (!xfer_res.size) {
-					std::cerr << "FIN\n";
 					// FIXME: handle FIN
-					continue;
+					return;
 				}
-				std::cerr << "GOT: " << std::string(inbuf.get() + inoff, xfer_res.size) << "\n";
 				inoff += xfer_res.size;
 
-				// FIXME: process input data
 			}
 		}
 	}
