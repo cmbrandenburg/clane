@@ -87,7 +87,8 @@ namespace clane {
 			hints.ai_protocol = 0;
 			addrinfo *results{};
 			// FIXME: Does getaddrinfo ever interrupt due to EINTR?
-			int stat = ::getaddrinfo(addr.data() + host, addr.data() + port, &hints, &results);
+			char const *node = host == sep ? nullptr : addr.data() + host;
+			int stat = ::getaddrinfo(node, addr.c_str() + port, &hints, &results);
 			if (stat) {
 				std::ostringstream ess;
 				addr[sep] = saved_sep; // restore address

@@ -8,6 +8,8 @@ libclane_la_SOURCES = \
 	clane_common.hpp \
 	clane_event.cpp \
 	clane_event.hpp \
+	clane_http_request.cpp \
+	clane_http_request.hpp \
 	clane_http_server.cpp \
 	clane_http_server.hpp \
 	clane_inet.cpp \
