@@ -1,7 +1,7 @@
 // vim: set noet:
 
-#include "check.h"
-#include "../clane_posix.hpp"
+#include "../../check/check.h"
+#include "../net_posix.hpp"
 
 using namespace clane;
 

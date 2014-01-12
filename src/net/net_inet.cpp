@@ -1,7 +1,7 @@
 // vim: set noet:
 
-#include "clane_inet.hpp"
-#include "clane_socket.hpp"
+#include "net_inet.hpp"
+#include "net_socket.hpp"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sstream>

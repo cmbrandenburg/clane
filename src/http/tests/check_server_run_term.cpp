@@ -1,6 +1,6 @@
 // vim: set noet:
 
-#include "../clane_http_server.hpp"
+#include "../http_server.hpp"
 #include <iostream> // FIXME: remove
 #include <thread>
 

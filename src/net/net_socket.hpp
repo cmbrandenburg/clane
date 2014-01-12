@@ -1,10 +1,10 @@
 // vim: set noet:
 
-#ifndef CLANE__SOCKET_HPP
-#define CLANE__SOCKET_HPP
+#ifndef CLANE__NET_SOCKET_HPP
+#define CLANE__NET_SOCKET_HPP
 
-#include "clane_common.hpp"
-#include "clane_posix.hpp"
+#include "net_common.hpp"
+#include "net_posix.hpp"
 #include <sys/socket.h>
 
 namespace clane {
@@ -142,4 +142,4 @@ namespace clane {
 	}
 }
 
-#endif // #ifndef CLANE__SOCKET_HPP
+#endif // #ifndef CLANE__NET_SOCKET_HPP

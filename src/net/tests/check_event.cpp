@@ -1,8 +1,8 @@
 // vim: set noet:
 
-#include "check.h"
-#include "../clane_event.hpp"
-#include "../clane_poll.hpp"
+#include "../../check/check.h"
+#include "../net_event.hpp"
+#include "../net_poll.hpp"
 #include <thread>
 
 using namespace clane;

@@ -1,9 +1,9 @@
 // vim: set noet:
 
-#ifndef CLANE__POLL_HPP
-#define CLANE__POLL_HPP
+#ifndef CLANE__NET_POLL_HPP
+#define CLANE__NET_POLL_HPP
 
-#include "clane_common.hpp"
+#include "net_common.hpp"
 #include <chrono>
 #include <poll.h>
 #include <vector>
@@ -54,4 +54,4 @@ namespace clane {
 	}
 }
 
-#endif // #ifndef CLANE__POLL_HPP
+#endif // #ifndef CLANE__NET_POLL_HPP

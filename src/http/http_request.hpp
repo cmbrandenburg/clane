@@ -3,8 +3,7 @@
 #ifndef CLANE__HTTP_REQUEST_HPP
 #define CLANE__HTTP_REQUEST_HPP
 
-#include "clane_common.hpp"
-#include "../include/clane_http.hpp"
+#include "http_common.hpp"
 #include <istream>
 
 namespace clane {

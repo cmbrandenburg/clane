@@ -1,8 +1,8 @@
 // vim: set noet:
 
-#include "check.h"
-#include "../clane_inet.hpp"
-#include "../clane_socket.hpp"
+#include "../../check/check.h"
+#include "../net_inet.hpp"
+#include "../net_socket.hpp"
 #include <cstring>
 
 using namespace clane;

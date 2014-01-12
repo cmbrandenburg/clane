@@ -1,6 +1,6 @@
 // vim: set noet:
 
-#include "clane_posix.hpp"
+#include "net_posix.hpp"
 #include <fcntl.h>
 #include <sstream>
 #include <stdexcept>

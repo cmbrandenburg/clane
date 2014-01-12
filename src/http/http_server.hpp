@@ -3,11 +3,10 @@
 #ifndef CLANE__HTTP_SERVER_HPP
 #define CLANE__HTTP_SERVER_HPP
 
-#include "clane_common.hpp"
-#include "clane_event.hpp"
-#include "clane_http_request.hpp"
-#include "clane_socket.hpp"
-#include "../include/clane_http.hpp"
+#include "http_common.hpp"
+#include "http_request.hpp"
+#include "../net/net_event.hpp"
+#include "../net/net_socket.hpp"
 #include <condition_variable>
 #include <deque>
 #include <mutex>

@@ -1,8 +1,8 @@
 // vim: set noet:
 
-#include "clane_http_server.hpp"
-#include "clane_inet.hpp"
-#include "clane_poll.hpp"
+#include "http_server.hpp"
+#include "../net/net_inet.hpp"
+#include "../net/net_poll.hpp"
 
 namespace clane {
 	namespace http {

@@ -1,10 +1,10 @@
 // vim: set noet:
 
-#ifndef CLANE__EVENT_HPP
-#define CLANE__EVENT_HPP
+#ifndef CLANE__NET_EVENT_HPP
+#define CLANE__NET_EVENT_HPP
 
-#include "clane_common.hpp"
-#include "clane_posix.hpp"
+#include "net_common.hpp"
+#include "net_posix.hpp"
 
 namespace clane {
 	namespace net {
@@ -25,4 +25,4 @@ namespace clane {
 	}
 }
 
-#endif // #ifndef CLANE__EVENT_HPP
+#endif // #ifndef CLANE__NET_EVENT_HPP

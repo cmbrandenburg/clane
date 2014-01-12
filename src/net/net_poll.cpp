@@ -1,8 +1,8 @@
 // vim: set noet:
 
-#include "clane_event.hpp"
-#include "clane_poll.hpp"
-#include "clane_socket.hpp"
+#include "net_event.hpp"
+#include "net_poll.hpp"
+#include "net_socket.hpp"
 #include <sstream>
 #include <stdexcept>
 #include <unistd.h>

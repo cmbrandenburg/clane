@@ -15,7 +15,11 @@ AC_CONFIG_FILES(
 	Makefile
 	include/Makefile
 	src/Makefile
-	src/tests/Makefile
+	src/check/Makefile
+	src/net/Makefile
+	src/net/tests/Makefile
+	src/http/Makefile
+	src/http/tests/Makefile
 	)
 AC_OUTPUT
 

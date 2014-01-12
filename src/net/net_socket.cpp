@@ -1,7 +1,7 @@
 // vim: set noet:
 
-#include "clane_posix.hpp"
-#include "clane_socket.hpp"
+#include "net_posix.hpp"
+#include "net_socket.hpp"
 #include <sstream>
 #include <stdexcept>
 #include <unistd.h>
