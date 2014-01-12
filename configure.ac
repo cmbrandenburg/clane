@@ -16,10 +16,12 @@ AC_CONFIG_FILES(
 	include/Makefile
 	src/Makefile
 	src/check/Makefile
-	src/net/Makefile
-	src/net/tests/Makefile
 	src/http/Makefile
 	src/http/tests/Makefile
+	src/net/Makefile
+	src/net/tests/Makefile
+	src/uri/Makefile
+	src/uri/tests/Makefile
 	)
 AC_OUTPUT
 

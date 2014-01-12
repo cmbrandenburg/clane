@@ -1,1 +1,1 @@
-SUBDIRS = check net http
+SUBDIRS = check net uri http
