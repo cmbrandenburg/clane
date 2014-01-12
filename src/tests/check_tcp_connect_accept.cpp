@@ -37,6 +37,12 @@ int main() {
 	check(net::status::ok == xfer_res.stat);
 	check(sizeof(buf) == xfer_res.size);
 	check(!memcmp(M, buf, sizeof(buf)));
+
+	// FIN:
+	cli.fin();
+	xfer_res = ser.recv(buf, sizeof(buf));
+	check(net::status::ok == xfer_res.stat);
+	check(0 == xfer_res.size);
 }
 
 
