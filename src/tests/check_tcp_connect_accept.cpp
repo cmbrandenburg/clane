@@ -3,6 +3,7 @@
 #include "check.h"
 #include "../clane_inet.hpp"
 #include "../clane_socket.hpp"
+#include <cstring>
 
 using namespace clane;
 
@@ -24,6 +25,18 @@ int main() {
 		check(ser.local_address() == cli.remote_address());
 	}
 
+	// send from client to server:
+	static char const *const M = "Hello, world.\n";
+	auto xfer_res = cli.send(M, strlen(M));
+	check(net::status::ok == xfer_res.stat);
+	check(strlen(M) == xfer_res.size);
+
+	// receive on server:
+	char buf[strlen(M)];
+	xfer_res = ser.recv(buf, sizeof(buf));
+	check(net::status::ok == xfer_res.stat);
+	check(sizeof(buf) == xfer_res.size);
+	check(!memcmp(M, buf, sizeof(buf)));
 }
 
 

@@ -6,6 +6,7 @@
 #include <netdb.h>
 #include <sstream>
 #include <stdexcept>
+#include <unistd.h>
 
 namespace clane {
 	namespace net {
@@ -189,6 +190,66 @@ namespace clane {
 			return res;
 		}
 
+		xfer_result pf_tcpx_send(socket_descriptor &sd, void const *p, size_t n) {
+			xfer_result res{};
+			ssize_t stat = TEMP_FAILURE_RETRY(::send(sd.n, p, n, MSG_NOSIGNAL));
+			if (-1 == stat) {
+				switch (errno) {
+					case EACCES: res.stat = status::permission; return res;
+					case EAGAIN:
+#if EAGAIN != EWOULDBLOCK
+					case EWOULDBLOCK:
+#endif
+						res.stat = status::would_block; return res;
+					case ECONNRESET: case EPIPE: res.stat = status::reset; return res;
+					case ENOBUFS: case ENOMEM: res.stat = status::no_resource; return res;
+					case ETIMEDOUT: res.stat = status::timed_out; return res;
+				}
+				if (-1 == stat) {
+					std::ostringstream ess;
+					ess << "socket send (sockfd=" << sd.n << "): " << posix::errno_to_string(errno);
+					throw std::runtime_error(ess.str());
+				}
+			}
+			res.size = stat;
+			return res;
+		}
+
+		xfer_result pf_tcpx_recv(socket_descriptor &sd, void *p, size_t n) {
+			xfer_result res{};
+			ssize_t stat = TEMP_FAILURE_RETRY(::recv(sd.n, p, n, 0));
+			if (-1 == stat) {
+				switch (errno) {
+					case EACCES: res.stat = status::permission; return res;
+					case EAGAIN:
+#if EAGAIN != EWOULDBLOCK
+					case EWOULDBLOCK:
+#endif
+						res.stat = status::would_block; return res;
+					case ECONNREFUSED: res.stat = status::conn_refused; return res;
+					case ECONNRESET: res.stat = status::reset; return res;
+					case ENOMEM: res.stat = status::no_resource; return res;
+					case ETIMEDOUT: res.stat = status::timed_out; return res;
+				}
+				if (-1 == stat) {
+					std::ostringstream ess;
+					ess << "socket receive (sockfd=" << sd.n << "): " << posix::errno_to_string(errno);
+					throw std::runtime_error(ess.str());
+				}
+			}
+			res.size = stat;
+			return res;
+		}
+
+		void pf_tcpx_fin(socket_descriptor &sd) {
+			int stat = ::shutdown(sd.n, SHUT_WR);
+			if (-1 == stat) {
+				std::ostringstream ess;
+				ess << "socket shutdown: (sockfd=" << sd.n << "): " << posix::errno_to_string(errno);
+				throw std::runtime_error(ess.str());
+			}
+		}
+
 		protocol_family const tcp = {
 			pf_tcpx_construct_descriptor,
 			pf_tcpx_destruct_descriptor,
@@ -196,7 +257,10 @@ namespace clane {
 			pf_tcpx_new_connection,
 			pf_unimpl_local_address,
 			pf_unimpl_remote_address,
-			pf_unimpl_accept
+			pf_unimpl_accept,
+			pf_unimpl_send,
+			pf_unimpl_recv,
+			pf_unimpl_fin
 		};
 
 		protocol_family const tcp4 = {
@@ -206,7 +270,10 @@ namespace clane {
 			pf_tcp4_new_connection,
 			pf_tcp4_local_address,
 			pf_tcp4_remote_address,
-			pf_tcp4_accept
+			pf_tcp4_accept,
+			pf_tcpx_send,
+			pf_tcpx_recv,
+			pf_tcpx_fin
 		};
 
 		protocol_family const tcp6 = {
@@ -216,7 +283,10 @@ namespace clane {
 			pf_tcp6_new_connection,
 			pf_tcp6_local_address,
 			pf_tcp6_remote_address,
-			pf_tcp6_accept
+			pf_tcp6_accept,
+			pf_tcpx_send,
+			pf_tcpx_recv,
+			pf_tcpx_fin
 		};
 	}
 }
