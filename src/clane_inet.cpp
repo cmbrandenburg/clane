@@ -163,13 +163,40 @@ namespace clane {
 			return tcp6_address_to_string(sa);
 		}
 
+		accept_result pf_tcp4_accept(socket_descriptor &sd, std::string *addr_o) {
+			sockaddr_in sa;
+			auto sys_res = sys_accept(sd.n, reinterpret_cast<sockaddr *>(addr_o ? &sa : nullptr), sizeof(sa));
+			accept_result res{};
+			res.stat = sys_res.first;
+			if (status::ok == res.stat) {
+				res.sock = socket(&tcp4, sys_res.second.release());
+				if (addr_o)
+					*addr_o = tcp4_address_to_string(sa);
+			}
+			return res;
+		}
+
+		accept_result pf_tcp6_accept(socket_descriptor &sd, std::string *addr_o) {
+			sockaddr_in6 sa;
+			auto sys_res = sys_accept(sd.n, reinterpret_cast<sockaddr *>(addr_o ? &sa : nullptr), sizeof(sa));
+			accept_result res{};
+			res.stat = sys_res.first;
+			if (status::ok == res.stat) {
+				res.sock = socket(&tcp6, sys_res.second.release());
+				if (addr_o)
+					*addr_o = tcp6_address_to_string(sa);
+			}
+			return res;
+		}
+
 		protocol_family const tcp = {
 			pf_tcpx_construct_descriptor,
 			pf_tcpx_destruct_descriptor,
 			pf_tcpx_new_listener,
 			pf_tcpx_new_connection,
 			pf_unimpl_local_address,
-			pf_unimpl_remote_address
+			pf_unimpl_remote_address,
+			pf_unimpl_accept
 		};
 
 		protocol_family const tcp4 = {
@@ -178,7 +205,8 @@ namespace clane {
 			pf_tcp4_new_listener,
 			pf_tcp4_new_connection,
 			pf_tcp4_local_address,
-			pf_tcp4_remote_address
+			pf_tcp4_remote_address,
+			pf_tcp4_accept
 		};
 
 		protocol_family const tcp6 = {
@@ -187,7 +215,8 @@ namespace clane {
 			pf_tcp6_new_listener,
 			pf_tcp6_new_connection,
 			pf_tcp6_local_address,
-			pf_tcp6_remote_address
+			pf_tcp6_remote_address,
+			pf_tcp6_accept
 		};
 	}
 }

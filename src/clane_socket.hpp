@@ -31,6 +31,7 @@ namespace clane {
 		void sys_getsockname(int sockfd, sockaddr *addr, socklen_t addr_len);
 		void sys_getpeername(int sockfd, sockaddr *addr, socklen_t addr_len);
 		status sys_connect(int sockfd, sockaddr const *addr, socklen_t addr_len);
+		std::pair<status, posix::file_descriptor> sys_accept(int sockfd, sockaddr *addr, socklen_t addr_len);
 
 		union socket_descriptor {
 			int n;
@@ -39,6 +40,7 @@ namespace clane {
 
 		class socket;
 		struct connect_result;
+		struct accept_result;
 
 		struct protocol_family {
 			void (*construct_descriptor)(socket_descriptor &sd);
@@ -47,6 +49,7 @@ namespace clane {
 			connect_result (*new_connection)(std::string &addr);
 			std::string (*local_address)(socket_descriptor &sd);
 			std::string (*remote_address)(socket_descriptor &sd);
+			accept_result (*accept)(socket_descriptor &sd, std::string *addr_o);
 		};
 
 		// default protocol family method implementations:
@@ -56,6 +59,7 @@ namespace clane {
 		connect_result pf_unimpl_new_connection(std::string &);
 		std::string pf_unimpl_local_address(socket_descriptor &);
 		std::string pf_unimpl_remote_address(socket_descriptor &);
+		accept_result pf_unimpl_accept(socket_descriptor &, std::string *);
 
 		class socket {
 			protocol_family const *pf;
@@ -71,6 +75,13 @@ namespace clane {
 			void swap(socket &that) noexcept;
 			std::string local_address() { return pf->local_address(sd); }
 			std::string remote_address() { return pf->remote_address(sd); }
+			accept_result accept();
+			accept_result accept(std::string &addr_o);
+		};
+
+		struct accept_result {
+			status stat;
+			socket sock;
 		};
 
 		inline socket &socket::operator=(socket &&that) noexcept {
@@ -82,6 +93,14 @@ namespace clane {
 			std::swap(pf, that.pf);
 			std::swap(sd, that.sd);
 		}
+
+		inline accept_result socket::accept() {
+		 	return pf->accept(sd, nullptr);
+	 	}
+
+		inline accept_result socket::accept(std::string &addr_o) {
+		 	return pf->accept(sd, &addr_o);
+	 	}
 
 		inline socket listen(protocol_family const *pf, std::string addr, int backlog = -1) {
 			return pf->new_listener(addr, backlog);

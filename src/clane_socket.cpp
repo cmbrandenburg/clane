@@ -88,14 +88,34 @@ namespace clane {
 					case EINPROGRESS: return status::in_progress;
 					case ENETUNREACH: return status::net_unreachable;
 					case ETIMEDOUT: return status::timed_out;
-					default: {
-						std::ostringstream ess;
-						ess << "connect (sockfd=" << sockfd << "): " << posix::errno_to_string(errno);
-						throw std::runtime_error(ess.str());
-					}
 				}
+				std::ostringstream ess;
+				ess << "connect (sockfd=" << sockfd << "): " << posix::errno_to_string(errno);
+				throw std::runtime_error(ess.str());
 			}
 			return status::ok;
+		}
+
+		std::pair<status, posix::file_descriptor> sys_accept(int sockfd, sockaddr *addr, socklen_t addr_len) {
+			socklen_t sa_len = addr_len;
+			std::pair<status, posix::file_descriptor> res{status::ok, TEMP_FAILURE_RETRY(::accept(sockfd, addr, &sa_len))};
+			if (-1 == res.second) {
+				switch (errno) {
+					case EAGAIN:
+#if EAGAIN != EWOULDBLOCK
+					case EWOULDBLOCK:
+#endif
+						res.first = status::would_block; return res;
+					case ECONNABORTED: res.first = status::aborted; return res;
+					case EMFILE: case ENFILE: case ENOBUFS: case ENOMEM: res.first = status::no_resource; return res;
+					case EPERM: res.first = status::permission; return res;
+					case ETIMEDOUT: res.first = status::timed_out; return res;
+				}
+				std::ostringstream ess;
+				ess << "accept (sockfd=" << sockfd << "): " << posix::errno_to_string(errno);
+				throw std::runtime_error(ess.str());
+			}
+			return res;
 		}
 
 		static char const *const pf_unsupported = "protocol family method is unsupported";
@@ -107,6 +127,7 @@ namespace clane {
 		connect_result pf_unimpl_new_connection(std::string &) { throw std::logic_error(pf_unsupported); }
 		std::string pf_unimpl_local_address(socket_descriptor &) { throw std::logic_error(pf_unsupported); }
 		std::string pf_unimpl_remote_address(socket_descriptor &) { throw std::logic_error(pf_unsupported); }
+		accept_result pf_unimpl_accept(socket_descriptor &, std::string *) { throw std::logic_error(pf_unsupported); }
 	}
 }
 
