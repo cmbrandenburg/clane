@@ -3,7 +3,7 @@
 #ifndef CLANE__POLL_HPP
 #define CLANE__POLL_HPP
 
-#include "clane_poll.hpp"
+#include "clane_common.hpp"
 #include <chrono>
 #include <poll.h>
 #include <vector>
