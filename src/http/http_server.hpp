@@ -45,13 +45,11 @@ namespace clane {
 		public:
 			handler root_handler;
 			size_t max_header_size;
-			std::chrono::steady_clock::time_point read_timeout;
-			std::chrono::steady_clock::time_point write_timeout;
+			std::chrono::steady_clock::duration read_timeout;
+			std::chrono::steady_clock::duration write_timeout;
 		public:
 			~server() = default;
-			server(): conn_cnt{}, max_header_size{8 * 1024},
-			 	read_timeout{std::chrono::steady_clock::now() + std::chrono::seconds(120)},
-				write_timeout{std::chrono::steady_clock::now() + std::chrono::seconds(120)} {}
+			server(): conn_cnt{}, max_header_size{8 * 1024} {}
 			server(server const &) = delete;
 			server(server &&) = delete;
 			server &operator=(server &&) = delete;
