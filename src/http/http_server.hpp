@@ -17,6 +17,15 @@ namespace clane {
 	namespace http {
 
 		class oresponsestream: public std::ostream {
+		public:
+			virtual ~oresponsestream() = default;
+			explicit oresponsestream(std::streambuf *sb): std::ostream{sb} {}
+			oresponsestream(oresponsestream const &) = delete;
+			oresponsestream(oresponsestream &&) = default;
+			oresponsestream &operator=(oresponsestream const &) = delete;
+			oresponsestream &operator=(oresponsestream &&) = default;
+			// TODO: access to headers
+			// TODO: method to write headers
 		};
 
 		typedef std::function<void(oresponsestream &, request &)> handler;

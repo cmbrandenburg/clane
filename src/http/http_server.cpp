@@ -10,6 +10,74 @@
 namespace clane {
 	namespace http {
 
+		// TODO: move to generic sublibrary
+		// TODO: unit test
+		class reference_counter {
+		public:
+			class reference {
+				reference_counter *rc;
+			public:
+				~reference() { if (rc) { rc->decrement(); }}
+				reference(reference_counter *rc) noexcept: rc{rc} {}
+				reference(reference const &) = delete;
+				reference(reference &&that) noexcept: rc{} { swap(that); }
+				reference &operator=(reference const &) = delete;
+				reference &operator=(reference &&that) noexcept { swap(that); return *this; }
+				void swap(reference &that) noexcept { std::swap(rc, that.rc); }
+			};
+		private:
+			int cnt;
+			std::mutex mutex;
+			std::condition_variable cond;
+		public:
+			~reference_counter();
+			reference_counter(): cnt{} {}
+			reference_counter(reference_counter const &) = delete;
+			reference_counter(reference_counter &&) = delete;
+			reference_counter &operator=(reference_counter const &) = delete;
+			reference_counter &operator=(reference_counter &&) = delete;
+			reference new_reference();
+		private:
+			void decrement();
+		};
+
+		reference_counter::~reference_counter() {
+			// wait for the count to become zero:
+			std::unique_lock<std::mutex> lock(mutex);
+			cond.wait(lock, [&]() -> bool { return 0 == cnt; });
+		}
+
+		reference_counter::reference reference_counter::new_reference() {
+			{
+				std::lock_guard<std::mutex> lock(mutex);
+				++cnt;
+			}
+			return reference(this);
+		};
+
+		void reference_counter::decrement() {
+			std::lock_guard<std::mutex> lock(mutex);
+			--cnt;
+			if (0 == cnt)
+				cond.notify_one();
+		}
+
+		class server_streambuf: public std::streambuf {
+		public:
+			virtual ~server_streambuf() = default;
+			server_streambuf() = default;
+			server_streambuf(server_streambuf const &) = default;
+			server_streambuf(server_streambuf &&) = default;
+			server_streambuf &operator=(server_streambuf const &) = default;
+			server_streambuf &operator=(server_streambuf &&) = default;
+			void append_request_body(std::shared_ptr<char> p, size_t offset, size_t size);
+			// TODO: streambuf overloads
+		};
+
+		void server_streambuf::append_request_body(std::shared_ptr<char> p, size_t offset, size_t size) {
+			// TODO: implement
+		}
+
 		static bool chunked_xfer_encoding(header_map const &hdrs) {
 			// FIXME: Ignore transfer-encoding order. Assume that if any one of the
 			// transfer-encoding headers is "chunked" then the message is chunked.
@@ -111,14 +179,37 @@ namespace clane {
 
 		void server::connection_main(net::socket conn, scoped_conn_ref ref) {
 
+			reference_counter out_cnt; // last thing to destruct
+
 			// input buffer:
 			static size_t const incap = 4096;
 			std::shared_ptr<char> inbuf;
 			size_t inoff = incap;
 
+			// request-handler context:
+			class context {
+				reference_counter::reference ref;
+			public:
+				server_streambuf sb;
+				request req;
+				oresponsestream rs;
+			public:
+				~context() = default;
+				context(reference_counter &rc): ref{rc.new_reference()}, rs{&sb} {}
+				context(context const &) = delete;
+				context(context &&) = delete;
+				context &operator=(context const &) = delete;
+				context &operator=(context &&) = delete;
+			};
+			auto cur_ctx = std::make_shared<context>(out_cnt);
+
+			// request-handler invoker:
+			auto handler_thread_main = [&](std::shared_ptr<context> ctx) {
+				root_handler(ctx->rs, ctx->req);
+			};
+
 			// parsing:
-			auto cur_req = std::make_shared<request>();
-			request_1x_consumer req_cons(*cur_req);
+			request_1x_consumer req_cons(cur_ctx->req);
 			req_cons.set_length_limit(max_header_size);
 			enum class phase {
 				head,
@@ -190,27 +281,29 @@ namespace clane {
 								done = true;
 								break;
 							}
-							if (chunked_xfer_encoding(cur_req->headers)) {
+							if (chunked_xfer_encoding(cur_ctx->req.headers)) {
 								cur_phase = phase::body_chunk_line;
 								chunk_cons.reset();
-							} else if (content_length(cur_req->headers, content_len)) {
+							} else if (content_length(cur_ctx->req.headers, content_len)) {
 								cur_phase = phase::body_fixed;
 							} else {
 								cur_phase = phase::body_end;
 							}
-							start_request_handler(root_handler);
+							// start request handler:
+							std::thread thrd(handler_thread_main, cur_ctx);
+							thrd.detach();
 						}
 
 						case phase::body_fixed: {
 							size_t len = std::min(content_len, xfer_res.size);
-							more_request_body(inbuf.get() + inoff, xfer_res.size);
+							cur_ctx->sb.append_request_body(inbuf, inoff, xfer_res.size);
 							inoff += len;
 							xfer_res.size -= len;
 							content_len -= len;
 							if (!content_len) {
 								cur_phase = phase::head;
-								cur_req = std::make_shared<request>();
-								req_cons.reset(*cur_req);
+								cur_ctx = std::make_shared<context>(out_cnt);
+								req_cons.reset(cur_ctx->req);
 							}
 							break;
 						}
@@ -233,8 +326,8 @@ namespace clane {
 							if (!chunk_cons.chunk_size()) {
 								// TODO: add support for trailers
 								cur_phase = phase::head;
-								cur_req = std::make_shared<request>();
-								req_cons.reset(*cur_req);
+								cur_ctx = std::make_shared<context>(out_cnt);
+								req_cons.reset(cur_ctx->req);
 							}
 							cur_phase = phase::body_chunk;
 							content_len = chunk_cons.chunk_size();
@@ -243,7 +336,7 @@ namespace clane {
 
 						case phase::body_chunk: {
 							size_t len = std::min(content_len, xfer_res.size);
-							more_request_body(inbuf.get() + inoff, xfer_res.size);
+							cur_ctx->sb.append_request_body(inbuf, inoff, xfer_res.size);
 							inoff += len;
 							xfer_res.size -= len;
 							content_len -= len;
@@ -258,7 +351,7 @@ namespace clane {
 							throw std::runtime_error("unimplemented");
 
 						case phase::body_end:
-							more_request_body(inbuf.get() + inoff, xfer_res.size);
+							cur_ctx->sb.append_request_body(inbuf, inoff, xfer_res.size);
 							inoff += xfer_res.size;
 							xfer_res.size = 0;
 							break;
