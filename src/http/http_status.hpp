@@ -62,6 +62,8 @@ namespace clane {
 		inline std::ostream &operator<<(std::ostream &ostrm, status_code n) {
 			return ostrm << static_cast<typename std::underlying_type<status_code>::type>(n);
 		}
+
+		char const *what(status_code n);
 	}
 }
 

@@ -14,4 +14,5 @@ libhttp_la_SOURCES = \
 	http_request.hpp \
 	http_server.cpp \
 	http_server.hpp \
+	http_status.cpp \
 	http_status.hpp

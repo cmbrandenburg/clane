@@ -5,6 +5,7 @@
 
 #include "http_common.hpp"
 #include "http_request.hpp"
+#include "http_status.hpp"
 #include "../net/net_event.hpp"
 #include "../net/net_socket.hpp"
 #include <condition_variable>
@@ -17,15 +18,17 @@ namespace clane {
 	namespace http {
 
 		class oresponsestream: public std::ostream {
+		protected:
+			status_code &status;
+			header_map &headers;
 		public:
 			virtual ~oresponsestream() = default;
-			explicit oresponsestream(std::streambuf *sb): std::ostream{sb} {}
+			explicit oresponsestream(std::streambuf *sb, status_code &stat_code, header_map &hdrs): std::ostream{sb},
+					status(stat_code), headers(hdrs) {}
 			oresponsestream(oresponsestream const &) = delete;
 			oresponsestream(oresponsestream &&) = default;
 			oresponsestream &operator=(oresponsestream const &) = delete;
 			oresponsestream &operator=(oresponsestream &&) = default;
-			// TODO: access to headers
-			// TODO: method to write headers
 		};
 
 		typedef std::function<void(oresponsestream &, request &)> handler;
