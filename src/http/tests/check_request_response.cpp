@@ -14,9 +14,12 @@ static std::condition_variable cond;
 static bool done{};
 
 void handle(http::oresponsestream &rs, http::request &req) {
-	//std::cout << "CHECK: " << req.uri << "\n";
 	rs.headers.insert(std::pair<std::string, std::string>("transfer-encoding", "chunked"));
-	rs << "Hello, world!\n";
+	rs.headers.insert(std::pair<std::string, std::string>("content-type", "text/plain"));
+	rs << "Hello, from Clane!\n\n";
+	rs << req.method << ": " << req.uri << '\n';
+	for (auto h: req.headers)
+		rs << h.first << ": " << h.second << '\n';
 #if 0
 	std::lock_guard<std::mutex> lock(mutex);
 	done = true;
