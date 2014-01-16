@@ -18,7 +18,7 @@ namespace clane {
 	namespace http {
 
 		class oresponsestream: public std::ostream {
-		protected:
+		public:
 			status_code &status;
 			header_map &headers;
 		public:

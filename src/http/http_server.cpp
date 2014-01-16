@@ -84,7 +84,7 @@ namespace clane {
 			bool hdrs_written;
 			char out_buf[4096];
 		public:
-			virtual ~server_streambuf() = default;
+			virtual ~server_streambuf();
 			server_streambuf(net::socket &sock);
 			server_streambuf(server_streambuf const &) = default;
 			server_streambuf(server_streambuf &&) = default;
@@ -99,8 +99,12 @@ namespace clane {
 			virtual int_type underflow();
 			virtual int_type overflow(int_type ch);
 		private:
-			int flush();
+			int flush(bool end = false);
 		};
+
+		server_streambuf::~server_streambuf() {
+			flush(true);
+		}
 
 		server_streambuf::server_streambuf(net::socket &sock): sock(sock), major_ver{}, minor_ver{},
 		 	out_stat_code(status_code::ok), active(true), hdrs_written{} {
@@ -136,7 +140,7 @@ namespace clane {
 			act_cond.notify_one();
 		}
 
-		int server_streambuf::flush() {
+		int server_streambuf::flush(bool end) {
 			net::xfer_result xfer_res;
 			// wait for previous responses in the pipeline to complete:
 			{
@@ -148,11 +152,8 @@ namespace clane {
 				std::ostringstream ss;
 				ss << "HTTP/" << major_ver << '.' << minor_ver << ' ' <<
 					static_cast<std::underlying_type<status_code>::type>(out_stat_code) << ' ' << what(out_stat_code) << "\r\n";
-				for (auto h: out_hdrs) {
+				for (auto h: out_hdrs)
 					ss << h.first << ": " << h.second << "\r\n";
-					std::string hdr_line = ss.str();
-					xfer_res = sock.send_all(hdr_line.data(), hdr_line.size());
-				}
 				ss << "\r\n";
 				std::string hdr_lines = ss.str();
 				xfer_res = sock.send_all(hdr_lines.data(), hdr_lines.size());
@@ -162,16 +163,27 @@ namespace clane {
 			}
 			// send:
 			size_t chunk_len = pptr() - pbase();
-			std::ostringstream ss;
-			ss << std::hex << chunk_len << "\r\n";
-			std::string chunk_line = ss.str();
-			xfer_res = sock.send_all(chunk_line.data(), chunk_line.size());
-			if (net::status::ok != xfer_res.stat)
-				return -1; // connection error
-			xfer_res = sock.send_all(pbase(), chunk_len);
-			if (net::status::ok != xfer_res.stat)
-				return -1; // connection error
+			if (chunk_len) {
+				std::ostringstream ss;
+				ss << std::hex << chunk_len << "\r\n";
+				std::string chunk_line = ss.str();
+				xfer_res = sock.send_all(chunk_line.data(), chunk_line.size());
+				if (net::status::ok != xfer_res.stat)
+					return -1; // connection error
+				xfer_res = sock.send_all(pbase(), chunk_len);
+				if (net::status::ok != xfer_res.stat)
+					return -1; // connection error
+				xfer_res = sock.send_all("\r\n", 2);
+				if (net::status::ok != xfer_res.stat)
+					return -1; // connection error
+			}
 			setp(out_buf, out_buf+sizeof(out_buf));
+			// final chunk:
+			if (end) {
+				xfer_res = sock.send_all("0\r\n\r\n", 5);
+				if (net::status::ok != xfer_res.stat)
+					return -1; // connection error
+			}
 			return 0; // success
 		}
 

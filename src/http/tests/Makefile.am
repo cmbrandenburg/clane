@@ -12,7 +12,8 @@ TESTS = \
 	check_headers_consumer \
 	check_request_1x_consumer \
 	check_chunk_line_consumer \
-	check_server_run_term
+	check_server_run_term \
+	check_request_response
 
 check_PROGRAMS = \
 	check_chunk_line_consumer \
@@ -25,6 +26,7 @@ check_PROGRAMS = \
 	check_is_method_valid \
 	check_request_1x_consumer \
 	check_request_line_consumer \
+	check_request_response \
 	check_rtrim \
 	check_server_run_term
 
@@ -57,6 +59,9 @@ check_request_1x_consumer_LDFLAGS = ../libhttp.la
 
 check_request_line_consumer_SOURCES = check_request_line_consumer.cpp
 check_request_line_consumer_LDFLAGS = ../libhttp.la
+
+check_request_response_SOURCES = check_request_response.cpp
+check_request_response_LDFLAGS = ../libhttp.la
 
 check_rtrim_SOURCES = check_rtrim.cpp
 check_rtrim_LDFLAGS = ../libhttp.la
