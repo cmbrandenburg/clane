@@ -13,14 +13,14 @@ check_PROGRAMS = \
 	check_tcp_connect_accept
 
 check_event_SOURCES = check_event.cpp
-check_event_LDFLAGS = ../libnet.la
+check_event_LDADD = ../libnet.la
 
 check_posix_errno_to_string_SOURCES = check_posix_errno_to_string.cpp
-check_posix_errno_to_string_LDFLAGS = ../libnet.la
+check_posix_errno_to_string_LDADD = ../libnet.la
 
 check_posix_fd_SOURCES = check_posix_fd.cpp
-check_posix_fd_LDFLAGS = ../libnet.la
+check_posix_fd_LDADD = ../libnet.la
 
 check_tcp_connect_accept_SOURCES = check_tcp_connect_accept.cpp
-check_tcp_connect_accept_LDFLAGS = ../libnet.la
+check_tcp_connect_accept_LDADD = ../libnet.la
 

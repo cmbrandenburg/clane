@@ -31,41 +31,41 @@ check_PROGRAMS = \
 	check_server_run_term
 
 check_chunk_line_consumer_SOURCES = check_chunk_line_consumer.cpp
-check_chunk_line_consumer_LDFLAGS = ../libhttp.la
+check_chunk_line_consumer_LDADD = ../libhttp.la
 
 check_consumer_SOURCES = check_consumer.cpp
-check_consumer_LDFLAGS = ../libhttp.la
+check_consumer_LDADD = ../libhttp.la
 
 check_find_newline_SOURCES = check_find_newline.cpp
-check_find_newline_LDFLAGS = ../libhttp.la
+check_find_newline_LDADD = ../libhttp.la
 
 check_header_name_less_SOURCES = check_header_name_less.cpp
-check_header_name_less_LDFLAGS = ../libhttp.la
+check_header_name_less_LDADD = ../libhttp.la
 
 check_headers_consumer_SOURCES = check_headers_consumer.cpp
-check_headers_consumer_LDFLAGS = ../libhttp.la
+check_headers_consumer_LDADD = ../libhttp.la
 
 check_is_header_name_valid_SOURCES = check_is_header_name_valid.cpp
-check_is_header_name_valid_LDFLAGS = ../libhttp.la
+check_is_header_name_valid_LDADD = ../libhttp.la
 
 check_is_header_value_valid_SOURCES = check_is_header_value_valid.cpp
-check_is_header_value_valid_LDFLAGS = ../libhttp.la
+check_is_header_value_valid_LDADD = ../libhttp.la
 
 check_is_method_valid_SOURCES = check_is_method_valid.cpp
-check_is_method_valid_LDFLAGS = ../libhttp.la
+check_is_method_valid_LDADD = ../libhttp.la
 
 check_request_1x_consumer_SOURCES = check_request_1x_consumer.cpp
-check_request_1x_consumer_LDFLAGS = ../libhttp.la
+check_request_1x_consumer_LDADD = ../libhttp.la
 
 check_request_line_consumer_SOURCES = check_request_line_consumer.cpp
-check_request_line_consumer_LDFLAGS = ../libhttp.la
+check_request_line_consumer_LDADD = ../libhttp.la
 
 check_request_response_SOURCES = check_request_response.cpp
-check_request_response_LDFLAGS = ../libhttp.la
+check_request_response_LDADD = ../libhttp.la
 
 check_rtrim_SOURCES = check_rtrim.cpp
-check_rtrim_LDFLAGS = ../libhttp.la
+check_rtrim_LDADD = ../libhttp.la
 
 check_server_run_term_SOURCES = check_server_run_term.cpp
-check_server_run_term_LDFLAGS = ../libhttp.la
+check_server_run_term_LDADD = ../libhttp.la
 
