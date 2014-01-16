@@ -130,6 +130,7 @@ namespace clane {
 		std::string pf_unimpl_remote_address(socket_descriptor &) { throw std::logic_error(pf_unsupported); }
 		accept_result pf_unimpl_accept(socket_descriptor &, std::string *) { throw std::logic_error(pf_unsupported); }
 		xfer_result pf_unimpl_send(socket_descriptor &, void const *, size_t) { throw std::logic_error(pf_unsupported); }
+		xfer_result pf_unimpl_send_all(socket_descriptor &, void const *, size_t) { throw std::logic_error(pf_unsupported); }
 		xfer_result pf_unimpl_recv(socket_descriptor &, void *, size_t) { throw std::logic_error(pf_unsupported); }
 		void pf_unimpl_fin(socket_descriptor &) { throw std::logic_error(pf_unsupported); }
 	}

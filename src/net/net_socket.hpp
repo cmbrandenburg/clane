@@ -57,6 +57,7 @@ namespace clane {
 			std::string (*remote_address)(socket_descriptor &sd);
 			accept_result (*accept)(socket_descriptor &sd, std::string *addr_o);
 			xfer_result (*send)(socket_descriptor &sd, void const *p, size_t n);
+			xfer_result (*send_all)(socket_descriptor &sd, void const *p, size_t n);
 			xfer_result (*recv)(socket_descriptor &sd, void *p, size_t n);
 			void (*fin)(socket_descriptor &sd);
 		};
@@ -79,6 +80,7 @@ namespace clane {
 			accept_result accept();
 			accept_result accept(std::string &addr_o);
 			xfer_result send(void const *p, size_t n) { return pf->send(sd, p, n); }
+			xfer_result send_all(void const *p, size_t n) { return pf->send_all(sd, p, n); }
 			xfer_result recv(void *p, size_t n) { return pf->recv(sd, p, n); }
 			void fin() { pf->fin(sd); }
 		};
@@ -137,6 +139,7 @@ namespace clane {
 		std::string pf_unimpl_remote_address(socket_descriptor &);
 		accept_result pf_unimpl_accept(socket_descriptor &, std::string *);
 		xfer_result pf_unimpl_send(socket_descriptor &, void const *, size_t);
+		xfer_result pf_unimpl_send_all(socket_descriptor &, void const *, size_t);
 		xfer_result pf_unimpl_recv(socket_descriptor &, void *, size_t);
 		void pf_unimpl_fin(socket_descriptor &);
 	}

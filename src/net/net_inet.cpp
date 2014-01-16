@@ -133,10 +133,8 @@ namespace clane {
 			auto sock_fd = sys_socket(lookup->ai_family, SOCK_STREAM, 0);
 			connect_result res{};
 			res.stat = sys_connect(sock_fd, lookup->ai_addr, lookup->ai_addrlen);
-			if (status::ok == res.stat || status::in_progress == res.stat) {
-				set_nonblocking(sock_fd);
+			if (status::ok == res.stat || status::in_progress == res.stat)
 				res.sock = socket(tcp_protocol_family_by_domain(lookup->ai_family), std::move(sock_fd));
-			}
 			return res;
 		}
 
@@ -196,7 +194,7 @@ namespace clane {
 
 		xfer_result pf_tcpx_send(socket_descriptor &sd, void const *p, size_t n) {
 			xfer_result res{};
-			ssize_t stat = TEMP_FAILURE_RETRY(::send(sd.n, p, n, MSG_NOSIGNAL));
+			ssize_t stat = TEMP_FAILURE_RETRY(::send(sd.n, p, n, MSG_DONTWAIT | MSG_NOSIGNAL));
 			if (-1 == stat) {
 				switch (errno) {
 					case EACCES: res.stat = status::permission; return res;
@@ -219,9 +217,31 @@ namespace clane {
 			return res;
 		}
 
+		xfer_result pf_tcpx_send_all(socket_descriptor &sd, void const *p, size_t n) {
+			xfer_result res{};
+			while (res.size < n) {
+				ssize_t stat = TEMP_FAILURE_RETRY(::send(sd.n, reinterpret_cast<char const *>(p)+res.size, n-res.size, MSG_NOSIGNAL));
+				if (-1 == stat) {
+					switch (errno) {
+						case EACCES: res.stat = status::permission; return res;
+						case ECONNRESET: case EPIPE: res.stat = status::reset; return res;
+						case ENOBUFS: case ENOMEM: res.stat = status::no_resource; return res;
+						case ETIMEDOUT: res.stat = status::timed_out; return res;
+					}
+					if (-1 == stat) {
+						std::ostringstream ess;
+						ess << "socket send (sockfd=" << sd.n << "): " << posix::errno_to_string(errno);
+						throw std::runtime_error(ess.str());
+					}
+				}
+				res.size += stat;
+			}
+			return res;
+		}
+
 		xfer_result pf_tcpx_recv(socket_descriptor &sd, void *p, size_t n) {
 			xfer_result res{};
-			ssize_t stat = TEMP_FAILURE_RETRY(::recv(sd.n, p, n, 0));
+			ssize_t stat = TEMP_FAILURE_RETRY(::recv(sd.n, p, n, MSG_DONTWAIT));
 			if (-1 == stat) {
 				switch (errno) {
 					case EACCES: res.stat = status::permission; return res;
@@ -264,6 +284,7 @@ namespace clane {
 			pf_unimpl_remote_address,
 			pf_unimpl_accept,
 			pf_unimpl_send,
+			pf_unimpl_send_all,
 			pf_unimpl_recv,
 			pf_unimpl_fin
 		};
@@ -278,6 +299,7 @@ namespace clane {
 			pf_tcp4_remote_address,
 			pf_tcp4_accept,
 			pf_tcpx_send,
+			pf_tcpx_send_all,
 			pf_tcpx_recv,
 			pf_tcpx_fin
 		};
@@ -292,6 +314,7 @@ namespace clane {
 			pf_tcp6_remote_address,
 			pf_tcp6_accept,
 			pf_tcpx_send,
+			pf_tcpx_send_all,
 			pf_tcpx_recv,
 			pf_tcpx_fin
 		};
