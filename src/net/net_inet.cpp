@@ -166,30 +166,26 @@ namespace clane {
 			return tcp6_address_to_string(sa);
 		}
 
-		accept_result pf_tcp4_accept(socket_descriptor &sd, std::string *addr_o) {
-			sockaddr_in sa;
+		template <class SockAddr, protocol_family const *pf, std::string (*addr_to_str)(SockAddr const &)>
+		accept_result pf_tcp_accept(socket_descriptor &sd, std::string *addr_o) {
+			SockAddr sa;
 			auto sys_res = sys_accept(sd.n, reinterpret_cast<sockaddr *>(addr_o ? &sa : nullptr), sizeof(sa));
 			accept_result res{};
 			res.stat = sys_res.first;
 			if (status::ok == res.stat) {
-				res.sock = socket(&tcp4, sys_res.second.release());
+				res.sock = socket(pf, sys_res.second.release());
 				if (addr_o)
-					*addr_o = tcp4_address_to_string(sa);
+					*addr_o = addr_to_str(sa);
 			}
 			return res;
 		}
 
+		accept_result pf_tcp4_accept(socket_descriptor &sd, std::string *addr_o) {
+			return pf_tcp_accept<sockaddr_in, &tcp4, tcp4_address_to_string>(sd, addr_o);
+		}
+
 		accept_result pf_tcp6_accept(socket_descriptor &sd, std::string *addr_o) {
-			sockaddr_in6 sa;
-			auto sys_res = sys_accept(sd.n, reinterpret_cast<sockaddr *>(addr_o ? &sa : nullptr), sizeof(sa));
-			accept_result res{};
-			res.stat = sys_res.first;
-			if (status::ok == res.stat) {
-				res.sock = socket(&tcp6, sys_res.second.release());
-				if (addr_o)
-					*addr_o = tcp6_address_to_string(sa);
-			}
-			return res;
+			return pf_tcp_accept<sockaddr_in6, &tcp6, tcp6_address_to_string>(sd, addr_o);
 		}
 
 		xfer_result pf_tcpx_send(socket_descriptor &sd, void const *p, size_t n) {
