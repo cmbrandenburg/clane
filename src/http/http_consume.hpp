@@ -84,6 +84,17 @@ namespace clane {
 			void reset(header_map &hdrs);
 		};
 
+		inline headers_consumer::headers_consumer(header_map &hdrs): cur_phase(phase::start_line), hdrs(&hdrs) {
+		}
+
+		inline void headers_consumer::reset(header_map &hdrs) {
+			consumer::reset();
+			cur_phase = phase::start_line;
+			this->hdrs = &hdrs;
+			hdr_name.clear();
+			hdr_val.clear();
+		}
+
 		class request_line_consumer: virtual public consumer {
 			enum class phase {
 				method,
@@ -110,6 +121,21 @@ namespace clane {
 			bool parse_version();
 		};
 
+		inline request_line_consumer::request_line_consumer(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver):
+		  	 	cur_phase(phase::method), method(&method), uri(&uri), major_ver(&major_ver), minor_ver(&minor_ver) {
+		}
+
+		inline void request_line_consumer::reset(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver) {
+			consumer::reset();
+			cur_phase = phase::method;
+			this->method = &method;
+			this->uri = &uri;
+			this->major_ver = &major_ver;
+			this->minor_ver = &minor_ver;
+			uri_str.clear();
+			version_str.clear();
+		}
+
 		class request_1x_consumer: virtual public consumer, private request_line_consumer, private headers_consumer {
 			enum class phase {
 				request_line,
@@ -125,6 +151,18 @@ namespace clane {
 			bool consume(char const *buf, size_t size);
 			void reset(request &req);
 		};
+
+		inline request_1x_consumer::request_1x_consumer(request &req):
+		  	 	request_line_consumer(req.method, req.uri, req.major_version, req.minor_version),
+				headers_consumer(req.headers), cur_phase(phase::request_line) {
+		}
+
+		inline void request_1x_consumer::reset(request &req) {
+			consumer::reset();
+			cur_phase = phase::request_line;
+			request_line_consumer::reset(req.method, req.uri, req.major_version, req.minor_version);
+			headers_consumer::reset(req.headers);
+		}
 
 		class chunk_line_consumer: virtual public consumer {
 			static constexpr int max_nibs = 2 * sizeof(size_t);
@@ -147,44 +185,6 @@ namespace clane {
 			void reset();
 			size_t chunk_size() const { return val; }
 		};
-
-		inline headers_consumer::headers_consumer(header_map &hdrs): cur_phase(phase::start_line), hdrs(&hdrs) {
-		}
-
-		inline void headers_consumer::reset(header_map &hdrs) {
-			consumer::reset();
-			cur_phase = phase::start_line;
-			this->hdrs = &hdrs;
-			hdr_name.clear();
-			hdr_val.clear();
-		}
-
-		inline request_line_consumer::request_line_consumer(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver):
-		  	 	cur_phase(phase::method), method(&method), uri(&uri), major_ver(&major_ver), minor_ver(&minor_ver) {
-		}
-
-		inline void request_line_consumer::reset(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver) {
-			consumer::reset();
-			cur_phase = phase::method;
-			this->method = &method;
-			this->uri = &uri;
-			this->major_ver = &major_ver;
-			this->minor_ver = &minor_ver;
-			uri_str.clear();
-			version_str.clear();
-		}
-
-		inline request_1x_consumer::request_1x_consumer(request &req):
-		  	 	request_line_consumer(req.method, req.uri, req.major_version, req.minor_version),
-				headers_consumer(req.headers), cur_phase(phase::request_line) {
-		}
-
-		inline void request_1x_consumer::reset(request &req) {
-			consumer::reset();
-			cur_phase = phase::request_line;
-			request_line_consumer::reset(req.method, req.uri, req.major_version, req.minor_version);
-			headers_consumer::reset(req.headers);
-		}
 
 		inline chunk_line_consumer::chunk_line_consumer(): cur_phase(phase::digit), nibs{}, val{} {}
 
