@@ -126,12 +126,12 @@ namespace clane {
 		int pf_unimpl_descriptor(socket_descriptor const &) { throw std::logic_error(pf_unsupported); }
 		socket pf_unimpl_new_listener(std::string &, int) { throw std::logic_error(pf_unsupported); }
 		connect_result pf_unimpl_new_connection(std::string &) { throw std::logic_error(pf_unsupported); }
+		void pf_unimpl_set_nonblocking(socket_descriptor &) { throw std::logic_error(pf_unsupported); }
 		std::string pf_unimpl_local_address(socket_descriptor &) { throw std::logic_error(pf_unsupported); }
 		std::string pf_unimpl_remote_address(socket_descriptor &) { throw std::logic_error(pf_unsupported); }
 		accept_result pf_unimpl_accept(socket_descriptor &, std::string *) { throw std::logic_error(pf_unsupported); }
-		xfer_result pf_unimpl_send(socket_descriptor &, void const *, size_t) { throw std::logic_error(pf_unsupported); }
-		xfer_result pf_unimpl_send_all(socket_descriptor &, void const *, size_t) { throw std::logic_error(pf_unsupported); }
-		xfer_result pf_unimpl_recv(socket_descriptor &, void *, size_t) { throw std::logic_error(pf_unsupported); }
+		xfer_result pf_unimpl_send(socket_descriptor &, void const *, size_t, int) { throw std::logic_error(pf_unsupported); }
+		xfer_result pf_unimpl_recv(socket_descriptor &, void *, size_t, int) { throw std::logic_error(pf_unsupported); }
 		void pf_unimpl_fin(socket_descriptor &) { throw std::logic_error(pf_unsupported); }
 	}
 }

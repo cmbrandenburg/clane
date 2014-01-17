@@ -142,6 +142,10 @@ namespace clane {
 		connect_result pf_tcp4_new_connection(std::string &addr) { return pf_tcp_new_connection(AF_INET, addr); }
 		connect_result pf_tcp6_new_connection(std::string &addr) { return pf_tcp_new_connection(AF_INET6, addr); }
 
+		void pf_tcpx_set_nonblocking(socket_descriptor &sd) {
+			posix::set_nonblocking(sd.n);
+		}
+
 		std::string pf_tcp4_local_address(socket_descriptor &sd) {
 			sockaddr_in sa;
 			sys_getsockname(sd.n, reinterpret_cast<sockaddr *>(&sa), sizeof(sa));
@@ -188,38 +192,19 @@ namespace clane {
 			return pf_tcp_accept<sockaddr_in6, &tcp6, tcp6_address_to_string>(sd, addr_o);
 		}
 
-		xfer_result pf_tcpx_send(socket_descriptor &sd, void const *p, size_t n) {
+		xfer_result pf_tcpx_send(socket_descriptor &sd, void const *p, size_t n, int flags) {
 			xfer_result res{};
-			ssize_t stat = TEMP_FAILURE_RETRY(::send(sd.n, p, n, MSG_DONTWAIT | MSG_NOSIGNAL));
-			if (-1 == stat) {
-				switch (errno) {
-					case EACCES: res.stat = status::permission; return res;
-					case EAGAIN:
-#if EAGAIN != EWOULDBLOCK
-					case EWOULDBLOCK:
-#endif
-						res.stat = status::would_block; return res;
-					case ECONNRESET: case EPIPE: res.stat = status::reset; return res;
-					case ENOBUFS: case ENOMEM: res.stat = status::no_resource; return res;
-					case ETIMEDOUT: res.stat = status::timed_out; return res;
-				}
-				if (-1 == stat) {
-					std::ostringstream ess;
-					ess << "socket send (sockfd=" << sd.n << "): " << posix::errno_to_string(errno);
-					throw std::runtime_error(ess.str());
-				}
-			}
-			res.size = stat;
-			return res;
-		}
-
-		xfer_result pf_tcpx_send_all(socket_descriptor &sd, void const *p, size_t n) {
-			xfer_result res{};
-			while (res.size < n) {
-				ssize_t stat = TEMP_FAILURE_RETRY(::send(sd.n, reinterpret_cast<char const *>(p)+res.size, n-res.size, MSG_NOSIGNAL));
+			char const *const ppos = reinterpret_cast<char const *>(p);
+			do {
+				ssize_t stat = TEMP_FAILURE_RETRY(::send(sd.n, ppos+res.size, n-res.size, MSG_NOSIGNAL));
 				if (-1 == stat) {
 					switch (errno) {
 						case EACCES: res.stat = status::permission; return res;
+						case EAGAIN:
+#if EAGAIN != EWOULDBLOCK
+						case EWOULDBLOCK:
+#endif
+							res.stat = status::would_block; return res;
 						case ECONNRESET: case EPIPE: res.stat = status::reset; return res;
 						case ENOBUFS: case ENOMEM: res.stat = status::no_resource; return res;
 						case ETIMEDOUT: res.stat = status::timed_out; return res;
@@ -231,33 +216,36 @@ namespace clane {
 					}
 				}
 				res.size += stat;
-			}
+			} while (flags & all && res.size < n);
 			return res;
 		}
 
-		xfer_result pf_tcpx_recv(socket_descriptor &sd, void *p, size_t n) {
+		xfer_result pf_tcpx_recv(socket_descriptor &sd, void *p, size_t n, int flags) {
 			xfer_result res{};
-			ssize_t stat = TEMP_FAILURE_RETRY(::recv(sd.n, p, n, MSG_DONTWAIT));
-			if (-1 == stat) {
-				switch (errno) {
-					case EACCES: res.stat = status::permission; return res;
-					case EAGAIN:
-#if EAGAIN != EWOULDBLOCK
-					case EWOULDBLOCK:
-#endif
-						res.stat = status::would_block; return res;
-					case ECONNREFUSED: res.stat = status::conn_refused; return res;
-					case ECONNRESET: res.stat = status::reset; return res;
-					case ENOMEM: res.stat = status::no_resource; return res;
-					case ETIMEDOUT: res.stat = status::timed_out; return res;
-				}
+			char *const ppos = reinterpret_cast<char *>(p);
+			do {
+				ssize_t stat = TEMP_FAILURE_RETRY(::recv(sd.n, ppos+res.size, n-res.size, 0));
 				if (-1 == stat) {
-					std::ostringstream ess;
-					ess << "socket receive (sockfd=" << sd.n << "): " << posix::errno_to_string(errno);
-					throw std::runtime_error(ess.str());
+					switch (errno) {
+						case EACCES: res.stat = status::permission; return res;
+						case EAGAIN:
+#if EAGAIN != EWOULDBLOCK
+						case EWOULDBLOCK:
+#endif
+							res.stat = status::would_block; return res;
+						case ECONNREFUSED: res.stat = status::conn_refused; return res;
+						case ECONNRESET: res.stat = status::reset; return res;
+						case ENOMEM: res.stat = status::no_resource; return res;
+						case ETIMEDOUT: res.stat = status::timed_out; return res;
+					}
+					if (-1 == stat) {
+						std::ostringstream ess;
+						ess << "socket receive (sockfd=" << sd.n << "): " << posix::errno_to_string(errno);
+						throw std::runtime_error(ess.str());
+					}
 				}
-			}
-			res.size = stat;
+				res.size += stat;
+			} while (flags & all && res.size < n);
 			return res;
 		}
 
@@ -276,11 +264,11 @@ namespace clane {
 			pf_tcpx_descriptor,
 			pf_tcpx_new_listener,
 			pf_tcpx_new_connection,
+			pf_tcpx_set_nonblocking,
 			pf_unimpl_local_address,
 			pf_unimpl_remote_address,
 			pf_unimpl_accept,
 			pf_unimpl_send,
-			pf_unimpl_send_all,
 			pf_unimpl_recv,
 			pf_unimpl_fin
 		};
@@ -291,11 +279,11 @@ namespace clane {
 			pf_tcpx_descriptor,
 			pf_tcp4_new_listener,
 			pf_tcp4_new_connection,
+			pf_tcpx_set_nonblocking,
 			pf_tcp4_local_address,
 			pf_tcp4_remote_address,
 			pf_tcp4_accept,
 			pf_tcpx_send,
-			pf_tcpx_send_all,
 			pf_tcpx_recv,
 			pf_tcpx_fin
 		};
@@ -306,11 +294,11 @@ namespace clane {
 			pf_tcpx_descriptor,
 			pf_tcp6_new_listener,
 			pf_tcp6_new_connection,
+			pf_tcpx_set_nonblocking,
 			pf_tcp6_local_address,
 			pf_tcp6_remote_address,
 			pf_tcp6_accept,
 			pf_tcpx_send,
-			pf_tcpx_send_all,
 			pf_tcpx_recv,
 			pf_tcpx_fin
 		};

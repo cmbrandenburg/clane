@@ -45,4 +45,3 @@ int main() {
 	check(0 == xfer_res.size);
 }
 
-
