@@ -462,6 +462,7 @@ namespace clane {
 							// start request handler:
 							std::thread thrd(handler_thread_main, cur_ctx);
 							thrd.detach();
+							break;
 						}
 
 						case phase::body_fixed: {
