@@ -450,8 +450,13 @@ namespace clane {
 								done = true;
 								break;
 							}
-							cur_ctx->set_version(cur_ctx->req.major_version, cur_ctx->req.minor_version);
-							if (chunked_xfer_encoding(cur_ctx->req.headers)) {
+							int major = cur_ctx->req.major_version;
+							int minor = cur_ctx->req.minor_version;
+							if (1 != major || (0 != minor && 1 != minor)) {
+								// FIXME: unsupported HTTP version
+							}
+							cur_ctx->set_version(major, minor);
+							if (1 == major && 1 == minor && chunked_xfer_encoding(cur_ctx->req.headers)) {
 								cur_phase = phase::body_chunk_line;
 								chunk_cons.reset();
 							} else if (content_length(cur_ctx->req.headers, content_len)) {
