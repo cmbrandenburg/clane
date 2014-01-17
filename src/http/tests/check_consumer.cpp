@@ -9,7 +9,8 @@ using namespace clane;
 class nop_consumer: public http::consumer {
 public:
 	using http::consumer::increase_length;
-	using http::consumer::set_error;
+	using http::consumer::set_server_error;
+	using http::consumer::set_client_error;
 };
 
 int main() {
@@ -24,10 +25,14 @@ int main() {
 	check(1234 == cons.length());
 
 	// setting error state:
-	cons.set_error(http::status_code::not_found, "my error message");
+	cons.set_server_error(http::status_code::not_found, "my error message");
 	check(!cons);
 	check(cons.error_code() == http::status_code::not_found);
 	check(!strcmp(cons.what(), "my error message"));
+	cons.reset();
+	cons.set_client_error("another error message");
+	check(!cons);
+	check(!strcmp(cons.what(), "another error message"));
 
 	// reset:
 	cons.reset();

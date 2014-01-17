@@ -54,6 +54,13 @@ namespace clane {
 			}
 			return "";
 		}
+
+		bool status_code_from_int(status_code &stat, int n) {
+			if (!*what(static_cast<status_code>(n)))
+				return false;
+			stat = static_cast<status_code>(n);
+			return true;
+		}
 	}
 }
 

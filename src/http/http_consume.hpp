@@ -58,7 +58,8 @@ namespace clane {
 			bool increase_length(size_t n);
 
 			// Sets the consumer into the error state, with a description of the error.
-			void set_error(status_code error_stat, char const *what);
+			void set_server_error(status_code error_stat, char const *what);
+			void set_client_error(char const *what);
 		};
 
 		class headers_consumer: virtual public consumer {
@@ -117,8 +118,6 @@ namespace clane {
 			request_line_consumer &operator=(request_line_consumer &&) = default;
 			bool consume(char const *buf, size_t size);
 			void reset(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver);
-		private:
-			bool parse_version();
 		};
 
 		inline request_line_consumer::request_line_consumer(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver):
@@ -134,6 +133,44 @@ namespace clane {
 			this->minor_ver = &minor_ver;
 			uri_str.clear();
 			version_str.clear();
+		}
+
+		class status_line_consumer: virtual public consumer {
+			enum class phase {
+				version,
+				status,
+				reason,
+				newline
+			} cur_phase;
+			int *major_ver;
+			int *minor_ver;
+			status_code *stat;
+			std::string *reason;
+			std::string version_str;
+			std::string status_str;
+		public:
+			~status_line_consumer() = default;
+			status_line_consumer(int &major_ver, int &minor_ver, status_code &stat, std::string &reason);
+			status_line_consumer(status_line_consumer const &) = delete;
+			status_line_consumer(status_line_consumer &&) = default;
+			status_line_consumer &operator=(status_line_consumer const &) = delete;
+			status_line_consumer &operator=(status_line_consumer &&) = default;
+			bool consume(char const *buf, size_t size);
+			void reset(int &major_ver, int &minor_ver, status_code &stat, std::string &reason);
+		};
+
+		inline status_line_consumer::status_line_consumer(int &major_ver, int &minor_ver, status_code &stat, std::string &reason):
+			cur_phase(phase::version), major_ver(&major_ver), minor_ver(&minor_ver), stat(&stat), reason(&reason) {}
+
+		inline void status_line_consumer::reset(int &major_ver, int &minor_ver, status_code &stat, std::string &reason) {
+			consumer::reset();
+			cur_phase = phase::version;
+			this->major_ver = &major_ver;
+			this->minor_ver = &minor_ver;
+			this->stat = &stat;
+			this->reason = &reason;
+			version_str.clear();
+			status_str.clear();
 		}
 
 		class request_1x_consumer: virtual public consumer, private request_line_consumer, private headers_consumer {

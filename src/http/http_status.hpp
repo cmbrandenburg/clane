@@ -64,6 +64,8 @@ namespace clane {
 		}
 
 		char const *what(status_code n);
+
+		bool status_code_from_int(status_code &stat, int n);
 	}
 }
 
