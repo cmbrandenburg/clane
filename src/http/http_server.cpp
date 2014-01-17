@@ -156,7 +156,7 @@ namespace clane {
 					ss << h.first << ": " << h.second << "\r\n";
 				ss << "\r\n";
 				std::string hdr_lines = ss.str();
-				xfer_res = sock.send_all(hdr_lines.data(), hdr_lines.size());
+				xfer_res = sock.send(hdr_lines.data(), hdr_lines.size(), net::all);
 				if (net::status::ok != xfer_res.stat)
 					return -1; // connection error
 				hdrs_written = true;
@@ -167,20 +167,20 @@ namespace clane {
 				std::ostringstream ss;
 				ss << std::hex << chunk_len << "\r\n";
 				std::string chunk_line = ss.str();
-				xfer_res = sock.send_all(chunk_line.data(), chunk_line.size());
+				xfer_res = sock.send(chunk_line.data(), chunk_line.size(), net::all);
 				if (net::status::ok != xfer_res.stat)
 					return -1; // connection error
-				xfer_res = sock.send_all(pbase(), chunk_len);
+				xfer_res = sock.send(pbase(), chunk_len, net::all);
 				if (net::status::ok != xfer_res.stat)
 					return -1; // connection error
-				xfer_res = sock.send_all("\r\n", 2);
+				xfer_res = sock.send("\r\n", 2, net::all);
 				if (net::status::ok != xfer_res.stat)
 					return -1; // connection error
 			}
 			setp(out_buf, out_buf+sizeof(out_buf));
 			// final chunk:
 			if (end) {
-				xfer_res = sock.send_all("0\r\n\r\n", 5);
+				xfer_res = sock.send("0\r\n\r\n", 5, net::all);
 				if (net::status::ok != xfer_res.stat)
 					return -1; // connection error
 			}
@@ -290,10 +290,12 @@ namespace clane {
 
 		void server::add_listener(char const *addr) {
 			listeners.push_back(listen(&net::tcp, addr));
+			listeners.back().set_nonblocking();
 		}
 
 		void server::add_listener(std::string const &addr) {
 			listeners.push_back(listen(&net::tcp, addr));
+			listeners.back().set_nonblocking();
 		}
 
 		void server::run() {
@@ -350,6 +352,8 @@ namespace clane {
 		void server::connection_main(net::socket conn, scoped_conn_ref ref) {
 
 			reference_counter out_cnt; // last thing to destruct
+
+			conn.set_nonblocking();
 
 			// input buffer:
 			static size_t const incap = 4096;
