@@ -415,7 +415,7 @@ namespace clane {
 
 				// reallocate input buffer if full:
 				if (inoff == incap) {
-					inbuf = std::unique_ptr<char, std::default_delete<char>>(new char[incap]);
+					inbuf = std::unique_ptr<char, std::default_delete<char[]>>(new char[incap]);
 					inoff = 0;
 				}
 
