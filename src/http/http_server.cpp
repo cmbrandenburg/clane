@@ -153,7 +153,7 @@ namespace clane {
 				ss << "HTTP/" << major_ver << '.' << minor_ver << ' ' <<
 					static_cast<std::underlying_type<status_code>::type>(out_stat_code) << ' ' << what(out_stat_code) << "\r\n";
 				for (auto h: out_hdrs)
-					ss << h.first << ": " << h.second << "\r\n";
+					ss << canonize_1x_header_name(h.first) << ": " << h.second << "\r\n";
 				ss << "\r\n";
 				std::string hdr_lines = ss.str();
 				xfer_res = sock.send(hdr_lines.data(), hdr_lines.size(), net::all);

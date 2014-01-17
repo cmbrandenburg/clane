@@ -2,6 +2,7 @@ AM_CXXFLAGS = -Wall -Werror -std=c++11
 
 TESTS = \
 	check_header_name_less \
+	check_canonize_1x_header_name \
 	check_find_newline \
 	check_rtrim \
 	check_is_header_name_valid \
@@ -16,6 +17,7 @@ TESTS = \
 	check_request_response
 
 check_PROGRAMS = \
+	check_canonize_1x_header_name \
 	check_chunk_line_consumer \
 	check_consumer \
 	check_find_newline \
@@ -29,6 +31,9 @@ check_PROGRAMS = \
 	check_request_response \
 	check_rtrim \
 	check_server_run_term
+
+check_canonize_1x_header_name_SOURCES = check_canonize_1x_header_name.cpp
+check_canonize_1x_header_name_LDADD = ../libhttp.la
 
 check_chunk_line_consumer_SOURCES = check_chunk_line_consumer.cpp
 check_chunk_line_consumer_LDADD = ../libhttp.la

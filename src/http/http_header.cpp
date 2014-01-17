@@ -22,6 +22,19 @@ namespace clane {
 				return true;
 			return false;
 		}
+
+		std::string canonize_1x_header_name(std::string s) {
+			bool cap = true;
+			for (char &i: s) {
+				if (cap) {
+					i = std::toupper(i);
+					cap = false;
+				}
+				if ('-' == i)
+					cap = true;
+			}
+			return s;
+		}
 	}
 }
 
