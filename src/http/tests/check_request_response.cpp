@@ -62,6 +62,7 @@ int main() {
 	}
 	check(resp == "HTTP/1.1 200 OK\r\n"
 			"Content-Type: text/plain\r\n"
+			"Transfer-Encoding: chunked\r\n"
 			"\r\n"
 			"13\r\n"
 			"Hello, from Clane!\n"

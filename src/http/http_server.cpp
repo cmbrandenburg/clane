@@ -11,6 +11,32 @@
 namespace clane {
 	namespace http {
 
+		static bool chunked_xfer_encoding(header_map const &hdrs) {
+			// FIXME: Ignore transfer-encoding order. Assume that if any one of the
+			// transfer-encoding headers is "chunked" then the message is chunked.
+			static std::string const key("transfer-encoding");
+			auto r = hdrs.equal_range(key);
+			return r.second != std::find_if(r.first, r.second, [&](std::pair<std::string, std::string> const &v) {
+					return v.second == "chunked";
+					});
+		}
+
+		static bool content_length(header_map const &hdrs, size_t &content_len) {
+			// FIXME: Ignore multiple and invalid content-length headers. Assume the
+			// first content-length header 
+			static std::string const key("content-length");
+			auto p = hdrs.find(key);
+			if (p == hdrs.end())
+				return false;
+			std::istringstream ss(p->second);
+			size_t len;
+			ss >> len;
+			if (!ss || !ss.eof())
+				return false;
+			content_len = len;
+			return true;
+		}
+
 		// TODO: move to generic sublibrary
 		// TODO: unit test
 		class reference_counter {
@@ -82,6 +108,7 @@ namespace clane {
 			std::condition_variable act_cond;
 			bool active;
 			bool hdrs_written;
+			bool chunked;
 			char out_buf[4096];
 		public:
 			virtual ~server_streambuf();
@@ -107,7 +134,7 @@ namespace clane {
 		}
 
 		server_streambuf::server_streambuf(net::socket &sock): sock(sock), major_ver{}, minor_ver{},
-		 	out_stat_code(status_code::ok), active(true), hdrs_written{} {
+		 	out_stat_code(status_code::ok), active(true), hdrs_written{}, chunked{} {
 			in_queue.push_back(buffer{}); // dummy node
 			// The put area begins empty. No buffering to the character sequence may
 			// occur before calling a virtual "put" method. This allows us to flush
@@ -149,6 +176,11 @@ namespace clane {
 			}
 			// flush headers if not already written:
 			if (!hdrs_written) {
+				size_t content_len;
+				if (!content_length(out_hdrs, content_len)) {
+					chunked = true;
+					out_hdrs.insert(std::pair<std::string, std::string>("transfer-encoding", "chunked"));
+				}
 				std::ostringstream ss;
 				ss << "HTTP/" << major_ver << '.' << minor_ver << ' ' <<
 					static_cast<std::underlying_type<status_code>::type>(out_stat_code) << ' ' << what(out_stat_code) << "\r\n";
@@ -164,22 +196,26 @@ namespace clane {
 			// send:
 			size_t chunk_len = pptr() - pbase();
 			if (chunk_len) {
-				std::ostringstream ss;
-				ss << std::hex << chunk_len << "\r\n";
-				std::string chunk_line = ss.str();
-				xfer_res = sock.send(chunk_line.data(), chunk_line.size(), net::all);
-				if (net::status::ok != xfer_res.stat)
-					return -1; // connection error
+				if (chunked) {
+					std::ostringstream ss;
+					ss << std::hex << chunk_len << "\r\n";
+					std::string chunk_line = ss.str();
+					xfer_res = sock.send(chunk_line.data(), chunk_line.size(), net::all);
+					if (net::status::ok != xfer_res.stat)
+						return -1; // connection error
+				}
 				xfer_res = sock.send(pbase(), chunk_len, net::all);
 				if (net::status::ok != xfer_res.stat)
 					return -1; // connection error
-				xfer_res = sock.send("\r\n", 2, net::all);
-				if (net::status::ok != xfer_res.stat)
-					return -1; // connection error
+				if (chunked) {
+					xfer_res = sock.send("\r\n", 2, net::all);
+					if (net::status::ok != xfer_res.stat)
+						return -1; // connection error
+				}
 			}
 			setp(out_buf, out_buf+sizeof(out_buf));
 			// final chunk:
-			if (end) {
+			if (end && chunked) {
 				xfer_res = sock.send("0\r\n\r\n", 5, net::all);
 				if (net::status::ok != xfer_res.stat)
 					return -1; // connection error
@@ -246,32 +282,6 @@ namespace clane {
 				next_ctx = nc;
 			}
 			nc->sb.inactivate();
-		}
-
-		static bool chunked_xfer_encoding(header_map const &hdrs) {
-			// FIXME: Ignore transfer-encoding order. Assume that if any one of the
-			// transfer-encoding headers is "chunked" then the message is chunked.
-			static std::string const key("transfer-encoding");
-			auto r = hdrs.equal_range(key);
-			return r.second != std::find_if(r.first, r.second, [&](std::pair<std::string, std::string> const &v) {
-					return v.second == "chunked";
-					});
-		}
-
-		static bool content_length(header_map const &hdrs, size_t &content_len) {
-			// FIXME: Ignore multiple and invalid content-length headers. Assume the
-			// first content-length header 
-			static std::string const key("content-length");
-			auto p = hdrs.find(key);
-			if (p == hdrs.end())
-				return false;
-			std::istringstream ss(p->second);
-			size_t len;
-			ss >> len;
-			if (!ss || !ss.eof())
-				return false;
-			content_len = len;
-			return true;
 		}
 
 		server::scoped_conn_ref::~scoped_conn_ref() {
