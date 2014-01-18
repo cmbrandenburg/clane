@@ -9,6 +9,7 @@ TESTS = \
 	check_is_header_value_valid \
 	check_is_method_valid \
 	check_consumer \
+	check_server_consumer \
 	check_request_line_consumer \
 	check_status_line_consumer \
 	check_headers_consumer \
@@ -31,6 +32,7 @@ check_PROGRAMS = \
 	check_request_line_consumer \
 	check_request_response \
 	check_rtrim \
+	check_server_consumer \
 	check_server_run_term \
 	check_status_line_consumer
 
@@ -72,6 +74,9 @@ check_request_response_LDADD = ../libhttp.la
 
 check_rtrim_SOURCES = check_rtrim.cpp
 check_rtrim_LDADD = ../libhttp.la
+
+check_server_consumer_SOURCES = check_server_consumer.cpp
+check_server_consumer_LDADD = ../libhttp.la
 
 check_server_run_term_SOURCES = check_server_run_term.cpp
 check_server_run_term_LDADD = ../libhttp.la
