@@ -10,6 +10,7 @@
 namespace clane {
 	namespace http {
 
+#if 0
 		static char const *const error_too_long = "message too long";
 
 		// Functor that determines whether a given character is a valid token
@@ -163,7 +164,9 @@ namespace clane {
 				return false;
 			return true;
 		}
+#endif
 
+#if 0
 		bool headers_consumer::consume(char const *buf, size_t size) {
 			static char const *const error_invalid = "invalid message header";
 
@@ -586,6 +589,7 @@ namespace clane {
 				++i;
 			}
 		}
+#endif
 	}
 }
 

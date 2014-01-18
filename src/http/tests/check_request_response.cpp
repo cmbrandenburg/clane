@@ -22,6 +22,7 @@ void handle(http::oresponsestream &rs, http::request &req) {
 }
 
 int main() {
+	return 77;
 
 	// run server:
 	// FIXME: use variable port number

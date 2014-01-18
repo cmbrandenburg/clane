@@ -11,6 +11,7 @@
 namespace clane {
 	namespace http {
 
+#if 0
 		static bool chunked_xfer_encoding(header_map const &hdrs) {
 			// FIXME: Ignore transfer-encoding order. Assume that if any one of the
 			// transfer-encoding headers is "chunked" then the message is chunked.
@@ -20,6 +21,7 @@ namespace clane {
 					return v.second == "chunked";
 					});
 		}
+#endif
 
 		static bool content_length(header_map const &hdrs, size_t &content_len) {
 			// FIXME: Ignore multiple and invalid content-length headers. Assume the
@@ -361,6 +363,7 @@ namespace clane {
 
 		void server::connection_main(net::socket conn, scoped_conn_ref ref) {
 
+#if 0
 			reference_counter out_cnt; // last thing to destruct
 
 			conn.set_nonblocking();
@@ -543,6 +546,7 @@ namespace clane {
 					}
 				} while (xfer_res.size);
 			}
+#endif
 		}
 	}
 }
