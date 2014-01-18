@@ -12,19 +12,37 @@
 namespace clane {
 	namespace http {
 
-		// Base class for all consumers.
+		// Base class for all consumers. A consumer is a stream-oriented parser that
+		// processes input in chunks.
+		//
+		// Derived classes implement a 'consume' member function that accepts a
+		// chunk of input and returns true if and only if consumption completed.
+		// Consumption may complete with success or due to an error. For example, an
+		// HTTP header consumer will be incomplete if the input chunk contains only
+		// a partial header (e.g., "Content-Length: 0\r\nContent-"), whereas the
+		// consumer will be complete if the input chunk contains an invalidity or a
+		// full, valid header.
+		//
+		// When incomplete, the consume method consumes all data in the input chunk.
+		// When complete, the input chunk may be only partially consumed. The
+		// total_length and delta_length members return the number of bytes
+		// consumed.
+		//
+		// The consumer class uses no virtual methods. The base class is provided as
+		// a means of providing state common to all consumer classes; otherwise the
+		// consumers are unrelated to each other except by idiom.
+		//
 		class consumer {
-		protected:
 			enum class status {
 				ready, // ready to consume (more) data
 				ok,    // parsing completed with success
 				error  // parsing completed with error
 			} stat;
-		private:
 			size_t len_limit; // length limit, if any
-			size_t cur_len;
-			status_code error_code_; // HTTP response status, in case an error occurred
+			size_t total_len; // total number of bytes consumed in all chunks
+			size_t delta_len; // number of bytes consumed in most recent chunk
 			char const *what_;       // error description, in case an error occurred
+			status_code error_code_; // HTTP response status, in case an error occurred, if server-side
 		public:
 			~consumer() = default;
 			consumer();
@@ -36,20 +54,25 @@ namespace clane {
 			// Returns true if and only if the consumer is in a non-error state.
 			operator bool() const { return stat != status::error; }
 
-			// Returns the HTTP response status, if an error occurred.
-			status_code error_code() const { return error_code_; }
-
 			// Returns the error description, if an error occurred.
 			char const *what() const { return what_; }
+
+			// Returns the HTTP response status, if an error occurred, if server-side.
+			status_code error_code() const { return error_code_; }
 
 			// Resets the consumer state so that it may begin parsing anew.
 			void reset();
 
 			// Returns the number of bytes consumed from parsing.
-			size_t length() const { return cur_len; }
+			size_t total_length() const { return total_len; }
+
+			size_t delta_length() const { return delta_len; }
 
 			// Sets the consumer's length limit.
-			void set_length_limit(size_t n) { len_limit = n; }
+			void set_length_limit(size_t n);
+
+			// Prepares consumer to process another chunk of input.
+			void pre_consume();
 
 		protected:
 
@@ -59,8 +82,45 @@ namespace clane {
 
 			// Sets the consumer into the error state, with a description of the error.
 			void set_server_error(status_code error_stat, char const *what);
-			void set_client_error(char const *what);
+			void set_error(char const *what);
 		};
+
+		inline consumer::consumer(): stat(status::ready), len_limit{}, total_len{}, delta_len{} {}
+
+		inline bool consumer::increase_length(size_t n) {
+			size_t new_len = total_len + n;
+			if (new_len < total_len)
+				return false; // overflow
+			if (len_limit && new_len > len_limit)
+				return false; // length limit set and exceeded
+			total_len = new_len;
+			return true;
+		}
+
+		inline void consumer::reset() {
+			stat = status::ready;
+			total_len = 0;
+			delta_len = 0;
+			// The length limit is preserved.
+		}
+
+		inline void consumer::set_server_error(status_code n, char const *what) {
+			set_error(what);
+			error_code_ = n;
+		}
+
+		inline void consumer::set_error(char const *what) {
+			stat = status::error;
+			what_ = what;
+		}
+
+		inline void consumer::set_length_limit(size_t n) {
+		 	len_limit = n;
+	 	}
+
+		inline void consumer::pre_consume() {
+			delta_len = 0;
+		}
 
 		class headers_consumer: virtual public consumer {
 			enum class phase {

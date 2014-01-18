@@ -17,7 +17,7 @@ void check_ok(char const *content, char const *exp_method, char const *exp_uri, 
 	// single pass:
 	http::request_line_consumer cons(got_method, got_uri, got_major, got_minor);
 	check(cons.consume(s.data(), s.size()));
-	check(strlen(content) == cons.length());
+	check(strlen(content) == cons.total_length());
 	check(got_method == exp_method);
 	check(got_uri.to_string() == exp_uri);
 	check(got_major == exp_major);
@@ -38,7 +38,7 @@ void check_ok(char const *content, char const *exp_method, char const *exp_uri, 
 	check(!cons.consume("", 0));
 	check(cons);
 	check(cons.consume(s.data()+strlen(content)-1, 1));
-	check(strlen(content) == cons.length());
+	check(strlen(content) == cons.total_length());
 	check(got_method == exp_method);
 	check(got_uri.to_string() == exp_uri);
 	check(got_major == exp_major);

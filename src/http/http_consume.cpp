@@ -164,38 +164,10 @@ namespace clane {
 			return true;
 		}
 
-		consumer::consumer(): stat(status::ready), len_limit{}, cur_len{} {
-		}
-
-		bool consumer::increase_length(size_t n) {
-			size_t new_len = cur_len + n;
-			if (new_len < cur_len)
-				return false; // overflow
-			if (len_limit && new_len > len_limit)
-				return false; // length limit set and exceeded
-			cur_len = new_len;
-			return true;
-		}
-
-		void consumer::reset() {
-			stat = status::ready;
-			cur_len = 0;
-			// The length limit is preserved.
-		}
-
-		void consumer::set_server_error(status_code n, char const *what) {
-			stat = status::error;
-			error_code_ = n;
-			what_ = what;
-		}
-
-		void consumer::set_client_error(char const *what) {
-			stat = status::error;
-			what_ = what;
-		}
-
 		bool headers_consumer::consume(char const *buf, size_t size) {
 			static char const *const error_invalid = "invalid message header";
+
+			pre_consume();
 
 			auto store_header = [&]() -> bool {
 				if (hdr_name.empty())
@@ -337,6 +309,8 @@ namespace clane {
 		bool request_line_consumer::consume(char const *buf, size_t size) {
 			static char const *const error_invalid_version = "invalid HTTP version";
 
+			pre_consume();
+
 			char const *cur = buf;
 			char const *const end = buf + size;
 			char const *newline = find_newline(cur, end - cur);
@@ -439,6 +413,8 @@ namespace clane {
 		bool status_line_consumer::consume(char const *buf, size_t size) {
 			static char const *const error_reason_too_long = "reason phrase too long";
 
+			pre_consume();
+
 			char const *cur = buf;
 			char const *const end = buf + size;
 			char const *newline = find_newline(cur, end - cur);
@@ -448,19 +424,19 @@ namespace clane {
 				case phase::version: {
 					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
 					if (newline != end && !space) {
-						set_client_error("missing status code");
+						set_error("missing status code");
 						return true;
 					}
 					size_t version_len = (space ? space : newline) - cur;
 					if (!increase_length(version_len + (space ? 1 : 0))) {
-						set_client_error("HTTP version too long");
+						set_error("HTTP version too long");
 						return true;
 					}
 					version_str.append(cur, version_len);
 					if (!space)
 						return false; // incomplete
 					if (!parse_version(major_ver, minor_ver, version_str)) {
-						set_client_error("invalid HTTP version");
+						set_error("invalid HTTP version");
 						return true;
 					}
 					cur_phase = phase::status;
@@ -471,19 +447,19 @@ namespace clane {
 				case phase::status: {
 					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
 					if (newline != end && !space) {
-						set_client_error("missing reason phrase");
+						set_error("missing reason phrase");
 						return true;
 					}
 					size_t status_len = (space ? space : newline) - cur;
 					if (!increase_length(status_len + (space ? 1 : 0))) {
-						set_client_error("status code too long");
+						set_error("status code too long");
 						return true;
 					}
 					status_str.append(cur, status_len);
 					if (!space)
 						return false; // incomplete
 					if (!parse_status_code(stat, status_str)) {
-						set_client_error("invalid status code");
+						set_error("invalid status code");
 						return true;
 					}
 					cur_phase = phase::reason;
@@ -493,7 +469,7 @@ namespace clane {
 
 				case phase::reason: {
 					if (!increase_length(newline - cur)) {
-						set_client_error(error_reason_too_long);
+						set_error(error_reason_too_long);
 						return true;
 					}
 					reason->append(cur, newline - cur);
@@ -504,7 +480,7 @@ namespace clane {
 					// terminating this line.
 					if (*cur == '\r') {
 						if (!increase_length(1)) {
-							set_client_error(error_reason_too_long);
+							set_error(error_reason_too_long);
 							return true;
 						}
 						++cur;
@@ -518,11 +494,11 @@ namespace clane {
 					if (cur == end)
 						return false; // incomplete
 					if (*cur != '\n') {
-						set_client_error("invalid reason phrase");
+						set_error("invalid reason phrase");
 						return true;
 					}
 					if (!increase_length(1)) {
-						set_client_error(error_reason_too_long);
+						set_error(error_reason_too_long);
 						return true;
 					}
 				}
@@ -531,27 +507,28 @@ namespace clane {
 		}
 
 		bool request_1x_consumer::consume(char const *buf, size_t size) {
+			pre_consume();
 			char const *cur = buf;
 			char const *const end = buf + size;
 			while (true) {
 				switch (cur_phase) {
 					case phase::request_line: {
-						size_t len = length();
+						size_t len = total_length();
 						if (!request_line_consumer::consume(cur, end - cur))
 							return false;
 						if (!request_line_consumer::operator bool())
 							return true;
-						cur += length() - len;
+						cur += total_length() - len;
 						cur_phase = phase::headers;
 						break;
 					}
 					case phase::headers: {
-						size_t len = length();
+						size_t len = total_length();
 						if (!headers_consumer::consume(cur, end - cur))
 							return false;
 						if (!headers_consumer::operator bool())
 							return true;
-						cur += length() - len;
+						cur += total_length() - len;
 						return true; // success
 					}
 				}
@@ -559,6 +536,7 @@ namespace clane {
 		}
 
 		bool chunk_line_consumer::consume(char const *buf, size_t size) {
+			pre_consume();
 			static const char *invalid = "invalid chunk size";
 			size_t i = 0;
 			while (true) {

@@ -446,13 +446,13 @@ namespace clane {
 					switch (cur_phase) {
 
 						case phase::head: {
-							size_t len = req_cons.length();
+							size_t len = req_cons.total_length();
 							if (!req_cons.consume(inbuf.get() + inoff, xfer_res.size)) {
 								inoff += xfer_res.size;
 								xfer_res.size = 0;
 								break;
 							}
-							size_t delta = req_cons.length() - len;
+							size_t delta = req_cons.total_length() - len;
 							inoff += delta;
 							xfer_res.size -= delta;
 							if (!req_cons) {
@@ -494,13 +494,13 @@ namespace clane {
 						}
 
 						case phase::body_chunk_line: {
-							size_t len = chunk_cons.length();
+							size_t len = chunk_cons.total_length();
 							if (!chunk_cons.consume(inbuf.get() + inoff, xfer_res.size)) {
 								inoff += xfer_res.size;
 								xfer_res.size = 0;
 								break;
 							}
-							size_t delta = chunk_cons.length() - len;
+							size_t delta = chunk_cons.total_length() - len;
 							inoff += delta;
 							xfer_res.size -= delta;
 							if (!chunk_cons) {

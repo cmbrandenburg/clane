@@ -17,7 +17,7 @@ void check_ok(char const *content, int exp_major, int exp_minor, http::status_co
 	// single pass:
 	http::status_line_consumer cons(got_major, got_minor, got_stat, got_reason);
 	check(cons.consume(s.data(), s.size()));
-	check(strlen(content) == cons.length());
+	check(strlen(content) == cons.total_length());
 	check(got_major == exp_major);
 	check(got_minor == exp_minor);
 	check(got_stat == exp_stat);
@@ -38,7 +38,7 @@ void check_ok(char const *content, int exp_major, int exp_minor, http::status_co
 	check(!cons.consume("", 0));
 	check(cons);
 	check(cons.consume(s.data()+strlen(content)-1, 1));
-	check(strlen(content) == cons.length());
+	check(strlen(content) == cons.total_length());
 	check(got_major == exp_major);
 	check(got_minor == exp_minor);
 	check(got_stat == exp_stat);

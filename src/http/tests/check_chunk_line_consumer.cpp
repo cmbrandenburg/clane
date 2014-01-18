@@ -13,7 +13,7 @@ void check_ok(char const *content, size_t exp_size) {
 	// single pass:
 	http::chunk_line_consumer cons;
 	check(cons.consume(s.data(), s.size()));
-	check(strlen(content) == cons.length());
+	check(strlen(content) == cons.total_length());
 	check(exp_size == cons.chunk_size());
 
 	// byte-by-byte:
@@ -27,7 +27,7 @@ void check_ok(char const *content, size_t exp_size) {
 	check(!cons.consume("", 0));
 	check(cons);
 	check(cons.consume(s.data()+strlen(content)-1, 1));
-	check(strlen(content) == cons.length());
+	check(strlen(content) == cons.total_length());
 	check(exp_size == cons.chunk_size());
 }
 

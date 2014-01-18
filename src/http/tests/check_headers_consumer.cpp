@@ -14,7 +14,7 @@ void check_ok(char const *content, http::header_map const &exp_hdrs) {
 	// single pass:
 	http::headers_consumer cons(got_hdrs);
 	check(cons.consume(s.data(), s.size()));
-	check(strlen(content) == cons.length());
+	check(strlen(content) == cons.total_length());
 	check(exp_hdrs == got_hdrs);
 
 	// byte-by-byte:
@@ -29,7 +29,7 @@ void check_ok(char const *content, http::header_map const &exp_hdrs) {
 	check(!cons.consume("", 0));
 	check(cons);
 	check(cons.consume(s.data()+strlen(content)-1, 1));
-	check(strlen(content) == cons.length());
+	check(strlen(content) == cons.total_length());
 	check(exp_hdrs == got_hdrs);
 }
 
