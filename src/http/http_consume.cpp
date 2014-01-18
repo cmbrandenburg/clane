@@ -10,34 +10,12 @@
 namespace clane {
 	namespace http {
 
-		char const *find_newline(char const *p, size_t n) {
-			char const *newline = reinterpret_cast<char const *>(memchr(p, '\n', n));
-			if (newline && newline > p && *(newline - 1) == '\r')
-				return newline - 1; // carriage return before newline
-			if (newline)
-				return newline; // newline
-			if (n > 0 && *(p + n - 1) == '\r')
-				return p + n - 1; // carriage return at end of block
-			return p + n; // no carriage return or newline
-		}
-
-		void rtrim(std::string &s) {
-			static auto is_not_space = std::not1(std::function<int(int)>(static_cast<int(*)(int)>(std::isspace)));
-			s.erase(std::find_if(s.rbegin(), s.rend(), is_not_space).base(), s.end());
-		}
-
-#if 0
-		static char const *const error_too_long = "message too long";
-
 		// Functor that determines whether a given character is a valid token
 		// character. The valid token characters are specified in RFC 2616
 		// section 2.2 ("Basic Rules").
-		struct token_char_checker {
-		private:
+		static class token_char_checker {
 			bool ok_chars[128];
-
 		public:
-
 			token_char_checker() {
 
 				// all CHAR minus CTL
@@ -72,20 +50,38 @@ namespace clane {
 			bool operator()(char c) const {
 				return 0 <= c && c < 128 && ok_chars[static_cast<int>(c)];
 			}
-		};
-
-		static token_char_checker const token_char_chk;
-
-		static bool is_header_name_valid(std::string const &s);
-		static bool is_header_value_valid(std::string const &s);
-		static bool is_method_valid(std::string const &s);
-
-		static char const *skip_whitespace(char const *beg, char const *end);
+		} token_char_chk;
 
 		// Returns whether a given string comprises valid token characters. This is
 		// merely a syntactic check; it does not check whether the method is
 		// meaningful.
 		static bool is_token(std::string const &s);
+
+		bool is_token(std::string const &s) {
+			if (s.empty())
+				return false; // token must have at least one character
+			for (char c: s) {
+				if (!token_char_chk(c))
+					return false;
+			}
+			return true;
+		}
+
+		char const *find_newline(char const *p, size_t n) {
+			char const *newline = reinterpret_cast<char const *>(memchr(p, '\n', n));
+			if (newline && newline > p && *(newline - 1) == '\r')
+				return newline - 1; // carriage return before newline
+			if (newline)
+				return newline; // newline
+			if (n > 0 && *(p + n - 1) == '\r')
+				return p + n - 1; // carriage return at end of block
+			return p + n; // no carriage return or newline
+		}
+
+		void rtrim(std::string &s) {
+			static auto is_not_space = std::not1(std::function<int(int)>(static_cast<int(*)(int)>(std::isspace)));
+			s.erase(std::find_if(s.rbegin(), s.rend(), is_not_space).base(), s.end());
+		}
 
 		bool is_header_name_valid(std::string const &s) {
 			return is_token(s);
@@ -105,15 +101,10 @@ namespace clane {
 			return is_token(s);
 		}
 
-		bool is_token(std::string const &s) {
-			if (s.empty())
-				return false; // token must have at least one character
-			for (char c: s) {
-				if (!token_char_chk(c))
-					return false;
-			}
-			return true;
-		}
+#if 0
+		static char const *const error_too_long = "message too long";
+
+		static char const *skip_whitespace(char const *beg, char const *end);
 
 		char const *skip_whitespace(char const *beg, char const *end) {
 			char const *p = beg;

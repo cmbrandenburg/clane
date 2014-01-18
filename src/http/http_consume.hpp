@@ -29,6 +29,10 @@ namespace clane {
 
 		void rtrim(std::string &s);
 
+		bool is_header_name_valid(std::string const &s);
+		bool is_header_value_valid(std::string const &s);
+		bool is_method_valid(std::string const &s);
+
 		// Base class for all consumers. A consumer is a stream-oriented parser that
 		// processes input one memory block at a time.
 		//

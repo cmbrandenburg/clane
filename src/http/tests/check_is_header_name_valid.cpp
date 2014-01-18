@@ -1,13 +1,11 @@
 // vim: set noet:
 
 #include "../../check/check.h"
-#include "../http_consume.cpp"
+#include "../http_consume.hpp"
 
 using namespace clane;
 
 int main() {
-	return 77;
-#if 0
 
 	check(http::is_header_name_valid("alphabravo"));
 	check(!http::is_header_name_valid(""));
@@ -68,6 +66,5 @@ int main() {
 	check(!http::is_header_name_valid("alpha bravo"));
 	check(!http::is_header_name_valid("alpha\tbravo"));
 	check(!http::is_header_name_valid("alpha\x7f" "bravo"));
-#endif
 }
 
