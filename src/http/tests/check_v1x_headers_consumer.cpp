@@ -21,6 +21,7 @@ void check_ok(char const *content, http::header_map const &exp_hdrs, size_t len_
 	// byte-by-byte:
 	got_hdrs.clear();
 	cons.reset(got_hdrs);
+	check(!cons.done());
 	for (size_t i = 0; i < strlen(content)-1; ++i) {
 		check(0 == cons.consume("", 0));
 		check(!cons.done());

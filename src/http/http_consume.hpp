@@ -33,6 +33,8 @@ namespace clane {
 		bool is_header_value_valid(std::string const &s);
 		bool is_method_valid(std::string const &s);
 
+		bool parse_version(int *major_ver, int *minor_ver, std::string &s);
+
 		// Base class for all consumers. A consumer is a stream-oriented parser that
 		// processes input one memory block at a time.
 		//
@@ -159,6 +161,45 @@ namespace clane {
 			error_code_ = n;
 		}
 
+		class v1x_request_line_consumer: virtual public server_consumer {
+			enum class phase {
+				method,
+				uri,
+				version,
+				newline
+			} cur_phase;
+			std::string *method;
+			uri::uri *uri;
+			int *major_ver;
+			int *minor_ver;
+			std::string uri_str;
+			std::string version_str;
+		public:
+			~v1x_request_line_consumer() = default;
+			v1x_request_line_consumer(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver);
+			v1x_request_line_consumer(v1x_request_line_consumer const &) = delete;
+			v1x_request_line_consumer(v1x_request_line_consumer &&) = default;
+			v1x_request_line_consumer &operator=(v1x_request_line_consumer const &) = delete;
+			v1x_request_line_consumer &operator=(v1x_request_line_consumer &&) = default;
+			size_t consume(char const *buf, size_t size);
+			void reset(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver);
+		};
+
+		inline v1x_request_line_consumer::v1x_request_line_consumer(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver):
+		  	 	cur_phase(phase::method), method(&method), uri(&uri), major_ver(&major_ver), minor_ver(&minor_ver) {
+		}
+
+		inline void v1x_request_line_consumer::reset(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver) {
+			consumer::reset();
+			cur_phase = phase::method;
+			this->method = &method;
+			this->uri = &uri;
+			this->major_ver = &major_ver;
+			this->minor_ver = &minor_ver;
+			uri_str.clear();
+			version_str.clear();
+		}
+
 		class v1x_headers_consumer: virtual public server_consumer {
 			enum class phase {
 				start_line,   // after consuming newline, expecting header name or linear whitespace
@@ -193,45 +234,6 @@ namespace clane {
 		}
 
 #if 0
-		class request_line_consumer: virtual public consumer {
-			enum class phase {
-				method,
-				uri,
-				version,
-				newline
-			} cur_phase;
-			std::string *method;
-			uri::uri *uri;
-			int *major_ver;
-			int *minor_ver;
-			std::string uri_str;
-			std::string version_str;
-		public:
-			~request_line_consumer() = default;
-			request_line_consumer(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver);
-			request_line_consumer(request_line_consumer const &) = delete;
-			request_line_consumer(request_line_consumer &&) = default;
-			request_line_consumer &operator=(request_line_consumer const &) = delete;
-			request_line_consumer &operator=(request_line_consumer &&) = default;
-			bool consume(char const *buf, size_t size);
-			void reset(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver);
-		};
-
-		inline request_line_consumer::request_line_consumer(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver):
-		  	 	cur_phase(phase::method), method(&method), uri(&uri), major_ver(&major_ver), minor_ver(&minor_ver) {
-		}
-
-		inline void request_line_consumer::reset(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver) {
-			consumer::reset();
-			cur_phase = phase::method;
-			this->method = &method;
-			this->uri = &uri;
-			this->major_ver = &major_ver;
-			this->minor_ver = &minor_ver;
-			uri_str.clear();
-			version_str.clear();
-		}
-
 		class status_line_consumer: virtual public consumer {
 			enum class phase {
 				version,
@@ -270,7 +272,7 @@ namespace clane {
 			status_str.clear();
 		}
 
-		class request_1x_consumer: virtual public consumer, private request_line_consumer, private v1x_headers_consumer {
+		class request_1x_consumer: virtual public consumer, private v1x_request_line_consumer, private v1x_headers_consumer {
 			enum class phase {
 				request_line,
 				headers
@@ -287,14 +289,14 @@ namespace clane {
 		};
 
 		inline request_1x_consumer::request_1x_consumer(request &req):
-		  	 	request_line_consumer(req.method, req.uri, req.major_version, req.minor_version),
+		  	 	v1x_request_line_consumer(req.method, req.uri, req.major_version, req.minor_version),
 				v1x_headers_consumer(req.headers), cur_phase(phase::request_line) {
 		}
 
 		inline void request_1x_consumer::reset(request &req) {
 			consumer::reset();
 			cur_phase = phase::request_line;
-			request_line_consumer::reset(req.method, req.uri, req.major_version, req.minor_version);
+			v1x_request_line_consumer::reset(req.method, req.uri, req.major_version, req.minor_version);
 			v1x_headers_consumer::reset(req.headers);
 		}
 

@@ -101,6 +101,21 @@ namespace clane {
 			return is_token(s);
 		}
 
+		bool parse_version(int *major_ver, int *minor_ver, std::string &s) {
+			if (s.size() < 5 || memcmp(s.c_str(), "HTTP/", 5))
+				return false;
+			s.erase(0, 5);
+			std::istringstream pss(s);
+			pss.unsetf(std::ios_base::skipws);
+			pss >> *major_ver;
+			if (!pss || pss.get() != '.' || *major_ver < 0)
+				return false;
+			pss >> *minor_ver;
+			if (!pss || pss.get() != std::char_traits<char>::eof() || *minor_ver < 0)
+				return false;
+			return true;
+		}
+
 		static char const *skip_whitespace(char const *beg, char const *end);
 
 		char const *skip_whitespace(char const *beg, char const *end) {
@@ -112,6 +127,110 @@ namespace clane {
 		}
 
 		static char const *const error_msg_too_long = "message too long";
+
+		size_t v1x_request_line_consumer::consume(char const *buf, size_t size) {
+			static char const *const error_invalid_version = "invalid HTTP version";
+
+			char const *cur = buf;
+			char const *const end = buf + size;
+			char const *newline = find_newline(cur, end - cur);
+
+			switch (cur_phase) {
+				case phase::method: {
+					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
+					if (newline != end && !space) {
+						set_error(status_code::bad_request, "missing request line URI reference");
+						return error;
+					}
+					size_t method_len = (space ? space : end) - cur;
+					if (!increase_length(method_len + (space ? 1 : 0))) {
+						set_error(status_code::bad_request, error_msg_too_long);
+						return error;
+					}
+					method->append(cur, method_len);
+					if (!space)
+						return end - buf; // incomplete
+					if (!is_method_valid(*method)) {
+						set_error(status_code::bad_request, "invalid request method");
+						return error;
+					}
+					cur_phase = phase::uri;
+					cur = space + 1;
+					// fall through switch
+				}
+
+	 			case phase::uri: {
+					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
+					if (newline != end && !space) {
+						set_error(status_code::bad_request, "missing request line HTTP version");
+						return error;
+					}
+					size_t uri_len = (space ? space : end) - cur;
+					if (!increase_length(uri_len + (space ? 1 : 0))) {
+						set_error(status_code::request_uri_too_long, "");
+						return error;
+					}
+					uri_str.append(cur, uri_len);
+					if (!space)
+						return end - buf; // incomplete
+					if (!uri::parse_uri_reference(*uri, uri_str)) {
+						set_error(status_code::bad_request, "invalid request line URI reference");
+						return error;
+					}
+					cur_phase = phase::version;
+					cur = space + 1;
+					// fall through switch
+				}
+
+				case phase::version: {
+					if (!increase_length(newline - cur)) {
+						// Assume the URI reference was too long, which has caused the
+						// version string to exceed the length limit. If the problem is
+						// really that the version string is too long then the client will
+						// receive a misleading error code, which is acceptable because the
+						// client did something excessively non-standard.
+						set_error(status_code::request_uri_too_long, "");
+						return error;
+					}
+					version_str.append(cur, newline - cur);
+					if (newline == end)
+						return end - buf; // incomplete
+					if (!parse_version(major_ver, minor_ver, version_str)) {
+						set_error(status_code::bad_request, error_invalid_version);
+						return error;
+					}
+					cur = newline;
+					// Invariant: There's at least a carriage return or newline
+					// terminating this line.
+					if (*cur == '\r') {
+						if (!increase_length(1)) {
+							set_error(status_code::request_uri_too_long, "");
+							return error;
+						}
+						++cur;
+					}
+					cur_phase = phase::newline;
+					// fall through switch
+				}
+
+				case phase::newline: {
+					// There's still a newline character needing to be extracted.
+					if (cur == end)
+						return end - buf; // incomplete
+					if (*cur != '\n') {
+						set_error(status_code::bad_request, error_invalid_version);
+						return error;
+					}
+					if (!increase_length(1)) {
+						set_error(status_code::request_uri_too_long, "");
+						return error;
+					}
+					++cur;
+				}
+			}
+			set_done();
+			return cur - buf; // complete and successful
+		}
 
 		size_t v1x_headers_consumer::consume(char const *buf, size_t size) {
 			static char const *const error_invalid = "invalid message header";
@@ -257,21 +376,6 @@ namespace clane {
 		}
 
 #if 0
-		static bool parse_version(int *major_ver, int *minor_ver, std::string &s) {
-			if (s.size() < 5 || memcmp(s.c_str(), "HTTP/", 5))
-				return false;
-			s.erase(0, 5);
-			std::istringstream pss(s);
-			pss.unsetf(std::ios_base::skipws);
-			pss >> *major_ver;
-			if (!pss || pss.get() != '.' || *major_ver < 0)
-				return false;
-			pss >> *minor_ver;
-			if (!pss || pss.get() != std::char_traits<char>::eof() || *minor_ver < 0)
-				return false;
-			return true;
-		}
-
 		static bool parse_status_code(status_code *stat, std::string &s) {
 			std::istringstream pss(s);
 			//typename std::underlying_type<status_code>::type pstat;
@@ -286,110 +390,6 @@ namespace clane {
 #endif
 
 #if 0
-		bool request_line_consumer::consume(char const *buf, size_t size) {
-			static char const *const error_invalid_version = "invalid HTTP version";
-
-			pre_consume();
-
-			char const *cur = buf;
-			char const *const end = buf + size;
-			char const *newline = find_newline(cur, end - cur);
-
-			switch (cur_phase) {
-				case phase::method: {
-					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
-					if (newline != end && !space) {
-						set_error(status_code::bad_request, "missing request line URI reference");
-						return true;
-					}
-					size_t method_len = (space ? space : newline) - cur;
-					if (!increase_length(method_len + (space ? 1 : 0))) {
-						set_error(status_code::bad_request, error_msg_too_long);
-						return true;
-					}
-					method->append(cur, method_len);
-					if (!space)
-						return false; // incomplete
-					if (!is_method_valid(*method)) {
-						set_error(status_code::bad_request, "invalid request method");
-						return true;
-					}
-					cur_phase = phase::uri;
-					cur = space + 1;
-					// fall through switch
-				}
-
-	 			case phase::uri: {
-					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
-					if (newline != end && !space) {
-						set_error(status_code::bad_request, "missing request line HTTP version");
-						return true;
-					}
-					size_t uri_len = (space ? space : newline) - cur;
-					if (!increase_length(uri_len + (space ? 1 : 0))) {
-						set_error(status_code::request_uri_too_long, "");
-						return true;
-					}
-					uri_str.append(cur, uri_len);
-					if (!space)
-						return false; // incomplete
-					if (!uri::parse_uri_reference(*uri, uri_str)) {
-						set_error(status_code::bad_request, "invalid request line URI reference");
-						return true;
-					}
-					cur_phase = phase::version;
-					cur = space + 1;
-					// fall through switch
-				}
-
-				case phase::version: {
-					if (!increase_length(newline - cur)) {
-						// Assume the URI reference was too long, which has caused the
-						// version string to exceed the length limit. If the problem is
-						// really that the version string is too long then the client will
-						// receive a misleading error code, which is acceptable because the
-						// client did something excessively non-standard.
-						set_error(status_code::request_uri_too_long, "");
-						return true;
-					}
-					version_str.append(cur, newline - cur);
-					if (newline == end)
-						return false; // incomplete
-					if (!parse_version(major_ver, minor_ver, version_str)) {
-						set_error(status_code::bad_request, error_invalid_version);
-						return true;
-					}
-					cur = newline;
-					// Invariant: There's at least a carriage return or newline
-					// terminating this line.
-					if (*cur == '\r') {
-						if (!increase_length(1)) {
-							set_error(status_code::request_uri_too_long, "");
-							return true;
-						}
-						++cur;
-					}
-					cur_phase = phase::newline;
-					// fall through switch
-				}
-
-				case phase::newline: {
-					// There's still a newline character needing to be extracted.
-					if (cur == end)
-						return false; // incomplete
-					if (*cur != '\n') {
-						set_error(status_code::bad_request, error_invalid_version);
-						return true;
-					}
-					if (!increase_length(1)) {
-						set_error(status_code::request_uri_too_long, "");
-						return true;
-					}
-				}
-			}
-			return true; // complete and successful
-		}
-
 		bool status_line_consumer::consume(char const *buf, size_t size) {
 			static char const *const error_reason_too_long = "reason phrase too long";
 
