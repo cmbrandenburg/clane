@@ -12,7 +12,7 @@ TESTS = \
 	check_server_consumer \
 	check_request_line_consumer \
 	check_status_line_consumer \
-	check_headers_consumer \
+	check_v1x_headers_consumer \
 	check_request_1x_consumer \
 	check_chunk_line_consumer \
 	check_server_run_term \
@@ -24,7 +24,6 @@ check_PROGRAMS = \
 	check_consumer \
 	check_find_newline \
 	check_header_name_less \
-	check_headers_consumer \
 	check_is_header_name_valid \
 	check_is_header_value_valid \
 	check_is_method_valid \
@@ -34,7 +33,8 @@ check_PROGRAMS = \
 	check_rtrim \
 	check_server_consumer \
 	check_server_run_term \
-	check_status_line_consumer
+	check_status_line_consumer \
+	check_v1x_headers_consumer
 
 check_canonize_1x_header_name_SOURCES = check_canonize_1x_header_name.cpp
 check_canonize_1x_header_name_LDADD = ../libhttp.la
@@ -50,9 +50,6 @@ check_find_newline_LDADD = ../libhttp.la
 
 check_header_name_less_SOURCES = check_header_name_less.cpp
 check_header_name_less_LDADD = ../libhttp.la
-
-check_headers_consumer_SOURCES = check_headers_consumer.cpp
-check_headers_consumer_LDADD = ../libhttp.la
 
 check_is_header_name_valid_SOURCES = check_is_header_name_valid.cpp
 check_is_header_name_valid_LDADD = ../libhttp.la
@@ -83,4 +80,7 @@ check_server_run_term_LDADD = ../libhttp.la
 
 check_status_line_consumer_SOURCES = check_status_line_consumer.cpp
 check_status_line_consumer_LDADD = ../libhttp.la
+
+check_v1x_headers_consumer_SOURCES = check_v1x_headers_consumer.cpp
+check_v1x_headers_consumer_LDADD = ../libhttp.la
 

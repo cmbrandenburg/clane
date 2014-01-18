@@ -6,48 +6,44 @@
 
 using namespace clane;
 
-#if 0
 void check_ok(char const *content, http::header_map const &exp_hdrs) {
 
 	std::string const s = std::string(content) + "extra";
 	http::header_map got_hdrs;
 
 	// single pass:
-	http::headers_consumer cons(got_hdrs);
-	check(cons.consume(s.data(), s.size()));
-	check(strlen(content) == cons.total_length());
+	http::v1x_headers_consumer cons(got_hdrs);
+	check(strlen(content) == cons.consume(s.data(), s.size()));
+	check(cons.done());
 	check(exp_hdrs == got_hdrs);
 
 	// byte-by-byte:
 	got_hdrs.clear();
 	cons.reset(got_hdrs);
 	for (size_t i = 0; i < strlen(content)-1; ++i) {
-		check(!cons.consume("", 0));
-		check(cons);
-		check(!cons.consume(s.data()+i, 1));
-		check(cons);
+		check(0 == cons.consume("", 0));
+		check(!cons.done());
+		check(1 == cons.consume(s.data()+i, 1));
+		check(!cons.done());
 	}
-	check(!cons.consume("", 0));
-	check(cons);
-	check(cons.consume(s.data()+strlen(content)-1, 1));
-	check(strlen(content) == cons.total_length());
+	check(0 == cons.consume("", 0));
+	check(!cons.done());
+	check(1 == cons.consume(s.data()+strlen(content)-1, 1));
+	check(cons.done());
 	check(exp_hdrs == got_hdrs);
 }
 
 void check_nok(size_t len_limit, char const *s, http::status_code exp_error_code) {
 	http::header_map got_hdrs;
 	// single pass:
-	http::headers_consumer cons(got_hdrs);
+	http::v1x_headers_consumer cons(got_hdrs);
 	cons.set_length_limit(len_limit);
-	check(cons.consume(s, strlen(s)));
-	check(!cons);
+	check(cons.error == cons.consume(s, strlen(s)));
+	check(cons.done());
 	check(exp_error_code == cons.error_code());
 }
-#endif
 
 int main() {
-	return 77;
-#if 0
 
 	check_ok("\r\n", http::header_map({}));
 	check_ok("alpha: bravo\r\n\r\n", http::header_map({http::header_map::value_type("alpha", "bravo")}));
@@ -94,6 +90,5 @@ int main() {
 	check_nok(7, "alpha: bravo\r\n\r\n", http::status_code::bad_request);
 	check_nok(12, "alpha: bravo\r\n\r\n", http::status_code::bad_request);
 	check_nok(13, "alpha: bravo\r\n\r\n", http::status_code::bad_request);
-#endif
 }
 

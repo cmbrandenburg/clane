@@ -101,9 +101,6 @@ namespace clane {
 			return is_token(s);
 		}
 
-#if 0
-		static char const *const error_too_long = "message too long";
-
 		static char const *skip_whitespace(char const *beg, char const *end);
 
 		char const *skip_whitespace(char const *beg, char const *end) {
@@ -114,6 +111,152 @@ namespace clane {
 			return p;
 		}
 
+		static char const *const error_msg_too_long = "message too long";
+
+		size_t v1x_headers_consumer::consume(char const *buf, size_t size) {
+			static char const *const error_invalid = "invalid message header";
+
+			auto store_header = [&]() -> bool {
+				if (hdr_name.empty())
+					return true; // special case: ignore empty line
+				// The header name has already been validated.
+				rtrim(hdr_val);
+				if (!is_header_value_valid(hdr_val)) {
+					set_error(status_code::bad_request, error_invalid);
+					return false;
+				}
+				// TODO: Replace 'insert' with 'emplace' when compilers support it.
+				hdrs->insert(header_map::value_type(std::move(hdr_name), std::move(hdr_val)));
+				return true;
+			};
+
+			char const *cur = buf;
+			char const *const end = buf + size;
+			char const *newline = find_newline(cur, size);
+			if (!increase_length(newline - cur)) {
+				set_error(status_code::bad_request, error_msg_too_long);
+				return error;
+			}
+
+			while (cur < end) {
+				switch (cur_phase) {
+
+					case phase::start_line: {
+						if (*cur == '\r') {
+							cur_phase = phase::end_newline;
+							if (!increase_length(1)) {
+								set_error(status_code::bad_request, error_msg_too_long);
+								return error;
+							}
+							++cur; // consume carriage return
+						} else if (*cur == '\n') {
+							if (!increase_length(1)) {
+								set_error(status_code::bad_request, error_msg_too_long);
+								return error;
+							}
+							++cur; // consume newline
+							if (store_header())
+								set_done();
+							return cur - buf;
+						} else if (*cur == ' ' || *cur == '\t') {
+							// linear white space: this line is a continuation of the
+							// header value in the previous line
+							hdr_val.push_back(' '); // all linear whitespace is replaced by a single space
+							cur_phase = phase::pre_value;
+						} else {
+							if (!store_header())
+								return error;
+							cur_phase = phase::name;
+						}
+						break;
+					}
+
+					case phase::end_newline: {
+						if (*cur != '\n') {
+							set_error(status_code::bad_request, error_invalid);
+							return error;
+						}
+						if (!increase_length(1)) {
+							set_error(status_code::bad_request, error_msg_too_long);
+							return error;
+						}
+						++cur; // consume newline
+						if (!store_header())
+							return error;
+						set_done();
+						return cur - buf;
+					}
+
+					case phase::name: {
+						char const *colon = reinterpret_cast<char const *>(memchr(cur, ':', end - cur));
+						if (!colon)
+							colon = end;
+						hdr_name.append(cur, colon);
+						if (colon == end) {
+							if (newline != end) {
+								set_error(status_code::bad_request, error_invalid);
+								return error;
+							}
+							return end - buf; // incomplete
+						}
+						rtrim(hdr_name);
+						if (!is_header_name_valid(hdr_name)) {
+							set_error(status_code::bad_request, error_invalid);
+							return error;
+						}
+						cur_phase = phase::pre_value;
+						cur = colon + 1;
+						break;
+					}
+
+					case phase::pre_value: {
+						cur = skip_whitespace(cur, end);
+						if (cur != end)
+							cur_phase = phase::value;
+						break;
+					}
+
+					case phase::value: {
+						hdr_val.append(cur, newline);
+						cur = newline;
+						if (cur == end)
+							return cur - buf; // incomplete
+						if (*cur == '\r') {
+							if (!increase_length(1)) {
+								set_error(status_code::bad_request, error_msg_too_long);
+								return error;
+							}
+							++cur; // consume carriage return
+						}
+						cur_phase = phase::value_newline;
+						break;
+					}
+
+					case phase::value_newline: {
+						if (*cur != '\n') {
+							set_error(status_code::bad_request, error_invalid);
+							return error;
+						}
+						if (!increase_length(1)) {
+							set_error(status_code::bad_request, error_msg_too_long);
+							return error;
+						}
+						++cur; // consume newline
+						newline = find_newline(cur, end - cur);
+						if (!increase_length(newline - cur)) {
+							set_error(status_code::bad_request, error_msg_too_long);
+							return error;
+						}
+						cur_phase = phase::start_line;
+						break;
+					}
+				}
+			}
+
+			return cur - buf; // incomplete
+		}
+
+#if 0
 		static bool parse_version(int *major_ver, int *minor_ver, std::string &s) {
 			if (s.size() < 5 || memcmp(s.c_str(), "HTTP/", 5))
 				return false;
@@ -143,148 +286,6 @@ namespace clane {
 #endif
 
 #if 0
-		bool headers_consumer::consume(char const *buf, size_t size) {
-			static char const *const error_invalid = "invalid message header";
-
-			pre_consume();
-
-			auto store_header = [&]() -> bool {
-				if (hdr_name.empty())
-					return true; // special case: ignore empty line
-				// The header name has already been validated.
-				rtrim(hdr_val);
-				if (!is_header_value_valid(hdr_val)) {
-					set_server_error(status_code::bad_request, error_invalid);
-					return false;
-				}
-				// FIXME: Replace 'insert' with 'emplace' when compilers support it.
-				hdrs->insert(header_map::value_type(std::move(hdr_name), std::move(hdr_val)));
-				return true;
-			};
-
-			char const *cur = buf;
-			char const *const end = buf + size;
-			char const *newline = find_newline(cur, size);
-			if (!increase_length(newline - cur)) {
-				set_server_error(status_code::bad_request, error_too_long);
-				return true;
-			}
-
-			while (cur < end) {
-				switch (cur_phase) {
-
-					case phase::start_line: {
-						if (*cur == '\r') {
-							cur_phase = phase::end_newline;
-							if (!increase_length(1)) {
-								set_server_error(status_code::bad_request, error_too_long);
-								return true;
-							}
-							++cur; // consume carriage return
-						} else if (*cur == '\n') {
-							if (!increase_length(1)) {
-								set_server_error(status_code::bad_request, error_too_long);
-								return true;
-							}
-							++cur; // consume newline
-							store_header();
-							return true;
-						} else if (*cur == ' ' || *cur == '\t') {
-							// linear white space: this line is a continuation of the
-							// header value in the previous line
-							hdr_val.push_back(' '); // all linear whitespace is replaced by a single space
-							cur_phase = phase::pre_value;
-						} else {
-							if (!store_header())
-								return true;
-							cur_phase = phase::name;
-						}
-						break;
-					}
-
-					case phase::end_newline: {
-						if (*cur != '\n') {
-							set_server_error(status_code::bad_request, error_invalid);
-							return true;
-						}
-						if (!increase_length(1)) {
-							set_server_error(status_code::bad_request, error_too_long);
-							return true;
-						}
-						++cur; // consume newline
-						store_header();
-						return true;
-					}
-
-					case phase::name: {
-						char const *colon = reinterpret_cast<char const *>(memchr(cur, ':', end - cur));
-						if (!colon)
-							colon = end;
-						hdr_name.append(cur, colon);
-						if (colon == end) {
-							if (newline != end) {
-								set_server_error(status_code::bad_request, error_invalid);
-								return true;
-							}
-							return false; // incomplete
-						}
-						rtrim(hdr_name);
-						if (!is_header_name_valid(hdr_name)) {
-							set_server_error(status_code::bad_request, error_invalid);
-							return true;
-						}
-						cur_phase = phase::pre_value;
-						cur = colon + 1;
-						break;
-					}
-
-					case phase::pre_value: {
-						cur = skip_whitespace(cur, end);
-						if (cur != end)
-							cur_phase = phase::value;
-						break;
-					}
-
-					case phase::value: {
-						hdr_val.append(cur, newline);
-						cur = newline;
-						if (cur == end)
-							return false; // incomplete
-						if (*cur == '\r') {
-							if (!increase_length(1)) {
-								set_server_error(status_code::bad_request, error_too_long);
-								return true;
-							}
-							++cur; // consume carriage return
-						}
-						cur_phase = phase::value_newline;
-						break;
-					}
-
-					case phase::value_newline: {
-						if (*cur != '\n') {
-							set_server_error(status_code::bad_request, error_invalid);
-							return true;
-						}
-						if (!increase_length(1)) {
-							set_server_error(status_code::bad_request, error_too_long);
-							return true;
-						}
-						++cur; // consume newline
-						newline = find_newline(cur, end - cur);
-						if (!increase_length(newline - cur)) {
-							set_server_error(status_code::bad_request, error_too_long);
-							return true;
-						}
-						cur_phase = phase::start_line;
-						break;
-					}
-				}
-			}
-
-			return false; // incomplete
-		}
-
 		bool request_line_consumer::consume(char const *buf, size_t size) {
 			static char const *const error_invalid_version = "invalid HTTP version";
 
@@ -298,19 +299,19 @@ namespace clane {
 				case phase::method: {
 					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
 					if (newline != end && !space) {
-						set_server_error(status_code::bad_request, "missing request line URI reference");
+						set_error(status_code::bad_request, "missing request line URI reference");
 						return true;
 					}
 					size_t method_len = (space ? space : newline) - cur;
 					if (!increase_length(method_len + (space ? 1 : 0))) {
-						set_server_error(status_code::bad_request, error_too_long);
+						set_error(status_code::bad_request, error_msg_too_long);
 						return true;
 					}
 					method->append(cur, method_len);
 					if (!space)
 						return false; // incomplete
 					if (!is_method_valid(*method)) {
-						set_server_error(status_code::bad_request, "invalid request method");
+						set_error(status_code::bad_request, "invalid request method");
 						return true;
 					}
 					cur_phase = phase::uri;
@@ -321,19 +322,19 @@ namespace clane {
 	 			case phase::uri: {
 					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
 					if (newline != end && !space) {
-						set_server_error(status_code::bad_request, "missing request line HTTP version");
+						set_error(status_code::bad_request, "missing request line HTTP version");
 						return true;
 					}
 					size_t uri_len = (space ? space : newline) - cur;
 					if (!increase_length(uri_len + (space ? 1 : 0))) {
-						set_server_error(status_code::request_uri_too_long, "");
+						set_error(status_code::request_uri_too_long, "");
 						return true;
 					}
 					uri_str.append(cur, uri_len);
 					if (!space)
 						return false; // incomplete
 					if (!uri::parse_uri_reference(*uri, uri_str)) {
-						set_server_error(status_code::bad_request, "invalid request line URI reference");
+						set_error(status_code::bad_request, "invalid request line URI reference");
 						return true;
 					}
 					cur_phase = phase::version;
@@ -348,14 +349,14 @@ namespace clane {
 						// really that the version string is too long then the client will
 						// receive a misleading error code, which is acceptable because the
 						// client did something excessively non-standard.
-						set_server_error(status_code::request_uri_too_long, "");
+						set_error(status_code::request_uri_too_long, "");
 						return true;
 					}
 					version_str.append(cur, newline - cur);
 					if (newline == end)
 						return false; // incomplete
 					if (!parse_version(major_ver, minor_ver, version_str)) {
-						set_server_error(status_code::bad_request, error_invalid_version);
+						set_error(status_code::bad_request, error_invalid_version);
 						return true;
 					}
 					cur = newline;
@@ -363,7 +364,7 @@ namespace clane {
 					// terminating this line.
 					if (*cur == '\r') {
 						if (!increase_length(1)) {
-							set_server_error(status_code::request_uri_too_long, "");
+							set_error(status_code::request_uri_too_long, "");
 							return true;
 						}
 						++cur;
@@ -377,11 +378,11 @@ namespace clane {
 					if (cur == end)
 						return false; // incomplete
 					if (*cur != '\n') {
-						set_server_error(status_code::bad_request, error_invalid_version);
+						set_error(status_code::bad_request, error_invalid_version);
 						return true;
 					}
 					if (!increase_length(1)) {
-						set_server_error(status_code::request_uri_too_long, "");
+						set_error(status_code::request_uri_too_long, "");
 						return true;
 					}
 				}
@@ -524,7 +525,7 @@ namespace clane {
 				switch (cur_phase) {
 					case phase::digit:
 						if (nibs == max_nibs) {
-							set_server_error(status_code::bad_request, "chunk size too big");
+							set_error(status_code::bad_request, "chunk size too big");
 							return true;
 						}
 						if ('\r' == buf[i]) {
@@ -537,7 +538,7 @@ namespace clane {
 							return true;
 						}
 						if (!isxdigit(buf[i])) {
-							set_server_error(status_code::bad_request, invalid);
+							set_error(status_code::bad_request, invalid);
 							return true;
 						}
 						val <<= 4;
@@ -552,11 +553,11 @@ namespace clane {
 						break;
 					case phase::newline:
 						if ('\n' != buf[i]) {
-							set_server_error(status_code::bad_request, invalid);
+							set_error(status_code::bad_request, invalid);
 							return true;
 						}
 						if (0 == nibs) {
-							set_server_error(status_code::bad_request, invalid);
+							set_error(status_code::bad_request, invalid);
 							return true;
 						}
 						increase_length(1);

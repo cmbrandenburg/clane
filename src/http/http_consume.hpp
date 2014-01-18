@@ -97,6 +97,9 @@ namespace clane {
 
 			// Sets the consumer into the error state, with a description of the error.
 			void set_error(char const *what);
+
+			// Sets the consumer into the done state.
+			void set_done();
 		};
 
 		inline consumer::consumer(): len_limit{}, total_len{}, done_{} {}
@@ -120,6 +123,10 @@ namespace clane {
 		inline void consumer::set_error(char const *what) {
 			done_ = true;
 			what_ = what;
+		}
+
+		inline void consumer::set_done() {
+			done_ = true;
 		}
 
 		inline void consumer::set_length_limit(size_t n) {
@@ -152,8 +159,7 @@ namespace clane {
 			error_code_ = n;
 		}
 
-#if 0
-		class headers_consumer: virtual public consumer {
+		class v1x_headers_consumer: virtual public server_consumer {
 			enum class phase {
 				start_line,   // after consuming newline, expecting header name or linear whitespace
 				end_newline,  // expecting newline character to end headers
@@ -166,20 +172,19 @@ namespace clane {
 			std::string hdr_name;
 			std::string hdr_val;
 		public:
-			~headers_consumer() = default;
-			headers_consumer(header_map &hdrs);
-			headers_consumer(headers_consumer const &) = delete;
-			headers_consumer(headers_consumer &&) = default;
-			headers_consumer &operator=(headers_consumer const &) = delete;
-			headers_consumer &operator=(headers_consumer &&) = default;
-			bool consume(char const *buf, size_t size);
+			~v1x_headers_consumer() = default;
+			v1x_headers_consumer(header_map &hdrs);
+			v1x_headers_consumer(v1x_headers_consumer const &) = delete;
+			v1x_headers_consumer(v1x_headers_consumer &&) = default;
+			v1x_headers_consumer &operator=(v1x_headers_consumer const &) = delete;
+			v1x_headers_consumer &operator=(v1x_headers_consumer &&) = default;
+			size_t consume(char const *buf, size_t size);
 			void reset(header_map &hdrs);
 		};
 
-		inline headers_consumer::headers_consumer(header_map &hdrs): cur_phase(phase::start_line), hdrs(&hdrs) {
-		}
+		inline v1x_headers_consumer::v1x_headers_consumer(header_map &hdrs): cur_phase(phase::start_line), hdrs(&hdrs) {}
 
-		inline void headers_consumer::reset(header_map &hdrs) {
+		inline void v1x_headers_consumer::reset(header_map &hdrs) {
 			consumer::reset();
 			cur_phase = phase::start_line;
 			this->hdrs = &hdrs;
@@ -187,6 +192,7 @@ namespace clane {
 			hdr_val.clear();
 		}
 
+#if 0
 		class request_line_consumer: virtual public consumer {
 			enum class phase {
 				method,
@@ -264,7 +270,7 @@ namespace clane {
 			status_str.clear();
 		}
 
-		class request_1x_consumer: virtual public consumer, private request_line_consumer, private headers_consumer {
+		class request_1x_consumer: virtual public consumer, private request_line_consumer, private v1x_headers_consumer {
 			enum class phase {
 				request_line,
 				headers
@@ -282,14 +288,14 @@ namespace clane {
 
 		inline request_1x_consumer::request_1x_consumer(request &req):
 		  	 	request_line_consumer(req.method, req.uri, req.major_version, req.minor_version),
-				headers_consumer(req.headers), cur_phase(phase::request_line) {
+				v1x_headers_consumer(req.headers), cur_phase(phase::request_line) {
 		}
 
 		inline void request_1x_consumer::reset(request &req) {
 			consumer::reset();
 			cur_phase = phase::request_line;
 			request_line_consumer::reset(req.method, req.uri, req.major_version, req.minor_version);
-			headers_consumer::reset(req.headers);
+			v1x_headers_consumer::reset(req.headers);
 		}
 
 		class chunk_line_consumer: virtual public consumer {

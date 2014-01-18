@@ -10,6 +10,7 @@ using namespace clane;
 class nop_consumer: public http::consumer {
 public:
 	using http::consumer::increase_length;
+	using http::consumer::set_done;
 	using http::consumer::set_error;
 };
 
@@ -20,14 +21,18 @@ int main() {
 	// default OK state:
 	check(!cons.done());
 
-	// setting error state:
-	cons.set_error("another error message");
+	// setting done state:
+	cons.set_done();
 	check(cons.done());
-	check(!strcmp(cons.what(), "another error message"));
 
 	// reset:
 	cons.reset();
 	check(!cons.done());
+
+	// setting error state:
+	cons.set_error("another error message");
+	check(cons.done());
+	check(!strcmp(cons.what(), "another error message"));
 
 	// increase length without length limit:
 	check(cons.increase_length(1234));
