@@ -10,6 +10,22 @@
 namespace clane {
 	namespace http {
 
+		char const *find_newline(char const *p, size_t n) {
+			char const *newline = reinterpret_cast<char const *>(memchr(p, '\n', n));
+			if (newline && newline > p && *(newline - 1) == '\r')
+				return newline - 1; // carriage return before newline
+			if (newline)
+				return newline; // newline
+			if (n > 0 && *(p + n - 1) == '\r')
+				return p + n - 1; // carriage return at end of block
+			return p + n; // no carriage return or newline
+		}
+
+		void rtrim(std::string &s) {
+			static auto is_not_space = std::not1(std::function<int(int)>(static_cast<int(*)(int)>(std::isspace)));
+			s.erase(std::find_if(s.rbegin(), s.rend(), is_not_space).base(), s.end());
+		}
+
 #if 0
 		static char const *const error_too_long = "message too long";
 
@@ -60,43 +76,16 @@ namespace clane {
 
 		static token_char_checker const token_char_chk;
 
-		// Searches a given memory block for the first newline. If a carriage return
-		// and newline pair is found ("\r\n") then this returns a pointer to the
-		// carriage return character. Else, if a newline is found then this returns
-		// a pointer to the newline character. Else, if a carriage return is found
-		// at the last byte of the block then this returns a pointer to that
-		// carriage return. Else, this returns a pointer to the first byte after the
-		// memory block.
-		//
-		// In other words, the result of this function is to return a pointer to the
-		// first "unreadable" byte in or out of the block, where readable characters
-		// are characters in the current line, excluding "\r\n" and "\n". Note that
-		// carriage returns followed by a character other than a newline are
-		// considered readable.
-		static char const *find_newline(const char *p, size_t n);
-
 		static bool is_header_name_valid(std::string const &s);
 		static bool is_header_value_valid(std::string const &s);
 		static bool is_method_valid(std::string const &s);
 
 		static char const *skip_whitespace(char const *beg, char const *end);
-		static void rtrim(std::string &s);
 
 		// Returns whether a given string comprises valid token characters. This is
 		// merely a syntactic check; it does not check whether the method is
 		// meaningful.
 		static bool is_token(std::string const &s);
-
-		char const *find_newline(char const *p, size_t n) {
-			char const *newline = reinterpret_cast<char const *>(memchr(p, '\n', n));
-			if (newline && newline > p && *(newline - 1) == '\r')
-				return newline - 1; // carriage return before newline
-			if (newline)
-				return newline; // newline
-			if (n > 0 && *(p + n - 1) == '\r')
-				return p + n - 1; // carriage return at end of block
-			return p + n; // no carriage return or newline
-		}
 
 		bool is_header_name_valid(std::string const &s) {
 			return is_token(s);
@@ -124,10 +113,6 @@ namespace clane {
 					return false;
 			}
 			return true;
-		}
-
-		void rtrim(std::string &s) {
-			s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
 		}
 
 		char const *skip_whitespace(char const *beg, char const *end) {

@@ -12,7 +12,7 @@
 /** @brief Assertion macro for unit-testing */
 #define check(cond) do { \
 	if (!(cond)) { \
-		fprintf(stderr, "%s: %d: check failure: %s\n", __FILE__, __LINE__, #cond); \
+		fprintf(stderr, "%s:%d: check failure: %s\n", __FILE__, __LINE__, #cond); \
 		abort(); \
 	} \
 } while (false)

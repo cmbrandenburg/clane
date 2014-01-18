@@ -12,24 +12,42 @@
 namespace clane {
 	namespace http {
 
+		// Searches a given memory block for the first newline. If a carriage return
+		// and newline pair is found ("\r\n") then this returns a pointer to the
+		// carriage return character. Else, if a newline is found then this returns
+		// a pointer to the newline character. Else, if a carriage return is found
+		// at the last byte of the block then this returns a pointer to that
+		// carriage return. Else, this returns a pointer to the first byte after the
+		// memory block.
+		//
+		// In other words, the result of this function is to return a pointer to the
+		// first "unreadable" byte in or out of the block, where readable characters
+		// are characters in the current line, excluding "\r\n" and "\n". Note that
+		// carriage returns followed by a character other than a newline are
+		// considered readable.
+		char const *find_newline(const char *p, size_t n);
+
+		void rtrim(std::string &s);
+
 		// Base class for all consumers. A consumer is a stream-oriented parser that
-		// processes input in chunks.
+		// processes input one memory block at a time.
 		//
 		// Derived classes implement a 'consume' member function that accepts a
-		// chunk of input and returns the number of bytes consumed, or the special
-		// value 'error' if the input chunk is invalid. After consumption, the
-		// consumer may be checked for whether consumption completed. For example,
-		// an HTTP header consumer will be incomplete if the input chunk contains
-		// only a partial header (e.g., "Content-Length: 0\r\nContent-"), whereas
-		// the consumer will be complete if the input chunk contains a full header
-		// (e.g., "Content-Length: 0\r\nContent-Type: text/plain\r\n\r\n").
+		// memory block as input and returns the number of bytes consumed, or the
+		// special value 'error' if the input memory block is invalid. After
+		// consumption, the consumer may be checked for whether consumption
+		// completed. For example, an HTTP header consumer will be incomplete if the
+		// input memory block contains only a partial header (e.g., "Content-Length:
+		// 0\r\nContent-"), whereas the consumer will be complete if the input
+		// memory block contains a full header (e.g., "Content-Length:
+		// 0\r\nContent-Type: text/plain\r\n\r\n").
 		//
-		// Consumption may result in only some of the input chunk being consumed.
-		// This will happen if the input chunk contains additional data (e.g., an
-		// HTTP header consumer will ignore entity body data following the end of
-		// the header) or if (by design) the consumer returns control to the caller
-		// to allow the caller to process the consumed data before resuming further
-		// consumption.
+		// Consumption may result in only some of the input memory block being
+		// consumed. This will happen if the input memory block contains additional
+		// data (e.g., an HTTP header consumer will ignore entity body data
+		// following the end of the header) or if (by design) the consumer returns
+		// control to the caller to allow the caller to process the consumed data
+		// before resuming further consumption.
 		//
 		// A consumer instance may be reused after calling the 'reset' method.
 		// Derived classes overload this method to do additional reset steps.
@@ -43,7 +61,7 @@ namespace clane {
 			static size_t constexpr error = static_cast<size_t>(-1);
 		private:
 			size_t len_limit;  // length limit, if any
-			size_t total_len;  // total number of bytes consumed in all chunks
+			size_t total_len;  // total number of bytes consumed in all memory blocks
 			char const *what_; // error description, in case an error occurred
 			bool done_;
 		public:

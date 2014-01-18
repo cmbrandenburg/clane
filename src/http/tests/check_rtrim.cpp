@@ -1,13 +1,11 @@
 // vim: set noet:
 
-#include "../http_consume.cpp"
 #include "../../check/check.h"
+#include "../http_consume.hpp"
 
 using namespace clane;
 
 int main() {
-	return 77;
-#if 0
 
 	std::string s;
 	http::rtrim(s);
@@ -20,6 +18,5 @@ int main() {
 	s = "alpha bravo \t\r\n";
 	http::rtrim(s);
 	check("alpha bravo" == s);
-#endif
 }
 

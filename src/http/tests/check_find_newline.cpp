@@ -1,13 +1,12 @@
 // vim: set noet:
 
 #include "../../check/check.h"
-#include "../http_consume.cpp"
+#include "../http_consume.hpp"
+#include <cstring>
 
 using namespace clane;
 
 int main() {
-	return 77;
-#if 0
 	char const *p;
 
 	p = "";
@@ -52,6 +51,5 @@ int main() {
 	p = s.data();
 	got = http::find_newline(p, s.size());
 	check(p + 11 == got);
-#endif
 }
 
