@@ -10,6 +10,7 @@ TESTS = \
 	check_is_method_valid \
 	check_consumer \
 	check_request_line_consumer \
+	check_status_line_consumer \
 	check_headers_consumer \
 	check_request_1x_consumer \
 	check_chunk_line_consumer \
@@ -30,7 +31,8 @@ check_PROGRAMS = \
 	check_request_line_consumer \
 	check_request_response \
 	check_rtrim \
-	check_server_run_term
+	check_server_run_term \
+	check_status_line_consumer
 
 check_canonize_1x_header_name_SOURCES = check_canonize_1x_header_name.cpp
 check_canonize_1x_header_name_LDADD = ../libhttp.la
@@ -73,4 +75,7 @@ check_rtrim_LDADD = ../libhttp.la
 
 check_server_run_term_SOURCES = check_server_run_term.cpp
 check_server_run_term_LDADD = ../libhttp.la
+
+check_status_line_consumer_SOURCES = check_status_line_consumer.cpp
+check_status_line_consumer_LDADD = ../libhttp.la
 
