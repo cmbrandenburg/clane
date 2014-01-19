@@ -483,6 +483,63 @@ namespace clane {
 			return cur - buf; // incomplete
 		}
 
+		size_t v1x_chunk_line_consumer::consume(char const *buf, size_t size) {
+			static const char *invalid = "invalid chunk size";
+			size_t i = 0;
+			while (true) {
+				if (i == size)
+					return size; // incomplete
+				switch (cur_phase) {
+					case phase::digit:
+						if (nibs == max_nibs) {
+							set_error(status_code::bad_request, "chunk size too big");
+							return error;
+						}
+						if (('\r' == buf[i] || '\n' == buf[i]) && !nibs) {
+							set_error(status_code::bad_request, invalid);
+							return error;
+						}
+						if ('\r' == buf[i]) {
+							increase_length(1);
+							cur_phase = phase::newline;
+							break;
+						}
+						if ('\n' == buf[i]) {
+							increase_length(1);
+							++i;
+							return i;
+						}
+						if (!isxdigit(buf[i])) {
+							set_error(status_code::bad_request, invalid);
+							return error;
+						}
+						val <<= 4;
+						++nibs;
+						increase_length(1);
+						if ('0' <= buf[i] && buf[i] <= '9')
+							val |= buf[i] - '0';
+						else if ('A' <= buf[i] && buf[i] <= 'F')
+							val |= buf[i] - 'A' + 10;
+						else
+							val |= buf[i] - 'a' + 10;
+						break;
+					case phase::newline:
+						if ('\n' != buf[i]) {
+							set_error(status_code::bad_request, invalid);
+							return error;
+						}
+						if (!nibs) {
+							set_error(status_code::bad_request, invalid);
+							return error;
+						}
+						increase_length(1);
+						++i;
+						return i;
+				}
+				++i;
+			}
+		}
+
 #if 0
 		bool request_1x_consumer::consume(char const *buf, size_t size) {
 			pre_consume();
@@ -513,57 +570,6 @@ namespace clane {
 			}
 		}
 
-		bool chunk_line_consumer::consume(char const *buf, size_t size) {
-			pre_consume();
-			static const char *invalid = "invalid chunk size";
-			size_t i = 0;
-			while (true) {
-				if (i == size)
-					return false; // incomplete
-				switch (cur_phase) {
-					case phase::digit:
-						if (nibs == max_nibs) {
-							set_error(status_code::bad_request, "chunk size too big");
-							return true;
-						}
-						if ('\r' == buf[i]) {
-							increase_length(1);
-							cur_phase = phase::newline;
-							break;
-						}
-						if ('\n' == buf[i]) {
-							increase_length(1);
-							return true;
-						}
-						if (!isxdigit(buf[i])) {
-							set_error(status_code::bad_request, invalid);
-							return true;
-						}
-						val <<= 4;
-						++nibs;
-						increase_length(1);
-						if ('0' <= buf[i] && buf[i] <= '9')
-							val |= buf[i] - '0';
-						else if ('A' <= buf[i] && buf[i] <= 'F')
-							val |= buf[i] - 'A' + 10;
-						else
-							val |= buf[i] - 'a' + 10;
-						break;
-					case phase::newline:
-						if ('\n' != buf[i]) {
-							set_error(status_code::bad_request, invalid);
-							return true;
-						}
-						if (0 == nibs) {
-							set_error(status_code::bad_request, invalid);
-							return true;
-						}
-						increase_length(1);
-						return true;
-				}
-				++i;
-			}
-		}
 #endif
 	}
 }

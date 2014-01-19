@@ -15,14 +15,13 @@ TESTS = \
 	check_v1x_request_line_consumer \
 	check_v1x_status_line_consumer \
 	check_v1x_headers_consumer \
+	check_v1x_chunk_line_consumer \
 	check_request_1x_consumer \
-	check_chunk_line_consumer \
 	check_server_run_term \
 	check_request_response
 
 check_PROGRAMS = \
 	check_canonize_1x_header_name \
-	check_chunk_line_consumer \
 	check_consumer \
 	check_find_newline \
 	check_header_name_less \
@@ -36,15 +35,13 @@ check_PROGRAMS = \
 	check_rtrim \
 	check_server_consumer \
 	check_server_run_term \
+	check_v1x_chunk_line_consumer \
 	check_v1x_headers_consumer \
 	check_v1x_request_line_consumer \
 	check_v1x_status_line_consumer
 
 check_canonize_1x_header_name_SOURCES = check_canonize_1x_header_name.cpp
 check_canonize_1x_header_name_LDADD = ../libhttp.la
-
-check_chunk_line_consumer_SOURCES = check_chunk_line_consumer.cpp
-check_chunk_line_consumer_LDADD = ../libhttp.la
 
 check_consumer_SOURCES = check_consumer.cpp
 check_consumer_LDADD = ../libhttp.la
@@ -84,6 +81,9 @@ check_server_consumer_LDADD = ../libhttp.la
 
 check_server_run_term_SOURCES = check_server_run_term.cpp
 check_server_run_term_LDADD = ../libhttp.la
+
+check_v1x_chunk_line_consumer_SOURCES = check_v1x_chunk_line_consumer.cpp
+check_v1x_chunk_line_consumer_LDADD = ../libhttp.la
 
 check_v1x_headers_consumer_SOURCES = check_v1x_headers_consumer.cpp
 check_v1x_headers_consumer_LDADD = ../libhttp.la

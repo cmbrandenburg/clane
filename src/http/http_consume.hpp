@@ -272,6 +272,37 @@ namespace clane {
 			hdr_val.clear();
 		}
 
+		class v1x_chunk_line_consumer: virtual public server_consumer {
+			static constexpr int max_nibs = 2 * sizeof(size_t);
+			enum class phase {
+				digit,
+				newline
+			} cur_phase;
+			int nibs;
+			size_t val;
+		public:
+			~v1x_chunk_line_consumer() = default;
+			v1x_chunk_line_consumer();
+			v1x_chunk_line_consumer(v1x_chunk_line_consumer const &) = delete;
+			v1x_chunk_line_consumer(v1x_chunk_line_consumer &&) = default;
+			v1x_chunk_line_consumer &operator=(v1x_chunk_line_consumer const &) = delete;
+			v1x_chunk_line_consumer &operator=(v1x_chunk_line_consumer &&) = default;
+			// Note: Ignores length limit, uses fixed length limit based on
+			// sizeof(size_t).
+			size_t consume(char const *buf, size_t size);
+			void reset();
+			size_t chunk_size() const { return val; }
+		};
+
+		inline v1x_chunk_line_consumer::v1x_chunk_line_consumer(): cur_phase(phase::digit), nibs{}, val{} {}
+
+		inline void v1x_chunk_line_consumer::reset() {
+			consumer::reset();
+			cur_phase = phase::digit;
+			nibs = 0;
+			val = 0;
+		}
+
 #if 0
 		class request_1x_consumer: virtual public consumer, private v1x_request_line_consumer, private v1x_headers_consumer {
 			enum class phase {
@@ -301,36 +332,6 @@ namespace clane {
 			v1x_headers_consumer::reset(req.headers);
 		}
 
-		class chunk_line_consumer: virtual public consumer {
-			static constexpr int max_nibs = 2 * sizeof(size_t);
-			enum class phase {
-				digit,
-				newline
-			} cur_phase;
-			int nibs;
-			size_t val;
-		public:
-			~chunk_line_consumer() = default;
-			chunk_line_consumer();
-			chunk_line_consumer(chunk_line_consumer const &) = delete;
-			chunk_line_consumer(chunk_line_consumer &&) = default;
-			chunk_line_consumer &operator=(chunk_line_consumer const &) = delete;
-			chunk_line_consumer &operator=(chunk_line_consumer &&) = default;
-			// Note: Ignores length limit, uses fixed length limit based on
-			// sizeof(size_t).
-			bool consume(char const *buf, size_t size);
-			void reset();
-			size_t chunk_size() const { return val; }
-		};
-
-		inline chunk_line_consumer::chunk_line_consumer(): cur_phase(phase::digit), nibs{}, val{} {}
-
-		inline void chunk_line_consumer::reset() {
-			consumer::reset();
-			cur_phase = phase::digit;
-			nibs = 0;
-			val = 0;
-		}
 #endif
 	}
 }
