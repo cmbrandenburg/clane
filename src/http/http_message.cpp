@@ -1,7 +1,6 @@
 // vim: set noet:
 
-#include "http_response.hpp"
-#include <stdexcept>
+#include "http_message.hpp"
 
 namespace clane {
 	namespace http {

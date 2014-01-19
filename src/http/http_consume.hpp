@@ -5,7 +5,7 @@
 
 #include "http_common.hpp"
 #include "http_header.hpp"
-#include "http_request.hpp"
+#include "http_message.hpp"
 #include "http_status.hpp"
 #include "../uri/uri.hpp"
 
