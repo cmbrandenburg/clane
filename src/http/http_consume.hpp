@@ -100,6 +100,7 @@ namespace clane {
 
 			// Sets the consumer into the error state, with a description of the error.
 			void set_error(char const *what);
+			void set_error(consumer const &cons);
 
 			// Sets the consumer into the done state.
 			void set_done();
@@ -126,6 +127,10 @@ namespace clane {
 		inline void consumer::set_error(char const *what) {
 			done_ = true;
 			what_ = what;
+		}
+
+		inline void consumer::set_error(consumer const &cons) {
+			set_error(cons.what());
 		}
 
 		inline void consumer::set_done() {
@@ -155,11 +160,16 @@ namespace clane {
 
 			// Sets the consumer into the error state, with a description of the error.
 			void set_error(status_code error_stat, char const *what);
+			void set_error(server_consumer const &cons);
 		};
 
 		inline void server_consumer::set_error(status_code n, char const *what) {
 			consumer::set_error(what);
 			error_code_ = n;
+		}
+
+		inline void server_consumer::set_error(server_consumer const &cons) {
+			set_error(cons.error_code(), cons.what());
 		}
 
 		class v1x_request_line_consumer: virtual public server_consumer {

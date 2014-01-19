@@ -54,6 +54,7 @@ void check_nok(size_t len_limit, char const *ok, char const *bad, http::status_c
 	check(!cons.done());
 	check(cons.error == cons.consume(bad, 1));
 	check(cons.done());
+	check(exp_error_code == cons.error_code());
 }
 
 int main() {
