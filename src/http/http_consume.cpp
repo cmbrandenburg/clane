@@ -128,6 +128,32 @@ namespace clane {
 			return true;
 		}
 
+		bool is_chunked(header_map const &hdrs) {
+			// FIXME: Check for other transfer-codings.
+			// FIXME: Check transfer-enccoding order.
+			static std::string const key("transfer-encoding");
+			auto r = hdrs.equal_range(key);
+			return r.second != std::find_if(r.first, r.second, [&](std::pair<std::string, std::string> const &v) {
+					return v.second == "chunked";
+					});
+		}
+
+		bool is_content_length(header_map const &hdrs, size_t &len_o) {
+			// FIXME: Check for multiple and/or invalid content-length headers. For
+			// now, assume the first content-length headers is the only one.
+			static std::string const key("content-length");
+			auto p = hdrs.find(key);
+			if (p == hdrs.end())
+				return false;
+			std::istringstream ss(p->second);
+			size_t len;
+			ss >> len;
+			if (!ss || !ss.eof())
+				return false;
+			len_o = len;
+			return true;
+		}
+
 		static char const *skip_whitespace(char const *beg, char const *end);
 
 		char const *skip_whitespace(char const *beg, char const *end) {
@@ -500,12 +526,10 @@ namespace clane {
 							return error;
 						}
 						if ('\r' == buf[i]) {
-							increase_length(1);
 							cur_phase = phase::newline;
 							break;
 						}
 						if ('\n' == buf[i]) {
-							increase_length(1);
 							++i;
 							set_done();
 							return i;
@@ -516,7 +540,6 @@ namespace clane {
 						}
 						val <<= 4;
 						++nibs;
-						increase_length(1);
 						if ('0' <= buf[i] && buf[i] <= '9')
 							val |= buf[i] - '0';
 						else if ('A' <= buf[i] && buf[i] <= 'F')
@@ -533,7 +556,6 @@ namespace clane {
 							set_error(status_code::bad_request, invalid);
 							return error;
 						}
-						increase_length(1);
 						++i;
 						set_done();
 						return i;
@@ -613,6 +635,62 @@ namespace clane {
 				}
 			}
 			return i; // maybe complete, maybe not
+		}
+
+		size_t v1x_request_consumer::consume(std::shared_ptr<char> const &p, size_t offset, size_t size) {
+			char const *const buf = p.get() + offset;
+			size_t i = 0;
+			switch (cur_phase) {
+				case phase::request_line: {
+					size_t stat = v1x_request_line_consumer::consume(buf+i, size-i);
+					if (error == stat)
+						return error;
+					i += stat;
+					if (!done())
+						return i;
+					cur_phase = phase::headers;
+					// fall through to next case
+				}
+				case phase::headers: {
+					size_t stat = v1x_headers_consumer::consume(buf+i, size-i);
+					if (error == stat)
+						return error;
+					i += stat;
+					if (!done())
+						return i;
+					cur_phase = phase::body;
+					size_t len;
+					if (is_chunked(req->headers))
+						v1x_body_consumer::reset(v1x_body_consumer::chunked, 0);
+					else if (is_content_length(req->headers, len))
+						v1x_body_consumer::reset(v1x_body_consumer::fixed, len);
+					else {
+						set_error(status_code::bad_request, "unknown body length");
+						return error;
+					}
+					// fall through to next case
+				}
+				case phase::body: {
+					size_t stat = v1x_body_consumer::consume(buf+i, size-i);
+					if (error == stat)
+						return error;
+					sb->more_input(p, offset+i, stat);
+					i += stat;
+					if (!done())
+						return i;
+					cur_phase = phase::trailers;
+					v1x_headers_consumer::reset(req->trailers);
+					// fall through to next case
+				}
+				case phase::trailers: {
+					size_t stat = v1x_headers_consumer::consume(buf+i, size-i);
+					if (error == stat)
+						return error;
+					i += stat;
+					break;
+				}
+			}
+			return i; // maybe done, maybe not
 		}
 
 #if 0

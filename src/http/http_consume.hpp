@@ -36,6 +36,9 @@ namespace clane {
 		bool parse_version(int *major_ver, int *minor_ver, std::string &s);
 		bool parse_status_code(status_code *stat, std::string &s);
 
+		bool is_chunked(header_map const &hdrs);
+		bool is_content_length(header_map const &hdrs, size_t &len_o);
+
 		// Base class for all consumers. A consumer is a stream-oriented parser that
 		// processes input one memory block at a time.
 		//
@@ -282,6 +285,7 @@ namespace clane {
 			hdr_val.clear();
 		}
 
+		// Does not call consumer::increase_length.
 		class v1x_chunk_line_consumer: virtual public server_consumer {
 			static constexpr int max_nibs = 2 * sizeof(size_t);
 			enum class phase {
@@ -313,6 +317,7 @@ namespace clane {
 			val = 0;
 		}
 
+		// Does not call consumer::increase_length.
 		class v1x_body_consumer: virtual public server_consumer {
 		public:
 			enum length_type {
@@ -363,36 +368,48 @@ namespace clane {
 			}
 		}
 
-#if 0
-		class request_1x_consumer: virtual public consumer, private v1x_request_line_consumer, private v1x_headers_consumer {
+		class v1x_request_consumer: virtual public server_consumer, private v1x_request_line_consumer, private v1x_headers_consumer,
+		private v1x_body_consumer {
 			enum class phase {
 				request_line,
-				headers
+				headers,
+				body,
+				trailers
 			} cur_phase;
+			streambuf *sb;
+			request *req;
+			bool got_hdrs;
 		public:
-			~request_1x_consumer() = default;
-			request_1x_consumer(request &req);
-			request_1x_consumer(request_1x_consumer const &) = delete;
-			request_1x_consumer(request_1x_consumer &&) = default;
-			request_1x_consumer &operator=(request_1x_consumer const &) = delete;
-			request_1x_consumer &operator=(request_1x_consumer &&) = default;
-			bool consume(char const *buf, size_t size);
-			void reset(request &req);
+			~v1x_request_consumer() = default;
+			v1x_request_consumer(streambuf *sb, request &req);
+			v1x_request_consumer(v1x_request_consumer const &) = delete;
+			v1x_request_consumer(v1x_request_consumer &&) = default;
+			v1x_request_consumer &operator=(v1x_request_consumer const &) = delete;
+			v1x_request_consumer &operator=(v1x_request_consumer &&) = default;
+			size_t consume(std::shared_ptr<char> const &p, size_t offset, size_t size);
+
+			void reset(streambuf *sb, request &req);
+			bool got_headers() const { return got_hdrs; }
 		};
 
-		inline request_1x_consumer::request_1x_consumer(request &req):
-		  	 	v1x_request_line_consumer(req.method, req.uri, req.major_version, req.minor_version),
-				v1x_headers_consumer(req.headers), cur_phase(phase::request_line) {
-		}
+		inline v1x_request_consumer::v1x_request_consumer(streambuf *sb, request &req):
+			v1x_request_line_consumer(req.method, req.uri, req.major_version, req.minor_version),
+			v1x_headers_consumer(req.headers),
+			v1x_body_consumer(v1x_body_consumer::fixed, 0), // dummy initialization
+			cur_phase(phase::request_line),
+			sb(sb),
+			req(&req),
+			got_hdrs{} {}
 
-		inline void request_1x_consumer::reset(request &req) {
+		inline void v1x_request_consumer::reset(streambuf *sb, request &req) {
 			consumer::reset();
-			cur_phase = phase::request_line;
 			v1x_request_line_consumer::reset(req.method, req.uri, req.major_version, req.minor_version);
 			v1x_headers_consumer::reset(req.headers);
+			cur_phase = phase::request_line;
+			this->sb = sb;
+			this->req = &req;
+			got_hdrs = false;
 		}
-
-#endif
 	}
 }
 

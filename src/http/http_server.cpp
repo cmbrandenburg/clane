@@ -11,34 +11,6 @@
 namespace clane {
 	namespace http {
 
-#if 0
-		static bool chunked_xfer_encoding(header_map const &hdrs) {
-			// FIXME: Ignore transfer-encoding order. Assume that if any one of the
-			// transfer-encoding headers is "chunked" then the message is chunked.
-			static std::string const key("transfer-encoding");
-			auto r = hdrs.equal_range(key);
-			return r.second != std::find_if(r.first, r.second, [&](std::pair<std::string, std::string> const &v) {
-					return v.second == "chunked";
-					});
-		}
-#endif
-
-		static bool content_length(header_map const &hdrs, size_t &content_len) {
-			// FIXME: Ignore multiple and invalid content-length headers. Assume the
-			// first content-length header 
-			static std::string const key("content-length");
-			auto p = hdrs.find(key);
-			if (p == hdrs.end())
-				return false;
-			std::istringstream ss(p->second);
-			size_t len;
-			ss >> len;
-			if (!ss || !ss.eof())
-				return false;
-			content_len = len;
-			return true;
-		}
-
 		// TODO: move to generic sublibrary
 		// TODO: unit test
 		class reference_counter {
@@ -178,11 +150,13 @@ namespace clane {
 			}
 			// flush headers if not already written:
 			if (!hdrs_written) {
+#if 0
 				size_t content_len;
-				if (!content_length(out_hdrs, content_len)) {
+				if (!is_content_length(out_hdrs, content_len)) {
 					chunked = true;
 					out_hdrs.insert(std::pair<std::string, std::string>("transfer-encoding", "chunked"));
 				}
+#endif
 				std::ostringstream ss;
 				ss << "HTTP/" << major_ver << '.' << minor_ver << ' ' <<
 					static_cast<std::underlying_type<status_code>::type>(out_stat_code) << ' ' << what(out_stat_code) << "\r\n";

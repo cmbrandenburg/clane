@@ -8,9 +8,23 @@
 #include "http_status.hpp"
 #include "../uri/uri.hpp"
 #include <istream>
+#include <memory>
 
 namespace clane {
 	namespace http {
+
+		// Base class for server-side and client-side body stream buffers. This
+		// provides an additional method to add more input to the input sequence.
+		class streambuf: public std::streambuf {
+		public:
+			virtual ~streambuf();
+			streambuf();
+			streambuf(streambuf const &) = default;
+			streambuf(streambuf &&) = default;
+			streambuf &operator=(streambuf const &) = default;
+			streambuf &operator=(streambuf &&) = default;
+			virtual void more_input(std::shared_ptr<char> const &p, size_t offset, size_t size) = 0;
+		};
 
 		class request {
 		public:
@@ -19,6 +33,8 @@ namespace clane {
 			int major_version;
 			int minor_version;
 			header_map headers;
+			header_map trailers;
+			//std::istream body;
 		public:
 			~request() = default;
 			request() = default;

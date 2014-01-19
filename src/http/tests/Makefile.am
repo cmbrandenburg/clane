@@ -10,6 +10,8 @@ TESTS = \
 	check_is_method_valid \
 	check_parse_version \
 	check_parse_status_code \
+	check_is_chunked \
+	check_is_content_length \
 	check_consumer \
 	check_server_consumer \
 	check_v1x_request_line_consumer \
@@ -26,6 +28,8 @@ check_PROGRAMS = \
 	check_consumer \
 	check_find_newline \
 	check_header_name_less \
+	check_is_chunked \
+	check_is_content_length \
 	check_is_header_name_valid \
 	check_is_header_value_valid \
 	check_is_method_valid \
@@ -53,6 +57,12 @@ check_find_newline_LDADD = ../libhttp.la
 
 check_header_name_less_SOURCES = check_header_name_less.cpp
 check_header_name_less_LDADD = ../libhttp.la
+
+check_is_chunked_SOURCES = check_is_chunked.cpp
+check_is_chunked_LDADD = ../libhttp.la
+
+check_is_content_length_SOURCES = check_is_content_length.cpp
+check_is_content_length_LDADD = ../libhttp.la
 
 check_is_header_name_valid_SOURCES = check_is_header_name_valid.cpp
 check_is_header_name_valid_LDADD = ../libhttp.la
