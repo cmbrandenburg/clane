@@ -2,6 +2,7 @@
 
 #include "http_header.hpp"
 #include <algorithm>
+#include <cctype>
 
 namespace clane {
 	namespace http {

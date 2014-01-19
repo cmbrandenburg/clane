@@ -52,9 +52,13 @@ namespace clane {
 			~uri() = default;
 			uri() = default;
 			uri(uri const &) = default;
+			#ifndef _WIN32
 			uri(uri &&) = default;
+			#endif
 			uri &operator=(uri const &) = default;
+			#ifndef _WIN32
 			uri &operator=(uri &&) = default;
+			#endif
 			bool operator==(uri const &that) const;
 			bool operator!=(uri const &that) const { return !(*this == that); }
 			std::string to_string() const;

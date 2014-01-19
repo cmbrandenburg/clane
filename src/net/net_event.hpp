@@ -15,9 +15,13 @@ namespace clane {
 			~event() = default;
 			event();
 			event(event const &) = delete;
+			#ifndef _WIN32
 			event(event &&) = default;
+			#endif
 			event &operator=(event const &) = delete;
+			#ifndef _WIN32
 			event &operator=(event &&) = default;
+			#endif
 			void signal();
 			void reset();
 			posix::file_descriptor const &descriptor() const { return fd; }

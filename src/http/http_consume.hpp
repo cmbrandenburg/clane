@@ -68,7 +68,11 @@ namespace clane {
 		//
 		class consumer {
 		public:
+#ifndef _WIN32
 			static size_t constexpr error = static_cast<size_t>(-1);
+#else
+			static size_t const error = static_cast<size_t>(-1);
+#endif
 		private:
 			size_t len_limit;  // length limit, if any
 			size_t total_len;  // total number of bytes consumed in all memory blocks
@@ -78,9 +82,13 @@ namespace clane {
 			~consumer() = default;
 			consumer();
 			consumer(consumer const &) = delete;
+			#ifndef _WIN32
 			consumer(consumer &&) = default;
+			#endif
 			consumer &operator=(consumer const &) = delete;
+			#ifndef _WIN32
 			consumer &operator=(consumer &&) = default;
+			#endif
 
 			// Returns true if and only if the consumer is done, either due to success
 			// or error.
@@ -152,9 +160,13 @@ namespace clane {
 			~server_consumer() = default;
 			server_consumer() = default;
 			server_consumer(server_consumer const &) = delete;
+			#ifndef _WIN32
 			server_consumer(server_consumer &&) = default;
+			#endif
 			server_consumer &operator=(server_consumer const &) = delete;
+			#ifndef _WIN32
 			server_consumer &operator=(server_consumer &&) = default;
+			#endif
 
 			// Returns the HTTP response status, if an error occurred, if server-side.
 			status_code error_code() const { return error_code_; }
@@ -192,9 +204,13 @@ namespace clane {
 			~v1x_request_line_consumer() = default;
 			v1x_request_line_consumer(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver);
 			v1x_request_line_consumer(v1x_request_line_consumer const &) = delete;
+#ifndef _WIN32
 			v1x_request_line_consumer(v1x_request_line_consumer &&) = default;
+#endif
 			v1x_request_line_consumer &operator=(v1x_request_line_consumer const &) = delete;
+#ifndef _WIN32
 			v1x_request_line_consumer &operator=(v1x_request_line_consumer &&) = default;
+#endif
 			size_t consume(char const *buf, size_t size);
 			void reset(std::string &method, uri::uri &uri, int &major_ver, int &minor_ver);
 		};
@@ -231,9 +247,13 @@ namespace clane {
 			~v1x_status_line_consumer() = default;
 			v1x_status_line_consumer(int &major_ver, int &minor_ver, status_code &stat, std::string &reason);
 			v1x_status_line_consumer(v1x_status_line_consumer const &) = delete;
+#ifndef _WIN32
 			v1x_status_line_consumer(v1x_status_line_consumer &&) = default;
+#endif
 			v1x_status_line_consumer &operator=(v1x_status_line_consumer const &) = delete;
+#ifndef _WIN32
 			v1x_status_line_consumer &operator=(v1x_status_line_consumer &&) = default;
+#endif
 			size_t consume(char const *buf, size_t size);
 			void reset(int &major_ver, int &minor_ver, status_code &stat, std::string &reason);
 		};
@@ -268,9 +288,13 @@ namespace clane {
 			~v1x_headers_consumer() = default;
 			v1x_headers_consumer(header_map &hdrs);
 			v1x_headers_consumer(v1x_headers_consumer const &) = delete;
+#ifndef _WIN32
 			v1x_headers_consumer(v1x_headers_consumer &&) = default;
+#endif
 			v1x_headers_consumer &operator=(v1x_headers_consumer const &) = delete;
+#ifndef _WIN32
 			v1x_headers_consumer &operator=(v1x_headers_consumer &&) = default;
+#endif
 			size_t consume(char const *buf, size_t size);
 			void reset(header_map &hdrs);
 		};
@@ -287,7 +311,11 @@ namespace clane {
 
 		// Does not call consumer::increase_length.
 		class v1x_chunk_line_consumer: virtual public server_consumer {
+#ifndef _WIN32
 			static constexpr int max_nibs = 2 * sizeof(size_t);
+#else
+			static int const max_nibs = 2 * sizeof(size_t);
+#endif
 			enum class phase {
 				digit,
 				newline
@@ -298,9 +326,13 @@ namespace clane {
 			~v1x_chunk_line_consumer() = default;
 			v1x_chunk_line_consumer();
 			v1x_chunk_line_consumer(v1x_chunk_line_consumer const &) = delete;
+#ifndef _WIN32
 			v1x_chunk_line_consumer(v1x_chunk_line_consumer &&) = default;
+#endif
 			v1x_chunk_line_consumer &operator=(v1x_chunk_line_consumer const &) = delete;
+#ifndef _WIN32
 			v1x_chunk_line_consumer &operator=(v1x_chunk_line_consumer &&) = default;
+#endif
 			// Note: Ignores length limit, uses fixed length limit based on
 			// sizeof(size_t).
 			size_t consume(char const *buf, size_t size);
@@ -341,9 +373,13 @@ namespace clane {
 			~v1x_body_consumer() = default;
 			v1x_body_consumer(length_type len_type, size_t len);
 			v1x_body_consumer(v1x_body_consumer const &) = delete;
+#ifndef _WIN32
 			v1x_body_consumer(v1x_body_consumer &&) = default;
+#endif
 			v1x_body_consumer &operator=(v1x_body_consumer const &) = delete;
+#ifndef _WIN32
 			v1x_body_consumer &operator=(v1x_body_consumer &&) = default;
+#endif
 			size_t consume(char const *buf, size_t size, size_t offset = 0);
 			void reset(length_type len_type, size_t len);
 			size_t offset() const { return offset_; }
@@ -383,9 +419,13 @@ namespace clane {
 			~v1x_request_consumer() = default;
 			v1x_request_consumer(streambuf *sb, request &req);
 			v1x_request_consumer(v1x_request_consumer const &) = delete;
+#ifndef _WIN32
 			v1x_request_consumer(v1x_request_consumer &&) = default;
+#endif
 			v1x_request_consumer &operator=(v1x_request_consumer const &) = delete;
+#ifndef _WIN32
 			v1x_request_consumer &operator=(v1x_request_consumer &&) = default;
+#endif
 			size_t consume(std::shared_ptr<char> const &p, size_t offset, size_t size);
 
 			void reset(streambuf *sb, request &req);

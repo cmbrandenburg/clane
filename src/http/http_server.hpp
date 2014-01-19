@@ -26,9 +26,13 @@ namespace clane {
 			explicit oresponsestream(std::streambuf *sb, status_code &stat_code, header_map &hdrs): std::ostream{sb},
 					status(stat_code), headers(hdrs) {}
 			oresponsestream(oresponsestream const &) = delete;
+#ifndef _WIN32
 			oresponsestream(oresponsestream &&) = default;
+#endif
 			oresponsestream &operator=(oresponsestream const &) = delete;
+#ifndef _WIN32
 			oresponsestream &operator=(oresponsestream &&) = default;
+#endif
 		};
 
 		typedef std::function<void(oresponsestream &, request &)> handler;
@@ -41,10 +45,10 @@ namespace clane {
 				~scoped_conn_ref();
 				scoped_conn_ref(server *ser);
 				scoped_conn_ref(scoped_conn_ref const &) = delete;
-				scoped_conn_ref(scoped_conn_ref &&that) noexcept: ser{} { swap(that); }
+				scoped_conn_ref(scoped_conn_ref &&that) throw(): ser{} { swap(that); }
 				scoped_conn_ref &operator=(scoped_conn_ref const &) = delete;
-				scoped_conn_ref &operator=(scoped_conn_ref &&that) noexcept { swap(that); return *this; }
-				void swap(scoped_conn_ref &that) noexcept { std::swap(ser, that.ser); }
+				scoped_conn_ref &operator=(scoped_conn_ref &&that) throw() { swap(that); return *this; }
+				void swap(scoped_conn_ref &that) throw() { std::swap(ser, that.ser); }
 			};
 
 			std::deque<net::socket> listeners;

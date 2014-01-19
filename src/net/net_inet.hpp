@@ -8,7 +8,7 @@
 namespace clane {
 	namespace net {
 
-		class protocol_family;
+		struct protocol_family;
 		extern protocol_family const tcp;
 		extern protocol_family const tcp4;
 		extern protocol_family const tcp6;

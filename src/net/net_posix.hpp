@@ -19,37 +19,37 @@ namespace clane {
 			int fd;
 		public:
 			~file_descriptor() { close(); }
-			file_descriptor() noexcept: fd(-1) {}
+			file_descriptor() throw(): fd(-1) {}
 			file_descriptor(file_descriptor const &) = delete;
-			file_descriptor(file_descriptor &&that) noexcept: fd(-1) { swap(that); }
-			file_descriptor(int that_fd) noexcept: fd(that_fd) {}
+			file_descriptor(file_descriptor &&that) throw(): fd(-1) { swap(that); }
+			file_descriptor(int that_fd) throw(): fd(that_fd) {}
 			file_descriptor &operator=(file_descriptor const &) = delete;
-			file_descriptor &operator=(file_descriptor &&that) noexcept;
-			file_descriptor &operator=(int that_fd) noexcept;
-			void swap(file_descriptor &that) noexcept { std::swap(fd, that.fd); }
-			operator int() const noexcept { return fd; }
+			file_descriptor &operator=(file_descriptor &&that) throw();
+			file_descriptor &operator=(int that_fd) throw();
+			void swap(file_descriptor &that) throw() { std::swap(fd, that.fd); }
+			operator int() const throw() { return fd; }
 			void close();
-			int release() noexcept;
+			int release() throw();
 		};
 
-		inline file_descriptor &file_descriptor::operator=(file_descriptor &&that) noexcept {
+		inline file_descriptor &file_descriptor::operator=(file_descriptor &&that) throw() {
 			swap(that);
 			return *this;
 		}
 
-		inline file_descriptor &file_descriptor::operator=(int that_fd) noexcept {
+		inline file_descriptor &file_descriptor::operator=(int that_fd) throw() {
 			close();
 			fd = that_fd;
 			return *this;
 		}
 
-		inline int file_descriptor::release() noexcept {
+		inline int file_descriptor::release() throw() {
 			int n = fd;
 			fd = -1;
 			return n;
 		}
 
-		inline void swap(file_descriptor &a, file_descriptor &b) noexcept {
+		inline void swap(file_descriptor &a, file_descriptor &b) throw() {
 			a.swap(b);
 		}
 	}

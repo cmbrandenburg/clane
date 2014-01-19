@@ -5,7 +5,11 @@
 
 #include "net_common.hpp"
 #include "net_posix.hpp"
+#ifdef _WIN32
+#include <WinSock2.h>
+#else
 #include <sys/socket.h>
+#endif
 
 namespace clane {
 	namespace net {
@@ -71,13 +75,13 @@ namespace clane {
 			socket_descriptor sd;
 		public:
 			~socket() { if (pf) { pf->destruct_descriptor(sd); }}
-			socket() noexcept: pf{} {}
+			socket() throw(): pf{} {}
 			socket(protocol_family const *pf, posix::file_descriptor &&fd): pf{pf} { sd.n = fd.release(); }
 			socket(socket const &) = delete;
-			socket(socket &&that) noexcept: pf{} { swap(that); }
+			socket(socket &&that) throw(): pf{} { swap(that); }
 			socket &operator=(socket const &) = delete;
-			socket &operator=(socket &&that) noexcept;
-			void swap(socket &that) noexcept;
+			socket &operator=(socket &&that) throw();
+			void swap(socket &that) throw();
 			int descriptor() const { return pf->descriptor(sd); }
 			void set_nonblocking() { return pf->set_nonblocking(sd); }
 			std::string local_address() { return pf->local_address(sd); }
@@ -94,12 +98,12 @@ namespace clane {
 			socket sock;
 		};
 
-		inline socket &socket::operator=(socket &&that) noexcept {
+		inline socket &socket::operator=(socket &&that) throw() {
 			swap(that);
 			return *this;
 		}
 
-		inline void socket::swap(socket &that) noexcept {
+		inline void socket::swap(socket &that) throw() {
 			std::swap(pf, that.pf);
 			std::swap(sd, that.sd);
 		}

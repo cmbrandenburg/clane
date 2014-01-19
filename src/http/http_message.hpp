@@ -20,9 +20,13 @@ namespace clane {
 			virtual ~streambuf();
 			streambuf();
 			streambuf(streambuf const &) = default;
+			#ifndef _WIN32
 			streambuf(streambuf &&) = default;
+			#endif
 			streambuf &operator=(streambuf const &) = default;
+			#ifndef _WIN32
 			streambuf &operator=(streambuf &&) = default;
+			#endif
 			virtual void more_input(std::shared_ptr<char> const &p, size_t offset, size_t size) = 0;
 		};
 
@@ -39,9 +43,13 @@ namespace clane {
 			~request() = default;
 			request() = default;
 			request(request const &) = default;
+			#ifndef _WIN32
 			request(request &&) = default;
+			#endif
 			request &operator=(request const &) = default;
+			#ifndef _WIN32
 			request &operator=(request &&) = default;
+			#endif
 		};
 
 		class response {
@@ -56,9 +64,13 @@ namespace clane {
 			~response() = default;
 			response() = default;
 			response(response const &) = delete;
+			#ifndef _WIN32
 			response(response &&) = default;
+			#endif
 			response &operator=(response const &) = delete;
+			#ifndef _WIN32
 			response &operator=(response &&) = default;
+			#endif
 		};
 
 		bool parse_response(response &r, std::string const &s);
