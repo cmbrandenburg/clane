@@ -1,6 +1,7 @@
 // vim: set noet:
 
 #include "http_header.hpp"
+#include <algorithm>
 
 namespace clane {
 	namespace http {
