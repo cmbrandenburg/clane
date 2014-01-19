@@ -9,6 +9,11 @@ int main() {
 
 	http::header_name_less less;
 
+	check(!less("alpha", "alpha"));
+	check(!less("Alpha", "alpha"));
+	check(!less("alpha", "Alpha"));
+	check(!less("Alpha", "Alpha"));
+
 	check(less("alpha", "bravo"));
 	check(less("Alpha", "bravo"));
 	check(less("alpha", "Bravo"));

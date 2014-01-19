@@ -14,7 +14,6 @@ namespace clane {
 					return true;
 				if (la > lb)
 					return false;
-					return 1;
 			}
 			if (n < a.size())
 				return false;
