@@ -26,6 +26,7 @@ void check_ok(char const *content, size_t exp_size) {
 	check(0 == cons.consume("", 0));
 	check(!cons.done());
 	check(1 == cons.consume(s.data()+strlen(content)-1, 1));
+	check(cons.done());
 	check(exp_size == cons.chunk_size());
 }
 

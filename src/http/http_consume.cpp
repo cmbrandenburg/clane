@@ -168,7 +168,7 @@ namespace clane {
 					}
 					cur_phase = phase::uri;
 					cur = space + 1;
-					// fall through switch
+					// fall through to next case
 				}
 
 	 			case phase::uri: {
@@ -191,7 +191,7 @@ namespace clane {
 					}
 					cur_phase = phase::version;
 					cur = space + 1;
-					// fall through switch
+					// fall through to next case
 				}
 
 				case phase::version: {
@@ -222,7 +222,7 @@ namespace clane {
 						++cur;
 					}
 					cur_phase = phase::newline;
-					// fall through switch
+					// fall through to next case
 				}
 
 				case phase::newline: {
@@ -273,7 +273,7 @@ namespace clane {
 					}
 					cur_phase = phase::status;
 					cur = space + 1;
-					// fall through switch
+					// fall through to next case
 				}
 
 				case phase::status: {
@@ -296,7 +296,7 @@ namespace clane {
 					}
 					cur_phase = phase::reason;
 					cur = space + 1;
-					// fall through switch
+					// fall through to next case
 				}
 
 				case phase::reason: {
@@ -318,7 +318,7 @@ namespace clane {
 						++cur;
 					}
 					cur_phase = phase::newline;
-					// fall through switch
+					// fall through to next case
 				}
 
 				case phase::newline: {
@@ -507,6 +507,7 @@ namespace clane {
 						if ('\n' == buf[i]) {
 							increase_length(1);
 							++i;
+							set_done();
 							return i;
 						}
 						if (!isxdigit(buf[i])) {
@@ -534,10 +535,76 @@ namespace clane {
 						}
 						increase_length(1);
 						++i;
+						set_done();
 						return i;
 				}
 				++i;
 			}
+		}
+
+		size_t v1x_body_consumer::consume(char const *buf, size_t size, size_t offset) {
+			static char const *invalid = "invalid chunk data";
+			size_t i = 0;
+			switch (cur_phase) {
+				case phase::chunk_carriage_return:
+					if (i == size)
+						return i; // incomplete
+					if ('\n' == buf[i]) {
+						++i;
+						cur_phase = phase::chunk_line;
+						break;
+					}
+					if ('\r' != buf[i]) {
+						set_error(status_code::bad_request, invalid);
+						return error;
+					}
+					++i;
+					cur_phase = phase::chunk_newline;
+					// fall through to next case
+				case phase::chunk_newline:
+					if (i == size)
+						return i; // incomplete
+					if ('\n' != buf[i]) {
+						set_error(status_code::bad_request, invalid);
+						return error;
+					}
+					++i;
+					cur_phase = phase::chunk_line;
+					chunk_cons.reset();
+					// fall through to next case
+				case phase::chunk_line: {
+					size_t stat = chunk_cons.consume(buf+i, size-i);
+					if (error == stat)
+						return error;
+					i += stat;
+					if (!chunk_cons.done()) {
+						size_ = 0;
+						return i; // incomplete, no body data available
+					}
+					rem = chunk_cons.chunk_size();
+					if (!rem) {
+						size_ = 0;
+						set_done(); // terminator chunk line, no body data available
+						return i;
+					}
+					cur_phase = phase::body_data;
+					// fall through to next case
+				}
+				case phase::body_data: {
+					// Pass control to caller to process the body data.
+					offset_ = i + offset;
+					size_t got = std::min(rem ? rem : size-i, size-i);
+					i += got;
+					size_ = got;
+					if (rem)
+						rem -= got;
+					if (len_type == fixed && !rem)
+						set_done(); // received all data
+					else if (len_type == chunked && !rem)
+						cur_phase = phase::chunk_carriage_return;
+				}
+			}
+			return i; // maybe complete, maybe not
 		}
 
 #if 0

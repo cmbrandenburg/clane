@@ -303,6 +303,56 @@ namespace clane {
 			val = 0;
 		}
 
+		class v1x_body_consumer: virtual public server_consumer {
+		public:
+			enum length_type {
+				fixed,   // preset length, in bytes
+				chunked, // obeys rules for chunked transfer-encoding
+				infinite // body ends when connection closes
+			};
+		private:
+			enum class phase {
+				chunk_carriage_return,
+				chunk_newline,
+				chunk_line,
+				body_data
+			} cur_phase;
+			length_type len_type;
+			size_t rem; // bytes remaining if non-infinite, otherwise 0
+			v1x_chunk_line_consumer chunk_cons;
+			size_t offset_;
+			size_t size_;
+		public:
+			~v1x_body_consumer() = default;
+			v1x_body_consumer(length_type len_type, size_t len);
+			v1x_body_consumer(v1x_body_consumer const &) = delete;
+			v1x_body_consumer(v1x_body_consumer &&) = default;
+			v1x_body_consumer &operator=(v1x_body_consumer const &) = delete;
+			v1x_body_consumer &operator=(v1x_body_consumer &&) = default;
+			size_t consume(char const *buf, size_t size, size_t offset = 0);
+			void reset(length_type len_type, size_t len);
+			size_t offset() const { return offset_; }
+			size_t size() const { return size_; }
+		};
+
+		inline v1x_body_consumer::v1x_body_consumer(length_type len_type, size_t len) {
+			reset(len_type, len);
+		}
+
+		inline void v1x_body_consumer::reset(length_type len_type, size_t len) {
+			consumer::reset();
+			this->len_type = len_type;
+			switch (len_type) {
+				case chunked:
+					cur_phase = phase::chunk_line;
+					chunk_cons.reset();
+					break;
+				default:
+					cur_phase = phase::body_data;
+					rem = len;
+			}
+		}
+
 #if 0
 		class request_1x_consumer: virtual public consumer, private v1x_request_line_consumer, private v1x_headers_consumer {
 			enum class phase {

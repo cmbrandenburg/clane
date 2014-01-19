@@ -16,6 +16,7 @@ TESTS = \
 	check_v1x_status_line_consumer \
 	check_v1x_headers_consumer \
 	check_v1x_chunk_line_consumer \
+	check_v1x_body_consumer \
 	check_request_1x_consumer \
 	check_server_run_term \
 	check_request_response
@@ -35,6 +36,7 @@ check_PROGRAMS = \
 	check_rtrim \
 	check_server_consumer \
 	check_server_run_term \
+	check_v1x_body_consumer \
 	check_v1x_chunk_line_consumer \
 	check_v1x_headers_consumer \
 	check_v1x_request_line_consumer \
@@ -81,6 +83,9 @@ check_server_consumer_LDADD = ../libhttp.la
 
 check_server_run_term_SOURCES = check_server_run_term.cpp
 check_server_run_term_LDADD = ../libhttp.la
+
+check_v1x_body_consumer_SOURCES = check_v1x_body_consumer.cpp
+check_v1x_body_consumer_LDADD = ../libhttp.la
 
 check_v1x_chunk_line_consumer_SOURCES = check_v1x_chunk_line_consumer.cpp
 check_v1x_chunk_line_consumer_LDADD = ../libhttp.la
