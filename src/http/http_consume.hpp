@@ -34,6 +34,7 @@ namespace clane {
 		bool is_method_valid(std::string const &s);
 
 		bool parse_version(int *major_ver, int *minor_ver, std::string &s);
+		bool parse_status_code(status_code *stat, std::string &s);
 
 		// Base class for all consumers. A consumer is a stream-oriented parser that
 		// processes input one memory block at a time.
@@ -200,6 +201,44 @@ namespace clane {
 			version_str.clear();
 		}
 
+		class v1x_status_line_consumer: virtual public consumer {
+			enum class phase {
+				version,
+				status,
+				reason,
+				newline
+			} cur_phase;
+			int *major_ver;
+			int *minor_ver;
+			status_code *stat;
+			std::string *reason;
+			std::string version_str;
+			std::string status_str;
+		public:
+			~v1x_status_line_consumer() = default;
+			v1x_status_line_consumer(int &major_ver, int &minor_ver, status_code &stat, std::string &reason);
+			v1x_status_line_consumer(v1x_status_line_consumer const &) = delete;
+			v1x_status_line_consumer(v1x_status_line_consumer &&) = default;
+			v1x_status_line_consumer &operator=(v1x_status_line_consumer const &) = delete;
+			v1x_status_line_consumer &operator=(v1x_status_line_consumer &&) = default;
+			size_t consume(char const *buf, size_t size);
+			void reset(int &major_ver, int &minor_ver, status_code &stat, std::string &reason);
+		};
+
+		inline v1x_status_line_consumer::v1x_status_line_consumer(int &major_ver, int &minor_ver, status_code &stat, std::string &reason):
+			cur_phase(phase::version), major_ver(&major_ver), minor_ver(&minor_ver), stat(&stat), reason(&reason) {}
+
+		inline void v1x_status_line_consumer::reset(int &major_ver, int &minor_ver, status_code &stat, std::string &reason) {
+			consumer::reset();
+			cur_phase = phase::version;
+			this->major_ver = &major_ver;
+			this->minor_ver = &minor_ver;
+			this->stat = &stat;
+			this->reason = &reason;
+			version_str.clear();
+			status_str.clear();
+		}
+
 		class v1x_headers_consumer: virtual public server_consumer {
 			enum class phase {
 				start_line,   // after consuming newline, expecting header name or linear whitespace
@@ -234,44 +273,6 @@ namespace clane {
 		}
 
 #if 0
-		class status_line_consumer: virtual public consumer {
-			enum class phase {
-				version,
-				status,
-				reason,
-				newline
-			} cur_phase;
-			int *major_ver;
-			int *minor_ver;
-			status_code *stat;
-			std::string *reason;
-			std::string version_str;
-			std::string status_str;
-		public:
-			~status_line_consumer() = default;
-			status_line_consumer(int &major_ver, int &minor_ver, status_code &stat, std::string &reason);
-			status_line_consumer(status_line_consumer const &) = delete;
-			status_line_consumer(status_line_consumer &&) = default;
-			status_line_consumer &operator=(status_line_consumer const &) = delete;
-			status_line_consumer &operator=(status_line_consumer &&) = default;
-			bool consume(char const *buf, size_t size);
-			void reset(int &major_ver, int &minor_ver, status_code &stat, std::string &reason);
-		};
-
-		inline status_line_consumer::status_line_consumer(int &major_ver, int &minor_ver, status_code &stat, std::string &reason):
-			cur_phase(phase::version), major_ver(&major_ver), minor_ver(&minor_ver), stat(&stat), reason(&reason) {}
-
-		inline void status_line_consumer::reset(int &major_ver, int &minor_ver, status_code &stat, std::string &reason) {
-			consumer::reset();
-			cur_phase = phase::version;
-			this->major_ver = &major_ver;
-			this->minor_ver = &minor_ver;
-			this->stat = &stat;
-			this->reason = &reason;
-			version_str.clear();
-			status_str.clear();
-		}
-
 		class request_1x_consumer: virtual public consumer, private v1x_request_line_consumer, private v1x_headers_consumer {
 			enum class phase {
 				request_line,

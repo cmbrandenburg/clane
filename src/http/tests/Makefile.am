@@ -9,10 +9,11 @@ TESTS = \
 	check_is_header_value_valid \
 	check_is_method_valid \
 	check_parse_version \
+	check_parse_status_code \
 	check_consumer \
 	check_server_consumer \
 	check_v1x_request_line_consumer \
-	check_status_line_consumer \
+	check_v1x_status_line_consumer \
 	check_v1x_headers_consumer \
 	check_request_1x_consumer \
 	check_chunk_line_consumer \
@@ -28,15 +29,16 @@ check_PROGRAMS = \
 	check_is_header_name_valid \
 	check_is_header_value_valid \
 	check_is_method_valid \
+	check_parse_status_code \
 	check_parse_version \
 	check_request_1x_consumer \
 	check_request_response \
 	check_rtrim \
 	check_server_consumer \
 	check_server_run_term \
-	check_status_line_consumer \
 	check_v1x_headers_consumer \
-	check_v1x_request_line_consumer
+	check_v1x_request_line_consumer \
+	check_v1x_status_line_consumer
 
 check_canonize_1x_header_name_SOURCES = check_canonize_1x_header_name.cpp
 check_canonize_1x_header_name_LDADD = ../libhttp.la
@@ -62,14 +64,14 @@ check_is_header_value_valid_LDADD = ../libhttp.la
 check_is_method_valid_SOURCES = check_is_method_valid.cpp
 check_is_method_valid_LDADD = ../libhttp.la
 
+check_parse_status_code_SOURCES = check_parse_status_code.cpp
+check_parse_status_code_LDADD = ../libhttp.la
+
 check_parse_version_SOURCES = check_parse_version.cpp
 check_parse_version_LDADD = ../libhttp.la
 
 check_request_1x_consumer_SOURCES = check_request_1x_consumer.cpp
 check_request_1x_consumer_LDADD = ../libhttp.la
-
-check_v1x_request_line_consumer_SOURCES = check_v1x_request_line_consumer.cpp
-check_v1x_request_line_consumer_LDADD = ../libhttp.la
 
 check_request_response_SOURCES = check_request_response.cpp
 check_request_response_LDADD = ../libhttp.la
@@ -83,9 +85,12 @@ check_server_consumer_LDADD = ../libhttp.la
 check_server_run_term_SOURCES = check_server_run_term.cpp
 check_server_run_term_LDADD = ../libhttp.la
 
-check_status_line_consumer_SOURCES = check_status_line_consumer.cpp
-check_status_line_consumer_LDADD = ../libhttp.la
-
 check_v1x_headers_consumer_SOURCES = check_v1x_headers_consumer.cpp
 check_v1x_headers_consumer_LDADD = ../libhttp.la
+
+check_v1x_request_line_consumer_SOURCES = check_v1x_request_line_consumer.cpp
+check_v1x_request_line_consumer_LDADD = ../libhttp.la
+
+check_v1x_status_line_consumer_SOURCES = check_v1x_status_line_consumer.cpp
+check_v1x_status_line_consumer_LDADD = ../libhttp.la
 

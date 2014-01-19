@@ -116,6 +116,18 @@ namespace clane {
 			return true;
 		}
 
+		bool parse_status_code(status_code *stat, std::string &s) {
+			std::istringstream pss(s);
+			pss.unsetf(pss.skipws);
+			int pstat;
+			pss >> pstat;
+			if (!pss || pss.get() != std::char_traits<char>::eof())
+				return false;
+			if (!status_code_from_int(*stat, pstat))
+				return false;
+			return true;
+		}
+
 		static char const *skip_whitespace(char const *beg, char const *end);
 
 		char const *skip_whitespace(char const *beg, char const *end) {
@@ -223,6 +235,102 @@ namespace clane {
 					}
 					if (!increase_length(1)) {
 						set_error(status_code::request_uri_too_long, "");
+						return error;
+					}
+					++cur;
+				}
+			}
+			set_done();
+			return cur - buf; // complete and successful
+		}
+
+		size_t v1x_status_line_consumer::consume(char const *buf, size_t size) {
+			static char const *const error_reason_too_long = "reason phrase too long";
+
+			char const *cur = buf;
+			char const *const end = buf + size;
+			char const *newline = find_newline(cur, end - cur);
+
+			switch (cur_phase) {
+
+				case phase::version: {
+					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
+					if (newline != end && !space) {
+						set_error("missing status code");
+						return error;
+					}
+					size_t version_len = (space ? space : end) - cur;
+					if (!increase_length(version_len + (space ? 1 : 0))) {
+						set_error("HTTP version too long");
+						return error;
+					}
+					version_str.append(cur, version_len);
+					if (!space)
+						return end - buf; // incomplete
+					if (!parse_version(major_ver, minor_ver, version_str)) {
+						set_error("invalid HTTP version");
+						return error;
+					}
+					cur_phase = phase::status;
+					cur = space + 1;
+					// fall through switch
+				}
+
+				case phase::status: {
+					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
+					if (newline != end && !space) {
+						set_error("missing reason phrase");
+						return error;
+					}
+					size_t status_len = (space ? space : end) - cur;
+					if (!increase_length(status_len + (space ? 1 : 0))) {
+						set_error("status code too long");
+						return error;
+					}
+					status_str.append(cur, status_len);
+					if (!space)
+						return end - buf; // incomplete
+					if (!parse_status_code(stat, status_str)) {
+						set_error("invalid status code");
+						return error;
+					}
+					cur_phase = phase::reason;
+					cur = space + 1;
+					// fall through switch
+				}
+
+				case phase::reason: {
+					if (!increase_length(newline - cur)) {
+						set_error(error_reason_too_long);
+						return error;
+					}
+					reason->append(cur, newline - cur);
+					if (newline == end)
+						return end - buf; // incomplete
+					cur = newline;
+					// Invariant: There's at least a carriage return or newline
+					// terminating this line.
+					if (*cur == '\r') {
+						if (!increase_length(1)) {
+							set_error(error_reason_too_long);
+							return error;
+						}
+						++cur;
+					}
+					cur_phase = phase::newline;
+					// fall through switch
+				}
+
+				case phase::newline: {
+					// There's still a newline character needing to be extracted.
+					if (cur == end)
+						return end - buf; // incomplete
+					if (*cur != '\n') {
+						set_error("invalid reason phrase");
+						return error;
+					}
+					if (!increase_length(1)) {
+						set_error(error_reason_too_long);
 						return error;
 					}
 					++cur;
@@ -376,116 +484,6 @@ namespace clane {
 		}
 
 #if 0
-		static bool parse_status_code(status_code *stat, std::string &s) {
-			std::istringstream pss(s);
-			//typename std::underlying_type<status_code>::type pstat;
-			int pstat;
-			pss >> pstat;
-			if (!pss || pss.get() != std::char_traits<char>::eof())
-				return false;
-			if (!status_code_from_int(*stat, pstat))
-				return false;
-			return true;
-		}
-#endif
-
-#if 0
-		bool status_line_consumer::consume(char const *buf, size_t size) {
-			static char const *const error_reason_too_long = "reason phrase too long";
-
-			pre_consume();
-
-			char const *cur = buf;
-			char const *const end = buf + size;
-			char const *newline = find_newline(cur, end - cur);
-
-			switch (cur_phase) {
-
-				case phase::version: {
-					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
-					if (newline != end && !space) {
-						set_error("missing status code");
-						return true;
-					}
-					size_t version_len = (space ? space : newline) - cur;
-					if (!increase_length(version_len + (space ? 1 : 0))) {
-						set_error("HTTP version too long");
-						return true;
-					}
-					version_str.append(cur, version_len);
-					if (!space)
-						return false; // incomplete
-					if (!parse_version(major_ver, minor_ver, version_str)) {
-						set_error("invalid HTTP version");
-						return true;
-					}
-					cur_phase = phase::status;
-					cur = space + 1;
-					// fall through switch
-				}
-
-				case phase::status: {
-					char const *space = reinterpret_cast<char const *>(memchr(cur, ' ', newline - cur));
-					if (newline != end && !space) {
-						set_error("missing reason phrase");
-						return true;
-					}
-					size_t status_len = (space ? space : newline) - cur;
-					if (!increase_length(status_len + (space ? 1 : 0))) {
-						set_error("status code too long");
-						return true;
-					}
-					status_str.append(cur, status_len);
-					if (!space)
-						return false; // incomplete
-					if (!parse_status_code(stat, status_str)) {
-						set_error("invalid status code");
-						return true;
-					}
-					cur_phase = phase::reason;
-					cur = space + 1;
-					// fall through switch
-				}
-
-				case phase::reason: {
-					if (!increase_length(newline - cur)) {
-						set_error(error_reason_too_long);
-						return true;
-					}
-					reason->append(cur, newline - cur);
-					if (newline == end)
-						return false; // incomplete
-					cur = newline;
-					// Invariant: There's at least a carriage return or newline
-					// terminating this line.
-					if (*cur == '\r') {
-						if (!increase_length(1)) {
-							set_error(error_reason_too_long);
-							return true;
-						}
-						++cur;
-					}
-					cur_phase = phase::newline;
-					// fall through switch
-				}
-
-				case phase::newline: {
-					// There's still a newline character needing to be extracted.
-					if (cur == end)
-						return false; // incomplete
-					if (*cur != '\n') {
-						set_error("invalid reason phrase");
-						return true;
-					}
-					if (!increase_length(1)) {
-						set_error(error_reason_too_long);
-						return true;
-					}
-				}
-			}
-			return true; // complete and successful
-		}
-
 		bool request_1x_consumer::consume(char const *buf, size_t size) {
 			pre_consume();
 			char const *cur = buf;
