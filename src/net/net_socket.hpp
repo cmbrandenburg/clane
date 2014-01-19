@@ -1,0 +1,156 @@
+// vim: set noet:
+
+#ifndef CLANE__NET_SOCKET_HPP
+#define CLANE__NET_SOCKET_HPP
+
+#include "net_common.hpp"
+#include "net_posix.hpp"
+#ifdef _WIN32
+#include <WinSock2.h>
+#else
+#include <sys/socket.h>
+#endif
+
+namespace clane {
+	namespace net {
+
+		enum class status {
+			ok,
+			would_block,
+			in_progress,
+			timed_out,
+			conn_refused,
+			net_unreachable,
+			reset,
+			aborted,
+			no_resource,
+			permission
+		};
+
+		// low-level socket functions:
+		posix::file_descriptor sys_socket(int domain, int type, int protocol);
+		void sys_setsockopt(int sock_fd, int level, int optname, int val);
+		void sys_bind(int sockfd, sockaddr const *addr, socklen_t addr_len);
+		void sys_listen(int sockfd, int backlog);
+		void sys_getsockname(int sockfd, sockaddr *addr, socklen_t addr_len);
+		void sys_getpeername(int sockfd, sockaddr *addr, socklen_t addr_len);
+		status sys_connect(int sockfd, sockaddr const *addr, socklen_t addr_len);
+		std::pair<status, posix::file_descriptor> sys_accept(int sockfd, sockaddr *addr, socklen_t addr_len);
+
+		union socket_descriptor {
+			int n;
+			void *p;
+		};
+
+		class socket;
+		struct connect_result;
+		struct accept_result;
+
+		struct xfer_result {
+			status stat;
+			size_t size;
+		};
+
+		enum {
+			all = 1<<0
+		};
+
+		struct protocol_family {
+			void (*construct_descriptor)(socket_descriptor &sd);
+			void (*destruct_descriptor)(socket_descriptor &sd);
+			int (*descriptor)(socket_descriptor const &sd);
+			socket (*new_listener)(std::string &addr, int backlog);
+			connect_result (*new_connection)(std::string &addr);
+			void (*set_nonblocking)(socket_descriptor &sd);
+			std::string (*local_address)(socket_descriptor &sd);
+			std::string (*remote_address)(socket_descriptor &sd);
+			accept_result (*accept)(socket_descriptor &sd, std::string *addr_o);
+			xfer_result (*send)(socket_descriptor &sd, void const *p, size_t n, int flags);
+			xfer_result (*recv)(socket_descriptor &sd, void *p, size_t n, int flags);
+			void (*fin)(socket_descriptor &sd);
+		};
+
+		class socket {
+			protocol_family const *pf;
+			socket_descriptor sd;
+		public:
+			~socket() { if (pf) { pf->destruct_descriptor(sd); }}
+			socket() throw(): pf{} {}
+			socket(protocol_family const *pf, posix::file_descriptor &&fd): pf{pf} { sd.n = fd.release(); }
+			socket(socket const &) = delete;
+			socket(socket &&that) throw(): pf{} { swap(that); }
+			socket &operator=(socket const &) = delete;
+			socket &operator=(socket &&that) throw();
+			void swap(socket &that) throw();
+			int descriptor() const { return pf->descriptor(sd); }
+			void set_nonblocking() { return pf->set_nonblocking(sd); }
+			std::string local_address() { return pf->local_address(sd); }
+			std::string remote_address() { return pf->remote_address(sd); }
+			accept_result accept();
+			accept_result accept(std::string &addr_o);
+			xfer_result send(void const *p, size_t n, int flags = 0) { return pf->send(sd, p, n, flags); }
+			xfer_result recv(void *p, size_t n, int flags = 0) { return pf->recv(sd, p, n, flags); }
+			void fin() { pf->fin(sd); }
+		};
+
+		struct accept_result {
+			status stat;
+			socket sock;
+		};
+
+		inline socket &socket::operator=(socket &&that) throw() {
+			swap(that);
+			return *this;
+		}
+
+		inline void socket::swap(socket &that) throw() {
+			std::swap(pf, that.pf);
+			std::swap(sd, that.sd);
+		}
+
+		inline accept_result socket::accept() {
+		 	return pf->accept(sd, nullptr);
+	 	}
+
+		inline accept_result socket::accept(std::string &addr_o) {
+		 	return pf->accept(sd, &addr_o);
+	 	}
+
+		inline socket listen(protocol_family const *pf, std::string addr, int backlog = -1) {
+			return pf->new_listener(addr, backlog);
+		}
+
+		inline socket listen(protocol_family const *pf, char const *addr, int backlog = -1) {
+			return listen(pf, std::string(addr), backlog);
+		}
+
+		struct connect_result {
+			status stat;
+			socket sock;
+		};
+
+		inline connect_result connect(protocol_family const *pf, std::string addr) {
+			return pf->new_connection(addr);
+		}
+
+		inline connect_result connect(protocol_family const *pf, char const *addr) {
+			return connect(pf, std::string(addr));
+		}
+
+		// default protocol family method implementations:
+		void pf_unimpl_construct_descriptor(socket_descriptor &);
+		void pf_unimpl_destruct_destriptor(socket_descriptor &);
+		int pf_unimpl_descriptor(socket_descriptor const &);
+		socket pf_unimpl_new_listener(std::string &, int);
+		connect_result pf_unimpl_new_connection(std::string &);
+		void pf_unimpl_set_nonblocking(socket_descriptor &);
+		std::string pf_unimpl_local_address(socket_descriptor &);
+		std::string pf_unimpl_remote_address(socket_descriptor &);
+		accept_result pf_unimpl_accept(socket_descriptor &, std::string *);
+		xfer_result pf_unimpl_send(socket_descriptor &, void const *, size_t, int);
+		xfer_result pf_unimpl_recv(socket_descriptor &, void *, size_t, int);
+		void pf_unimpl_fin(socket_descriptor &);
+	}
+}
+
+#endif // #ifndef CLANE__NET_SOCKET_HPP
