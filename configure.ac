@@ -1,5 +1,5 @@
 AC_PREREQ([2.68])
-AC_INIT([clane], [master], [c.m.brandenburg@gmail.com])
+AC_INIT([clane], [0.0.0], [c.m.brandenburg@gmail.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AM_SILENT_RULES([yes])
 AC_CONFIG_MACRO_DIR([m4])
