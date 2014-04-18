@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+
+import glob
+import os.path
+import re
+import sys
+
+def amalgamate(out_src, in_pattern, excl_patterns = [], prefix = None):
+
+	hist = {}
+	for i in excl_patterns:
+		for j in glob.iglob(i):
+			hist[j] = True
+	out = open(out_src, 'w')
+	if prefix:
+		out.write(prefix)
+	inc_regex = re.compile('^#include "([^"]+)"\s*$')
+
+	def recur(src, cwd):
+		#print('CHECK recur', src, cwd)
+		for line in open(os.path.join(cwd, src)):
+			m = inc_regex.match(line)
+			if not m:
+				out.write(line)
+			else:
+				hdr = m.group(1)
+				path = os.path.join(cwd, os.path.dirname(hdr))
+				hdr = os.path.basename(hdr)
+				full_hdr = os.path.join(path, hdr)
+				if full_hdr not in hist:
+					hist[full_hdr] = True
+					recur(hdr, path)
+
+	for src in glob.iglob(in_pattern):
+		recur(os.path.basename(src), os.path.dirname(src))
+
+def main():
+	amalgamate('clane.cpp', '../*.cpp', excl_patterns = ['../include/*'], prefix='#include "clane.hpp"\n')
+	amalgamate('clane.hpp', '../include/clane.hpp')
+
+if __name__ == '__main__':
+	main()
+

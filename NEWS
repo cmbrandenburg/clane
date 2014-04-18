@@ -1,0 +1,16 @@
+# Clane News
+
+## v0.0.0-rc2 pre-release (2014-04-16)
+
+### Requirements
+* Linux
+* GCC >= 4.4, <= 4.7
+* C++11 (`-std=c++0x` or `-std=c++11`)
+* Boost >= 1.49
+
+### Feature summary
+* Support for HTTP server applications running HTTP 1.0 or HTTP 1.1.
+* Built-in HTTP request handlers for request-routing and file-serving.
+* Partial API documentation.
+* Server application examples.
+

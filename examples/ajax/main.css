@@ -1,0 +1,12 @@
+#count {
+	font-weight: bolder;
+}
+
+.hidden {
+	display: none;
+}
+
+.visible {
+	display: default;
+}
+
