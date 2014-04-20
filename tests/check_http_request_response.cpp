@@ -23,7 +23,6 @@ void handle(http::response_ostream &rs, http::request &req) {
 int main() {
 
 	// run server:
-	// FIXME: use variable port number
 	http::server s;
 	s.root_handler = handle;
 	auto lis = net::listen(&net::tcp, "localhost:");

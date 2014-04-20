@@ -62,7 +62,8 @@ TESTS = \
 	check_http_router \
 	check_http_server_run_term \
 	check_http_server_term_then_run \
-	check_http_request_response
+	check_http_request_response \
+	check_http_server_error_response
 
 check_PROGRAMS =
 
@@ -149,6 +150,10 @@ check_http_serve_dir_SOURCES = check_http_serve_dir.cpp
 check_PROGRAMS += check_http_serve_file
 check_http_serve_file_LDADD = ../libclane.la
 check_http_serve_file_SOURCES = check_http_serve_file.cpp
+
+check_PROGRAMS += check_http_server_error_response
+check_http_server_error_response_LDADD = ../libclane.la
+check_http_server_error_response_SOURCES = check_http_server_error_response.cpp
 
 check_PROGRAMS += check_http_server_run_term
 check_http_server_run_term_LDADD = ../libclane.la
