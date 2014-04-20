@@ -17,8 +17,9 @@
 namespace clane {
 	namespace http {
 
-		/** @brief HTTP request handler that removes a beginning substring of a
-		 * request's URI path before forwarding the request to another handler */
+		/** @brief @ref http_request_handling_page "HTTP request handler" that
+		 * removes a beginning substring of a request's URI path before forwarding
+		 * the request to another handler */
 		template <typename Handler> class basic_prefix_stripper {
 			std::string prefix;
 			Handler h;

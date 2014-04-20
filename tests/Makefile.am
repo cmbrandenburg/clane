@@ -55,7 +55,6 @@ TESTS = \
 	check_http_response_record \
 	check_http_default_error_handler \
 	check_http_prefix_stripper \
-	check_http_serve_dir \
 	check_http_serve_file \
 	check_http_file_server \
 	check_http_route \
@@ -142,10 +141,6 @@ check_http_route_SOURCES = check_http_route.cpp
 check_PROGRAMS += check_http_router
 check_http_router_LDADD = ../libclane.la
 check_http_router_SOURCES = check_http_router.cpp
-
-check_PROGRAMS += check_http_serve_dir
-check_http_serve_dir_LDADD = ../libclane.la
-check_http_serve_dir_SOURCES = check_http_serve_dir.cpp
 
 check_PROGRAMS += check_http_serve_file
 check_http_serve_file_LDADD = ../libclane.la

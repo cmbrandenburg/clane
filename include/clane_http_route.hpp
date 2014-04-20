@@ -192,8 +192,9 @@ next_header_match_item:
 			return basic_route<Handler>(std::forward<Handler>(h));
 		}
 
-		/** @brief HTTP request handler that dispatches requests to one of many
-		 * given request handlers according to specified criteria */
+		/** @brief @ref http_request_handling_page "HTTP request handler" that
+		 * dispatches requests to one of many given request handlers according to
+		 * specified criteria */
 		template <typename Handler> class basic_router {
 			std::list<std::unique_ptr<basic_route<Handler>>> routes;
 		public:

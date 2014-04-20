@@ -16,9 +16,7 @@
 namespace clane {
 	namespace http {
 
-		void serve_dir(response_ostream &rs, request &req, boost::filesystem::path const &path);
-		void serve_file(response_ostream &rs, request &req, boost::filesystem::path const &path);
-
+		// FIXME: remove this source module?
 	}
 }
 

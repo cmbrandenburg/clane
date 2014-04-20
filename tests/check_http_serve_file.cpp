@@ -50,6 +50,20 @@ int main() {
 		check(http::status_code::not_found == rr.status);
 	}
 
+	{
+		http::response_record rr;
+		std::ostringstream reqss(std::ios_base::in | std::ios_base::out);
+		http::request req(reqss.rdbuf());
+		http::serve_file(rr.record(), req, "http_serve_file_files");
+		check(http::status_code::ok == rr.status);
+		check(rr.body.str() == "<html><head/><body><pre>\n"
+			"<a href=\"alpha.html\">alpha.html</a>\n"
+			"<a href=\"bravo/\">bravo/</a>\n"
+			"<a href=\"charlie.js\">charlie.js</a>\n"
+			"<a href=\"delta/\">delta/</a>\n"
+			"</pre></body></html>\n");
+	}
+
 	// cleanup:
 	boost::filesystem::remove_all("http_serve_file_files");
 }
