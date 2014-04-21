@@ -47,7 +47,7 @@ libclane_la_LIBADD = \
 	$(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_SYSTEM_LIB)
 libclane_la_LDFLAGS = \
-	-version-info 0:0:0
+	-version-info 1:0:0
 libclane_la_SOURCES = \
 	clane_ascii.hpp \
 	clane_base.hpp \

@@ -82,7 +82,6 @@ namespace clane {
 			}
 			// flush headers if not already written:
 			if (!hdrs_written) {
-				size_t content_len;
 				if (!query_headers_content_length(out_hdrs, content_len)) {
 					chunked = true;
 #ifdef CLANE_HAVE_STD_MULTIMAP_EMPLACE
@@ -113,6 +112,12 @@ namespace clane {
 					sock.send(chunk_line.data(), chunk_line.size(), net::all, e);
 					if (e)
 						return -1; // connection error
+				} else {
+					// Sanity check: Ensure no request handler writes too many content
+					// bytes. This may catch some application bugs.
+					if (chunk_len > content_len)
+						throw std::runtime_error("HTTP request handler wrote too much content");
+					content_len -= chunk_len;
 				}
 				sock.send(pbase(), chunk_len, net::all, e);
 				if (e)
@@ -128,6 +133,9 @@ namespace clane {
 				sock.send("0\r\n\r\n", 5, net::all, e);
 				if (e)
 					return -1; // connection error
+			} else if (end) {
+				if (content_len)
+					throw std::runtime_error("HTTP request handler wrote too little content");
 			}
 			return 0; // success
 		}

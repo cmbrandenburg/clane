@@ -649,6 +649,7 @@ namespace clane {
 			bool active;
 			bool hdrs_written;
 			bool chunked;
+			size_t content_len;
 			char out_buf[4096];
 		public:
 			virtual ~server_streambuf();

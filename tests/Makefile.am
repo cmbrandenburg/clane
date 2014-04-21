@@ -61,8 +61,9 @@ TESTS = \
 	check_http_router \
 	check_http_server_run_term \
 	check_http_server_term_then_run \
-	check_http_request_response \
-	check_http_server_error_response
+	check_http_server_response \
+	check_http_server_error_response \
+	check_http_server_content_length_response
 
 check_PROGRAMS =
 
@@ -126,9 +127,9 @@ check_PROGRAMS += check_http_query_headers_content_length
 check_http_query_headers_content_length_LDADD = ../libclane.la
 check_http_query_headers_content_length_SOURCES = check_http_query_headers_content_length.cpp
 
-check_PROGRAMS += check_http_request_response
-check_http_request_response_LDADD = ../libclane.la
-check_http_request_response_SOURCES = check_http_request_response.cpp
+check_PROGRAMS += check_http_server_response
+check_http_server_response_LDADD = ../libclane.la
+check_http_server_response_SOURCES = check_http_server_response.cpp
 
 check_PROGRAMS += check_http_response_record
 check_http_response_record_LDADD = ../libclane.la
@@ -145,6 +146,10 @@ check_http_router_SOURCES = check_http_router.cpp
 check_PROGRAMS += check_http_serve_file
 check_http_serve_file_LDADD = ../libclane.la
 check_http_serve_file_SOURCES = check_http_serve_file.cpp
+
+check_PROGRAMS += check_http_server_content_length_response
+check_http_server_content_length_response_LDADD = ../libclane.la
+check_http_server_content_length_response_SOURCES = check_http_server_content_length_response.cpp
 
 check_PROGRAMS += check_http_server_error_response
 check_http_server_error_response_LDADD = ../libclane.la
