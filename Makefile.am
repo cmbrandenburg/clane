@@ -38,15 +38,18 @@ EXTRA_DIST = \
 	m4/ax_boost_regex.m4 \
 	m4/ax_boost_system.m4 \
 	m4/ax_check_compile_flag.m4 \
-	m4/ax_cxx_compile_stdcxx_11.m4
+	m4/ax_cxx_compile_stdcxx_11.m4 \
+	Doxyfile
 
 AM_CXXFLAGS = -Wall -Werror
-
-noinst_HEADERS = \
-	src/clane_check.hpp \
-	src/http/tests/clane_http_v1x_response.hpp
+AM_CXXFLAGS += $(BOOST_CPPFLAGS)
 
 noinst_LTLIBRARIES =
+noinst_HEADERS =
+
+noinst_HEADERS += src/ascii/clane_ascii.hpp
+
+noinst_HEADERS += src/clane_base.hpp
 
 noinst_LTLIBRARIES += src/http/libclane_http.la
 src_http_libclane_http_la_LIBADD = \
@@ -108,6 +111,13 @@ src_uri_libclane_uri_la_SOURCES = \
 	src/uri/clane_uri.cpp \
 	src/uri/clane_uri.hpp
 
+lib_LTLIBRARIES = libclane.la
+libclane_la_LDFLAGS = \
+	-version-info 1:0:0
+libclane_la_LIBADD = \
+	src/http/libclane_http.la
+libclane_la_SOURCES =
+
 TESTS = \
 	src/ascii/tests/check_ascii_icase_compare \
 	src/ascii/tests/check_ascii_find_newline \
@@ -168,6 +178,8 @@ TESTS = \
 	src/http/tests/check_http_server_error_response \
 	src/http/tests/check_http_server_content_length_response
 
+noinst_HEADERS += src/clane_check.hpp
+
 check_PROGRAMS =
 
 check_PROGRAMS += src/ascii/tests/check_ascii_find_newline
@@ -178,6 +190,8 @@ src_ascii_tests_check_ascii_icase_compare_SOURCES = src/ascii/tests/check_ascii_
 
 check_PROGRAMS += src/ascii/tests/check_ascii_rtrim
 src_ascii_tests_check_ascii_rtrim_SOURCES = src/ascii/tests/check_ascii_rtrim.cpp
+
+noinst_HEADERS += src/http/tests/clane_http_v1x_response.hpp
 
 check_PROGRAMS += src/http/tests/check_http_canonize_1x_header_name
 src_http_tests_check_http_canonize_1x_header_name_LDADD = src/http/libclane_http.la
@@ -398,12 +412,4 @@ src_uri_tests_check_uri_validate_SOURCES = src/uri/tests/check_uri_validate.cpp
 check_PROGRAMS += src/uri/tests/check_uri_to_string
 src_uri_tests_check_uri_to_string_LDADD = src/uri/libclane_uri.la
 src_uri_tests_check_uri_to_string_SOURCES = src/uri/tests/check_uri_to_string.cpp
-
-#lib_LTLIBRARIES = libclane.la
-#libclane_AM_CXXFLAGS = $(BOOST_CPPFLAGS)
-#libclane_la_LIBADD = \
-#libclane_la_LDFLAGS = \
-#	-version-info 1:0:0
-
-
 
