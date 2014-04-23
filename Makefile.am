@@ -46,6 +46,14 @@ AM_CXXFLAGS = -Wall -Werror
 
 noinst_LTLIBRARIES =
 
+noinst_LTLIBRARIES += src/mime/libclane_mime.la
+src_mime_libclane_mime_la_LIBADD = \
+	$(BOOST_FILESYSTEM_LIB) \
+	$(BOOST_SYSTEM_LIB)
+src_mime_libclane_mime_la_SOURCES = \
+	src/mime/clane_mime.cpp \
+	src/mime/clane_mime.hpp
+
 noinst_LTLIBRARIES += src/posix/libclane_posix.la
 src_posix_libclane_posix_la_SOURCES = \
 	src/posix/clane_posix_fd.cpp \
@@ -61,7 +69,8 @@ TESTS = \
 	src/ascii/tests/check_ascii_find_newline \
 	src/ascii/tests/check_ascii_rtrim \
 	src/posix/tests/check_posix_unique_fd \
-	src/sync/tests/check_sync_wait_group
+	src/sync/tests/check_sync_wait_group \
+	src/mime/tests/check_mime_map
 
 check_PROGRAMS =
 
@@ -73,6 +82,10 @@ src_ascii_tests_check_ascii_icase_compare_SOURCES = src/ascii/tests/check_ascii_
 
 check_PROGRAMS += src/ascii/tests/check_ascii_rtrim
 src_ascii_tests_check_ascii_rtrim_SOURCES = src/ascii/tests/check_ascii_rtrim.cpp
+
+check_PROGRAMS += src/mime/tests/check_mime_map
+src_mime_tests_check_mime_map_LDADD = src/mime/libclane_mime.la
+src_mime_tests_check_mime_map_SOURCES = src/mime/tests/check_mime_map.cpp
 
 check_PROGRAMS += src/posix/tests/check_posix_unique_fd
 src_posix_tests_check_posix_unique_fd_LDADD = src/posix/libclane_posix.la

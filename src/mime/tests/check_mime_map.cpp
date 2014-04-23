@@ -1,6 +1,6 @@
 // vim: set noet:
 
-#include "clane_check.hpp"
+#include "../../clane_check.hpp"
 #include "../clane_mime.hpp"
 
 using namespace clane;

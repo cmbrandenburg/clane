@@ -4,12 +4,12 @@
 
 // vim: set noet:
 
-#ifndef CLANE_MIME_HPP
-#define CLANE_MIME_HPP
+#ifndef CLANE__MIME_HPP
+#define CLANE__MIME_HPP
 
 /** @file */
 
-#include "clane_base.hpp"
+#include "../clane_base.hpp"
 #include <boost/filesystem.hpp>
 #include <map>
 #include <sstream>
@@ -67,4 +67,4 @@ namespace clane {
 	}
 }
 
-#endif // #ifndef CLANE_MIME_HPP
+#endif // #ifndef CLANE__MIME_HPP

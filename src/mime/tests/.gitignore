@@ -1,0 +1,3 @@
+check_*
+!check_*.cpp
+!check_*.hpp

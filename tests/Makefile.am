@@ -9,7 +9,6 @@ TESTS = \
 	check_net_poll_event \
 	check_net_tcp_connect_accept \
 	check_net_tcp_connect_accept_nb \
-	check_mime_map \
 	check_uri_is_percent_encoded \
 	check_uri_percent_decode \
 	check_uri_percent_encode \
@@ -177,10 +176,6 @@ check_http_v1x_response_incparser_SOURCES = check_http_v1x_response_incparser.cp
 check_PROGRAMS += check_http_v1x_status_line_incparser
 check_http_v1x_status_line_incparser_LDADD = ../libclane.la
 check_http_v1x_status_line_incparser_SOURCES = check_http_v1x_status_line_incparser.cpp
-
-check_PROGRAMS += check_mime_map
-check_mime_map_LDADD = ../libclane.la
-check_mime_map_SOURCES = check_mime_map.cpp
 
 check_PROGRAMS += check_net_poll_event
 check_net_poll_event_LDADD = ../libclane.la
