@@ -6,20 +6,18 @@ all: doc amalgam
 #SUBDIRS = . examples
 
 pkginclude_HEADERS = \
+	include/clane.hpp \
 	include/clane_ascii.hpp \
 	include/clane_base.hpp \
+	include/clane_http_file.hpp \
+	include/clane_http_message.hpp \
+	include/clane_http_prefix_stripper.hpp \
+	include/clane_http_route.hpp \
 	include/clane_net.hpp \
 	include/clane_posix.hpp \
+	include/clane_regex.hpp \
 	include/clane_sync.hpp \
 	include/clane_uri.hpp
-
-# FIXME: remove '_pub' prefix.
-#	include/clane.hpp \
-#	include/clane_http_file.hpp \
-#	include/clane_http_prefix_stripper.hpp \
-#	include/clane_http_pub.hpp \
-#	include/clane_http_route.hpp \
-#	include/clane_regex.hpp
 
 .PHONY: amalgam
 amalgam:
@@ -45,9 +43,32 @@ EXTRA_DIST = \
 AM_CXXFLAGS = -Wall -Werror
 
 noinst_HEADERS = \
-	src/clane_check.hpp
+	src/clane_check.hpp \
+	src/http/tests/clane_http_v1x_response.hpp
 
 noinst_LTLIBRARIES =
+
+noinst_LTLIBRARIES += src/http/libclane_http.la
+src_http_libclane_http_la_LIBADD = \
+	$(BOOST_REGEX_LIB) \
+	src/mime/libclane_mime.la \
+	src/net/libclane_net.la \
+	src/sync/libclane_sync.la \
+	src/uri/libclane_uri.la
+src_http_libclane_http_la_SOURCES = \
+	src/http/clane_http_client.cpp \
+	src/http/clane_http_client.hpp \
+	src/http/clane_http_file.cpp \
+	src/http/clane_http_file.hpp \
+	src/http/clane_http_message.cpp \
+	src/http/clane_http_message.hpp \
+	src/http/clane_http_parse.cpp \
+	src/http/clane_http_parse.hpp \
+	src/http/clane_http_prefix_stripper.hpp \
+	src/http/clane_http_route.cpp \
+	src/http/clane_http_route.hpp \
+	src/http/clane_http_server.cpp \
+	src/http/clane_http_server.hpp
 
 noinst_LTLIBRARIES += src/mime/libclane_mime.la
 src_mime_libclane_mime_la_LIBADD = \
@@ -116,7 +137,36 @@ TESTS = \
 	src/uri/tests/check_uri_to_string \
 	src/net/tests/check_net_poll_event \
 	src/net/tests/check_net_tcp_connect_accept \
-	src/net/tests/check_net_tcp_connect_accept_nb
+	src/net/tests/check_net_tcp_connect_accept_nb \
+	src/http/tests/check_http_status_code \
+	src/http/tests/check_http_header_map \
+	src/http/tests/check_http_canonize_1x_header_name \
+	src/http/tests/check_http_is_header_name_valid \
+	src/http/tests/check_http_is_header_value_valid \
+	src/http/tests/check_http_is_method_valid \
+	src/http/tests/check_http_parse_version \
+	src/http/tests/check_http_parse_status_code \
+	src/http/tests/check_http_query_headers_chunked \
+	src/http/tests/check_http_query_headers_content_length \
+	src/http/tests/check_http_v1x_request_line_incparser \
+	src/http/tests/check_http_v1x_status_line_incparser \
+	src/http/tests/check_http_v1x_headers_incparser \
+	src/http/tests/check_http_v1x_chunk_line_incparser \
+	src/http/tests/check_http_v1x_body_incparser \
+	src/http/tests/check_http_v1x_request_incparser \
+	src/http/tests/check_http_v1x_response_incparser \
+	src/http/tests/check_http_response_record \
+	src/http/tests/check_http_default_error_handler \
+	src/http/tests/check_http_prefix_stripper \
+	src/http/tests/check_http_serve_file \
+	src/http/tests/check_http_file_server \
+	src/http/tests/check_http_route \
+	src/http/tests/check_http_router \
+	src/http/tests/check_http_server_run_term \
+	src/http/tests/check_http_server_term_then_run \
+	src/http/tests/check_http_server_response \
+	src/http/tests/check_http_server_error_response \
+	src/http/tests/check_http_server_content_length_response
 
 check_PROGRAMS =
 
@@ -128,6 +178,122 @@ src_ascii_tests_check_ascii_icase_compare_SOURCES = src/ascii/tests/check_ascii_
 
 check_PROGRAMS += src/ascii/tests/check_ascii_rtrim
 src_ascii_tests_check_ascii_rtrim_SOURCES = src/ascii/tests/check_ascii_rtrim.cpp
+
+check_PROGRAMS += src/http/tests/check_http_canonize_1x_header_name
+src_http_tests_check_http_canonize_1x_header_name_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_canonize_1x_header_name_SOURCES = src/http/tests/check_http_canonize_1x_header_name.cpp
+
+check_PROGRAMS += src/http/tests/check_http_default_error_handler
+src_http_tests_check_http_default_error_handler_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_default_error_handler_SOURCES = src/http/tests/check_http_default_error_handler.cpp
+
+check_PROGRAMS += src/http/tests/check_http_file_server
+src_http_tests_check_http_file_server_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_file_server_SOURCES = src/http/tests/check_http_file_server.cpp
+
+check_PROGRAMS += src/http/tests/check_http_header_map
+src_http_tests_check_http_header_map_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_header_map_SOURCES = src/http/tests/check_http_header_map.cpp
+
+check_PROGRAMS += src/http/tests/check_http_is_header_name_valid
+src_http_tests_check_http_is_header_name_valid_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_is_header_name_valid_SOURCES = src/http/tests/check_http_is_header_name_valid.cpp
+
+check_PROGRAMS += src/http/tests/check_http_is_header_value_valid
+src_http_tests_check_http_is_header_value_valid_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_is_header_value_valid_SOURCES = src/http/tests/check_http_is_header_value_valid.cpp
+
+check_PROGRAMS += src/http/tests/check_http_is_method_valid
+src_http_tests_check_http_is_method_valid_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_is_method_valid_SOURCES = src/http/tests/check_http_is_method_valid.cpp
+
+check_PROGRAMS += src/http/tests/check_http_parse_status_code
+src_http_tests_check_http_parse_status_code_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_parse_status_code_SOURCES = src/http/tests/check_http_parse_status_code.cpp
+
+check_PROGRAMS += src/http/tests/check_http_parse_version
+src_http_tests_check_http_parse_version_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_parse_version_SOURCES = src/http/tests/check_http_parse_version.cpp
+
+check_PROGRAMS += src/http/tests/check_http_prefix_stripper
+src_http_tests_check_http_prefix_stripper_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_prefix_stripper_SOURCES = src/http/tests/check_http_prefix_stripper.cpp
+
+check_PROGRAMS += src/http/tests/check_http_query_headers_chunked
+src_http_tests_check_http_query_headers_chunked_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_query_headers_chunked_SOURCES = src/http/tests/check_http_query_headers_chunked.cpp
+
+check_PROGRAMS += src/http/tests/check_http_query_headers_content_length
+src_http_tests_check_http_query_headers_content_length_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_query_headers_content_length_SOURCES = src/http/tests/check_http_query_headers_content_length.cpp
+
+check_PROGRAMS += src/http/tests/check_http_server_response
+src_http_tests_check_http_server_response_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_server_response_SOURCES = src/http/tests/check_http_server_response.cpp
+
+check_PROGRAMS += src/http/tests/check_http_response_record
+src_http_tests_check_http_response_record_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_response_record_SOURCES = src/http/tests/check_http_response_record.cpp
+
+check_PROGRAMS += src/http/tests/check_http_route
+src_http_tests_check_http_route_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_route_SOURCES = src/http/tests/check_http_route.cpp
+
+check_PROGRAMS += src/http/tests/check_http_router
+src_http_tests_check_http_router_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_router_SOURCES = src/http/tests/check_http_router.cpp
+
+check_PROGRAMS += src/http/tests/check_http_serve_file
+src_http_tests_check_http_serve_file_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_serve_file_SOURCES = src/http/tests/check_http_serve_file.cpp
+
+check_PROGRAMS += src/http/tests/check_http_server_content_length_response
+src_http_tests_check_http_server_content_length_response_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_server_content_length_response_SOURCES = src/http/tests/check_http_server_content_length_response.cpp
+
+check_PROGRAMS += src/http/tests/check_http_server_error_response
+src_http_tests_check_http_server_error_response_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_server_error_response_SOURCES = src/http/tests/check_http_server_error_response.cpp
+
+check_PROGRAMS += src/http/tests/check_http_server_run_term
+src_http_tests_check_http_server_run_term_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_server_run_term_SOURCES = src/http/tests/check_http_server_run_term.cpp
+
+check_PROGRAMS += src/http/tests/check_http_server_term_then_run
+src_http_tests_check_http_server_term_then_run_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_server_term_then_run_SOURCES = src/http/tests/check_http_server_term_then_run.cpp
+
+check_PROGRAMS += src/http/tests/check_http_status_code
+src_http_tests_check_http_status_code_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_status_code_SOURCES = src/http/tests/check_http_status_code.cpp
+
+check_PROGRAMS += src/http/tests/check_http_v1x_body_incparser
+src_http_tests_check_http_v1x_body_incparser_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_v1x_body_incparser_SOURCES = src/http/tests/check_http_v1x_body_incparser.cpp
+
+check_PROGRAMS += src/http/tests/check_http_v1x_chunk_line_incparser
+src_http_tests_check_http_v1x_chunk_line_incparser_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_v1x_chunk_line_incparser_SOURCES = src/http/tests/check_http_v1x_chunk_line_incparser.cpp
+
+check_PROGRAMS += src/http/tests/check_http_v1x_headers_incparser
+src_http_tests_check_http_v1x_headers_incparser_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_v1x_headers_incparser_SOURCES = src/http/tests/check_http_v1x_headers_incparser.cpp
+
+check_PROGRAMS += src/http/tests/check_http_v1x_request_incparser
+src_http_tests_check_http_v1x_request_incparser_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_v1x_request_incparser_SOURCES = src/http/tests/check_http_v1x_request_incparser.cpp
+
+check_PROGRAMS += src/http/tests/check_http_v1x_request_line_incparser
+src_http_tests_check_http_v1x_request_line_incparser_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_v1x_request_line_incparser_SOURCES = src/http/tests/check_http_v1x_request_line_incparser.cpp
+
+check_PROGRAMS += src/http/tests/check_http_v1x_response_incparser
+src_http_tests_check_http_v1x_response_incparser_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_v1x_response_incparser_SOURCES = src/http/tests/check_http_v1x_response_incparser.cpp
+
+check_PROGRAMS += src/http/tests/check_http_v1x_status_line_incparser
+src_http_tests_check_http_v1x_status_line_incparser_LDADD = src/http/libclane_http.la
+src_http_tests_check_http_v1x_status_line_incparser_SOURCES = src/http/tests/check_http_v1x_status_line_incparser.cpp
 
 check_PROGRAMS += src/mime/tests/check_mime_map
 src_mime_tests_check_mime_map_LDADD = src/mime/libclane_mime.la
@@ -236,21 +402,8 @@ src_uri_tests_check_uri_to_string_SOURCES = src/uri/tests/check_uri_to_string.cp
 #lib_LTLIBRARIES = libclane.la
 #libclane_AM_CXXFLAGS = $(BOOST_CPPFLAGS)
 #libclane_la_LIBADD = \
-#	$(BOOST_REGEX_LIB) \
-#	$(BOOST_FILESYSTEM_LIB) \
-#	$(BOOST_SYSTEM_LIB)
 #libclane_la_LDFLAGS = \
 #	-version-info 1:0:0
-#libclane_la_SOURCES = \
-#	clane_http_client.cpp \
-#	clane_http_client.hpp \
-#	clane_http_file.cpp \
-#	clane_http_file.hpp \
-#	clane_http_message.cpp \
-#	clane_http_message.hpp \
-#	clane_http_parse.cpp \
-#	clane_http_parse.hpp \
-#	clane_http_route.cpp \
-#	clane_http_route.hpp \
-#	clane_http_server.cpp \
-#	clane_http_server.hpp
+
+
+
