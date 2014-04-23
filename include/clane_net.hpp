@@ -4,15 +4,15 @@
 
 // vim: set noet:
 
-#ifndef CLANE_NET_PUB_HPP
-#define CLANE_NET_PUB_HPP
+#ifndef CLANE_NET_HPP
+#define CLANE_NET_HPP
 
 /** @file
  *
  * @brief Low-level networking  */
 
-#include "clane_base_pub.hpp"
-#include "clane_posix_pub.hpp"
+#include "clane_base.hpp"
+#include "clane_posix.hpp"
 #include <chrono>
 #include <poll.h>
 #include <system_error>
@@ -167,4 +167,4 @@ namespace clane {
 
 }
 
-#endif // #ifndef CLANE_NET_PUB_HPP
+#endif // #ifndef CLANE_NET_HPP

@@ -4,12 +4,12 @@
 
 // vim: set noet:
 
-#ifndef CLANE_NET_ERROR_HPP
-#define CLANE_NET_ERROR_HPP
+#ifndef CLANE__NET_ERROR_HPP
+#define CLANE__NET_ERROR_HPP
 
 /** @file */
 
-#include "clane_base.hpp"
+#include "../clane_base.hpp"
 #include <system_error>
 
 namespace clane {
@@ -28,4 +28,4 @@ namespace clane {
 	}
 }
 
-#endif // #ifndef CLANE_NET_ERROR_HPP
+#endif // #ifndef CLANE__NET_ERROR_HPP

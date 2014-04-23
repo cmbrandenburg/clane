@@ -2,13 +2,9 @@ AM_CXXFLAGS = -Wall -Werror $(BOOST_CPPFLAGS)
 AM_LDFLAGS = $(BOOST_LDFLAGS)
 
 noinst_HEADERS = \
-	clane_check.hpp \
 	clane_http_v1x_response.hpp
 
 TESTS = \
-	check_net_poll_event \
-	check_net_tcp_connect_accept \
-	check_net_tcp_connect_accept_nb \
 	check_http_status_code \
 	check_http_header_map \
 	check_http_canonize_1x_header_name \
@@ -156,16 +152,4 @@ check_http_v1x_response_incparser_SOURCES = check_http_v1x_response_incparser.cp
 check_PROGRAMS += check_http_v1x_status_line_incparser
 check_http_v1x_status_line_incparser_LDADD = ../libclane.la
 check_http_v1x_status_line_incparser_SOURCES = check_http_v1x_status_line_incparser.cpp
-
-check_PROGRAMS += check_net_poll_event
-check_net_poll_event_LDADD = ../libclane.la
-check_net_poll_event_SOURCES = check_net_poll_event.cpp
-
-check_PROGRAMS += check_net_tcp_connect_accept
-check_net_tcp_connect_accept_LDADD = ../libclane.la
-check_net_tcp_connect_accept_SOURCES = check_net_tcp_connect_accept.cpp
-
-check_PROGRAMS += check_net_tcp_connect_accept_nb
-check_net_tcp_connect_accept_nb_LDADD = ../libclane.la
-check_net_tcp_connect_accept_nb_SOURCES = check_net_tcp_connect_accept_nb.cpp
 

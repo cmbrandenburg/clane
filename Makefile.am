@@ -5,21 +5,21 @@ all: doc amalgam
 # FIXME: reenable examples
 #SUBDIRS = . examples
 
-# FIXME: remove '_pub' prefix.
 pkginclude_HEADERS = \
 	include/clane_ascii.hpp \
 	include/clane_base.hpp \
+	include/clane_net.hpp \
 	include/clane_posix.hpp \
-	include/clane_sync.hpp
+	include/clane_sync.hpp \
+	include/clane_uri.hpp
 
+# FIXME: remove '_pub' prefix.
 #	include/clane.hpp \
 #	include/clane_http_file.hpp \
 #	include/clane_http_prefix_stripper.hpp \
 #	include/clane_http_pub.hpp \
 #	include/clane_http_route.hpp \
-#	include/clane_net_pub.hpp \
-#	include/clane_regex.hpp \
-#	include/clane_uri_pub.hpp
+#	include/clane_regex.hpp
 
 .PHONY: amalgam
 amalgam:
@@ -44,6 +44,9 @@ EXTRA_DIST = \
 
 AM_CXXFLAGS = -Wall -Werror
 
+noinst_HEADERS = \
+	src/clane_check.hpp
+
 noinst_LTLIBRARIES =
 
 noinst_LTLIBRARIES += src/mime/libclane_mime.la
@@ -53,6 +56,21 @@ src_mime_libclane_mime_la_LIBADD = \
 src_mime_libclane_mime_la_SOURCES = \
 	src/mime/clane_mime.cpp \
 	src/mime/clane_mime.hpp
+
+noinst_LTLIBRARIES += src/net/libclane_net.la
+src_net_libclane_net_la_LIBADD = \
+	src/posix/libclane_posix.la \
+	-lpthread
+src_net_libclane_net_la_SOURCES = \
+	src/net/clane_net_error.hpp \
+	src/net/clane_net_event.cpp \
+	src/net/clane_net_event.hpp \
+	src/net/clane_net_inet.cpp \
+	src/net/clane_net_inet.hpp \
+	src/net/clane_net_poller.cpp \
+	src/net/clane_net_poller.hpp \
+	src/net/clane_net_socket.cpp \
+	src/net/clane_net_socket.hpp
 
 noinst_LTLIBRARIES += src/posix/libclane_posix.la
 src_posix_libclane_posix_la_SOURCES = \
@@ -95,7 +113,10 @@ TESTS = \
 	src/uri/tests/check_uri_remove_empty_segments \
 	src/uri/tests/check_uri_parse_uri_reference \
 	src/uri/tests/check_uri_validate \
-	src/uri/tests/check_uri_to_string
+	src/uri/tests/check_uri_to_string \
+	src/net/tests/check_net_poll_event \
+	src/net/tests/check_net_tcp_connect_accept \
+	src/net/tests/check_net_tcp_connect_accept_nb
 
 check_PROGRAMS =
 
@@ -111,6 +132,18 @@ src_ascii_tests_check_ascii_rtrim_SOURCES = src/ascii/tests/check_ascii_rtrim.cp
 check_PROGRAMS += src/mime/tests/check_mime_map
 src_mime_tests_check_mime_map_LDADD = src/mime/libclane_mime.la
 src_mime_tests_check_mime_map_SOURCES = src/mime/tests/check_mime_map.cpp
+
+check_PROGRAMS += src/net/tests/check_net_poll_event
+src_net_tests_check_net_poll_event_LDADD = src/net/libclane_net.la
+src_net_tests_check_net_poll_event_SOURCES = src/net/tests/check_net_poll_event.cpp
+
+check_PROGRAMS += src/net/tests/check_net_tcp_connect_accept
+src_net_tests_check_net_tcp_connect_accept_LDADD = src/net/libclane_net.la
+src_net_tests_check_net_tcp_connect_accept_SOURCES = src/net/tests/check_net_tcp_connect_accept.cpp
+
+check_PROGRAMS += src/net/tests/check_net_tcp_connect_accept_nb
+src_net_tests_check_net_tcp_connect_accept_nb_LDADD = src/net/libclane_net.la
+src_net_tests_check_net_tcp_connect_accept_nb_SOURCES = src/net/tests/check_net_tcp_connect_accept_nb.cpp
 
 check_PROGRAMS += src/posix/tests/check_posix_unique_fd
 src_posix_tests_check_posix_unique_fd_LDADD = src/posix/libclane_posix.la
@@ -220,14 +253,4 @@ src_uri_tests_check_uri_to_string_SOURCES = src/uri/tests/check_uri_to_string.cp
 #	clane_http_route.cpp \
 #	clane_http_route.hpp \
 #	clane_http_server.cpp \
-#	clane_http_server.hpp \
-#	clane_net_error.hpp \
-#	clane_net_event.cpp \
-#	clane_net_event.hpp \
-#	clane_net_inet.cpp \
-#	clane_net_inet.hpp \
-#	clane_net_poller.cpp \
-#	clane_net_poller.hpp \
-#	clane_net_socket.cpp \
-#	clane_net_socket.hpp
-
+#	clane_http_server.hpp

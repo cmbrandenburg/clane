@@ -4,14 +4,14 @@
 
 // vim: set noet:
 
-#ifndef CLANE_NET_SOCKET_HPP
-#define CLANE_NET_SOCKET_HPP
+#ifndef CLANE__NET_SOCKET_HPP
+#define CLANE__NET_SOCKET_HPP
 
 /** @file */
 
-#include "clane_base.hpp"
-#include "clane_posix_fd.hpp"
-#include "include/clane_net_pub.hpp"
+#include "../clane_base.hpp"
+#include "../posix/clane_posix_fd.hpp"
+#include "../../include/clane_net.hpp"
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -46,4 +46,4 @@ namespace clane {
 	}
 }
 
-#endif // #ifndef CLANE_NET_SOCKET_HPP
+#endif // #ifndef CLANE__NET_SOCKET_HPP

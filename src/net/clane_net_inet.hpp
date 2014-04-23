@@ -4,19 +4,16 @@
 
 // vim: set noet:
 
-#ifndef CLANE_NET_POLLER_HPP
-#define CLANE_NET_POLLER_HPP
+#ifndef CLANE__NET_INET_HPP
+#define CLANE__NET_INET_HPP
 
 /** @file */
 
-#include "clane_base.hpp"
-#include "include/clane_net_pub.hpp"
+#include "../clane_base.hpp"
+#include "../../include/clane_net.hpp"
 
 namespace clane {
-	namespace net {
-
-		// FIXME: What to do with this header? Remove?
-	}
+	namespace net {}
 }
 
-#endif // #ifndef CLANE_NET_POLLER_HPP
+#endif // #ifndef CLANE__NET_INET_HPP
