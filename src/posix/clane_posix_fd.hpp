@@ -4,13 +4,13 @@
 
 // vim: set noet:
 
-#ifndef CLANE_POSIX_FD_HPP
-#define CLANE_POSIX_FD_HPP
+#ifndef CLANE__POSIX_FD_HPP
+#define CLANE__POSIX_FD_HPP
 
 /** @file */
 
-#include "clane_base.hpp"
-#include "include/clane_posix_pub.hpp"
+#include "../clane_base.hpp"
+#include "../../include/clane_posix.hpp"
 
 namespace clane {
 	namespace posix {
@@ -21,4 +21,4 @@ namespace clane {
 	}
 }
 
-#endif // #ifndef CLANE_POSIX_FD_HPP
+#endif // #ifndef CLANE__POSIX_FD_HPP

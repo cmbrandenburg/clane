@@ -4,11 +4,11 @@
 
 // vim: set noet:
 
-#ifndef CLANE_BASE_HPP
-#define CLANE_BASE_HPP
+#ifndef CLANE__BASE_HPP
+#define CLANE__BASE_HPP
 
 /** @file */
 
-#include "include/clane_base_pub.hpp"
+#include "../include/clane_base.hpp"
 
-#endif // #ifndef CLANE_BASE_HPP
+#endif // #ifndef CLANE__BASE_HPP

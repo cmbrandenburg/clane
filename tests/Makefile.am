@@ -6,11 +6,6 @@ noinst_HEADERS = \
 	clane_http_v1x_response.hpp
 
 TESTS = \
-	check_ascii_icase_compare \
-	check_ascii_find_newline \
-	check_ascii_rtrim \
-	check_posix_unique_fd \
-	check_sync_wait_group \
 	check_net_poll_event \
 	check_net_tcp_connect_accept \
 	check_net_tcp_connect_accept_nb \
@@ -66,18 +61,6 @@ TESTS = \
 	check_http_server_content_length_response
 
 check_PROGRAMS =
-
-check_PROGRAMS += check_ascii_find_newline
-check_ascii_find_newline_LDADD = ../libclane.la
-check_ascii_find_newline_SOURCES = check_ascii_find_newline.cpp
-
-check_PROGRAMS += check_ascii_icase_compare
-check_ascii_icase_compare_LDADD = ../libclane.la
-check_ascii_icase_compare_SOURCES = check_ascii_icase_compare.cpp
-
-check_PROGRAMS += check_ascii_rtrim
-check_ascii_rtrim_LDADD = ../libclane.la
-check_ascii_rtrim_SOURCES = check_ascii_rtrim.cpp
 
 check_PROGRAMS += check_http_canonize_1x_header_name
 check_http_canonize_1x_header_name_LDADD = ../libclane.la
@@ -214,14 +197,6 @@ check_net_tcp_connect_accept_nb_SOURCES = check_net_tcp_connect_accept_nb.cpp
 check_PROGRAMS += check_parse_uri_reference
 check_parse_uri_reference_LDADD = ../libclane.la
 check_parse_uri_reference_SOURCES = check_parse_uri_reference.cpp
-
-check_PROGRAMS += check_posix_unique_fd
-check_posix_unique_fd_LDADD = ../libclane.la
-check_posix_unique_fd_SOURCES = check_posix_unique_fd.cpp
-
-check_PROGRAMS += check_sync_wait_group
-check_sync_wait_group_LDADD = ../libclane.la
-check_sync_wait_group_SOURCES = check_sync_wait_group.cpp
 
 check_PROGRAMS += check_uri_is_fragment
 check_uri_is_fragment_LDADD = ../libclane.la

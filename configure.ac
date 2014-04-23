@@ -1,6 +1,6 @@
 AC_PREREQ([2.68])
 AC_INIT([clane], [master], [c.m.brandenburg@gmail.com])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
 AM_SILENT_RULES([yes])
 AC_CONFIG_MACRO_DIR([m4])
 AM_CONFIG_HEADER(config.h)
@@ -76,11 +76,6 @@ AC_CHECK_FUNCS([eventfd])
 
 AC_CONFIG_FILES(
 	Makefile
-	examples/Makefile
-	examples/ajax/Makefile
-	examples/file_server/Makefile
-	examples/hello/Makefile
-	tests/Makefile
 	)
 AC_OUTPUT
 

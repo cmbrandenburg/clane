@@ -1,6 +1,6 @@
 // vim: set noet:
 
-#include "clane_check.hpp"
+#include "../../clane_check.hpp"
 #include "../clane_ascii.hpp"
 
 using namespace clane;
@@ -19,8 +19,6 @@ using namespace clane;
 	do { \
 		check(ascii::icase_compare(a, b) > 0); \
 	} while (false)
-
-#include <boost/filesystem.hpp>
 
 int main() {
 	check_eq("", "");

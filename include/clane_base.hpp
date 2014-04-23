@@ -4,8 +4,8 @@
 
 // vim: set noet:
 
-#ifndef CLANE_BASE_PUB_HPP
-#define CLANE_BASE_PUB_HPP
+#ifndef CLANE_BASE_HPP
+#define CLANE_BASE_HPP
 
 /** @file
  *
@@ -34,4 +34,4 @@
 #define CLANE_HAVE_NO_DEFAULT_MOVE
 #endif
 
-#endif // #ifndef CLANE_BASE_PUB_HPP
+#endif // #ifndef CLANE_BASE_HPP

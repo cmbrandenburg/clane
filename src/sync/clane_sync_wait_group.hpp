@@ -4,13 +4,13 @@
 
 // vim: set noet:
 
-#ifndef CLANE_SYNC_WAIT_GROUP_HPP
-#define CLANE_SYNC_WAIT_GROUP_HPP
+#ifndef CLANE__SYNC_WAIT_GROUP_HPP
+#define CLANE__SYNC_WAIT_GROUP_HPP
 
 /** @file */
 
-#include "clane_base.hpp"
-#include "include/clane_sync_pub.hpp"
+#include "../clane_base.hpp"
+#include "../../include/clane_sync.hpp"
 
 namespace clane {
 	namespace sync {
@@ -18,4 +18,4 @@ namespace clane {
 	}
 }
 
-#endif // #ifndef CLANE_SYNC_WAIT_GROUP_HPP
+#endif // #ifndef CLANE__SYNC_WAIT_GROUP_HPP

@@ -4,14 +4,14 @@
 
 // vim: set noet:
 
-#ifndef CLANE_SYNC_PUB_HPP
-#define CLANE_SYNC_PUB_HPP
+#ifndef CLANE_SYNC_HPP
+#define CLANE_SYNC_HPP
 
 /** @file
  *
  * @brief Concurrency synchronization */
 
-#include "clane_base_pub.hpp"
+#include "clane_base.hpp"
 #include <condition_variable>
 #include <mutex>
 
@@ -89,4 +89,4 @@ namespace clane {
 
 }
 
-#endif // #ifndef CLANE_SYNC_PUB_HPP
+#endif // #ifndef CLANE_SYNC_HPP

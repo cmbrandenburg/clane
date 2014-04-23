@@ -4,13 +4,13 @@
 
 // vim: set noet:
 
-#ifndef CLANE_ASCII_HPP
-#define CLANE_ASCII_HPP
+#ifndef CLANE__ASCII_HPP
+#define CLANE__ASCII_HPP
 
 /** @file */
 
-#include "clane_base.hpp"
-#include "include/clane_ascii_pub.hpp"
+#include "../clane_base.hpp"
+#include "../../include/clane_ascii.hpp"
 #include <algorithm>
 #include <cassert>
 #include <string>
@@ -82,4 +82,4 @@ namespace clane {
 	}
 }
 
-#endif // #ifndef CLANE_ASCII_HPP
+#endif // #ifndef CLANE__ASCII_HPP
