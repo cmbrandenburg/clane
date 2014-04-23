@@ -7,9 +7,7 @@
 #ifndef CLANE_URI_HPP
 #define CLANE_URI_HPP
 
-/** @file
- *
- * @brief Uniform Resource Identifier */
+/** @file */
 
 #include "clane_base.hpp"
 #include <system_error>

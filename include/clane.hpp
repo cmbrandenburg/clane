@@ -22,6 +22,7 @@
 #include "clane_http_message.hpp"
 #include "clane_http_prefix_stripper.hpp"
 #include "clane_http_route.hpp"
+#include "clane_http_server.hpp"
 #include "clane_net.hpp"
 #include "clane_posix.hpp"
 #include "clane_regex.hpp"

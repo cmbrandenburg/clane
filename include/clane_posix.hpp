@@ -7,9 +7,7 @@
 #ifndef CLANE_POSIX_HPP
 #define CLANE_POSIX_HPP
 
-/** @file
- *
- * @brief POSIX utilities */
+/** @file */
 
 #include "clane_base.hpp"
 #include <utility>

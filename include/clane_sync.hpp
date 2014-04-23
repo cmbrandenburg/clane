@@ -7,9 +7,7 @@
 #ifndef CLANE_SYNC_HPP
 #define CLANE_SYNC_HPP
 
-/** @file
- *
- * @brief Concurrency synchronization */
+/** @file */
 
 #include "clane_base.hpp"
 #include <condition_variable>

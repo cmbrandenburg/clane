@@ -7,12 +7,10 @@
 #ifndef CLANE_HTTP_PREFIX_STRIPPER_HPP
 #define CLANE_HTTP_PREFIX_STRIPPER_HPP
 
-/** @file
- *
- * @brief HTTP request URI path prefix-stripping */
+/** @file */
 
 #include "clane_base.hpp"
-#include "clane_http_message.hpp"
+#include "clane_http_server.hpp"
 #include <functional>
 #include <string>
 

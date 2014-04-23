@@ -7,9 +7,7 @@
 #ifndef CLANE_NET_HPP
 #define CLANE_NET_HPP
 
-/** @file
- *
- * @brief Low-level networking  */
+/** @file */
 
 #include "clane_base.hpp"
 #include "clane_posix.hpp"

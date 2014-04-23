@@ -7,9 +7,7 @@
 #ifndef CLANE_BASE_HPP
 #define CLANE_BASE_HPP
 
-/** @file
- *
- * @brief Base definitions common to all header files */
+/** @file */
 
 // Every platform-configuration macro definition below denotes a deviation from
 // the C++11 standard. The default--i.e., having no macro defined--assumes

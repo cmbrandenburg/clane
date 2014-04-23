@@ -7,12 +7,10 @@
 #ifndef CLANE_HTTP_ROUTE_HPP
 #define CLANE_HTTP_ROUTE_HPP
 
-/** @file
- *
- * @brief HTTP request routing */
+/** @file */
 
 #include "clane_base.hpp"
-#include "clane_http_message.hpp"
+#include "clane_http_server.hpp"
 #include "clane_regex.hpp"
 #include <list>
 

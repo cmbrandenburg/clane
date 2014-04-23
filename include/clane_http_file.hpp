@@ -7,12 +7,10 @@
 #ifndef CLANE_HTTP_FILE_HPP
 #define CLANE_HTTP_FILE_HPP
 
-/** @file
- *
- * @brief HTTP file serving */
+/** @file */
 
 #include "clane_base.hpp"
-#include "clane_http_message.hpp"
+#include "clane_http_server.hpp"
 #include <boost/filesystem.hpp>
 
 namespace clane {

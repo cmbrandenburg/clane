@@ -7,9 +7,7 @@
 #ifndef CLANE_ASCII_HPP
 #define CLANE_ASCII_HPP
 
-/** @file
- *
- * @brief ASCII string operations */
+/** @file */
 
 #include "clane_base.hpp"
 #include <algorithm>

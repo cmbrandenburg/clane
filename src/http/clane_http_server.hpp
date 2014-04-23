@@ -14,6 +14,7 @@
 #include "../net/clane_net_event.hpp"
 #include "../net/clane_net_socket.hpp"
 #include "../sync/clane_sync_wait_group.hpp"
+#include "../../include/clane_http_server.hpp"
 #include <sstream>
 
 namespace clane {

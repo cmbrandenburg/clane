@@ -7,9 +7,7 @@
 #ifndef CLANE_REGEX_HPP
 #define CLANE_REGEX_HPP
 
-/** @file
- *
- * @brief Regular expression support */
+/** @file */
 
 #include "clane_base.hpp"
 #include <boost/regex.hpp>
