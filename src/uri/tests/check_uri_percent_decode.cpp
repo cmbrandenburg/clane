@@ -1,6 +1,6 @@
 // vim: set noet:
 
-#include "clane_check.hpp"
+#include "../../clane_check.hpp"
 #include "../clane_uri.hpp"
 #include <ctype.h>
 #include <cstring>

@@ -64,13 +64,38 @@ src_sync_libclane_sync_la_SOURCES = \
 	src/sync/clane_sync_wait_group.cpp \
 	src/sync/clane_sync_wait_group.hpp
 
+noinst_LTLIBRARIES += src/uri/libclane_uri.la
+src_uri_libclane_uri_la_SOURCES = \
+	src/uri/clane_uri.cpp \
+	src/uri/clane_uri.hpp
+
 TESTS = \
 	src/ascii/tests/check_ascii_icase_compare \
 	src/ascii/tests/check_ascii_find_newline \
 	src/ascii/tests/check_ascii_rtrim \
 	src/posix/tests/check_posix_unique_fd \
 	src/sync/tests/check_sync_wait_group \
-	src/mime/tests/check_mime_map
+	src/mime/tests/check_mime_map \
+	src/uri/tests/check_uri_is_percent_encoded \
+	src/uri/tests/check_uri_percent_decode \
+	src/uri/tests/check_uri_percent_encode \
+	src/uri/tests/check_uri_is_scheme \
+	src/uri/tests/check_uri_is_userinfo \
+	src/uri/tests/check_uri_is_ipv4_address \
+	src/uri/tests/check_uri_is_ls32 \
+	src/uri/tests/check_uri_is_ipv6_address \
+	src/uri/tests/check_uri_is_ipvfut_address \
+	src/uri/tests/check_uri_is_reg_name \
+	src/uri/tests/check_uri_is_port \
+	src/uri/tests/check_uri_is_path \
+	src/uri/tests/check_uri_is_query \
+	src/uri/tests/check_uri_is_fragment \
+	src/uri/tests/check_uri_remove_last_path_segment \
+	src/uri/tests/check_uri_remove_dot_segments \
+	src/uri/tests/check_uri_remove_empty_segments \
+	src/uri/tests/check_uri_parse_uri_reference \
+	src/uri/tests/check_uri_validate \
+	src/uri/tests/check_uri_to_string
 
 check_PROGRAMS =
 
@@ -95,6 +120,86 @@ check_PROGRAMS += src/sync/tests/check_sync_wait_group
 src_sync_tests_check_sync_wait_group_LDADD = src/sync/libclane_sync.la
 src_sync_tests_check_sync_wait_group_SOURCES = src/sync/tests/check_sync_wait_group.cpp
 
+check_PROGRAMS += src/uri/tests/check_uri_is_fragment
+src_uri_tests_check_uri_is_fragment_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_is_fragment_SOURCES = src/uri/tests/check_uri_is_fragment.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_is_ipv4_address
+src_uri_tests_check_uri_is_ipv4_address_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_is_ipv4_address_SOURCES = src/uri/tests/check_uri_is_ipv4_address.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_is_ipv6_address
+src_uri_tests_check_uri_is_ipv6_address_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_is_ipv6_address_SOURCES = src/uri/tests/check_uri_is_ipv6_address.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_is_ipvfut_address
+src_uri_tests_check_uri_is_ipvfut_address_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_is_ipvfut_address_SOURCES = src/uri/tests/check_uri_is_ipvfut_address.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_is_ls32
+src_uri_tests_check_uri_is_ls32_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_is_ls32_SOURCES = src/uri/tests/check_uri_is_ls32.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_is_path
+src_uri_tests_check_uri_is_path_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_is_path_SOURCES = src/uri/tests/check_uri_is_path.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_is_percent_encoded
+src_uri_tests_check_uri_is_percent_encoded_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_is_percent_encoded_SOURCES = src/uri/tests/check_uri_is_percent_encoded.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_is_port
+src_uri_tests_check_uri_is_port_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_is_port_SOURCES = src/uri/tests/check_uri_is_port.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_is_query
+src_uri_tests_check_uri_is_query_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_is_query_SOURCES = src/uri/tests/check_uri_is_query.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_is_reg_name
+src_uri_tests_check_uri_is_reg_name_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_is_reg_name_SOURCES = src/uri/tests/check_uri_is_reg_name.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_is_scheme
+src_uri_tests_check_uri_is_scheme_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_is_scheme_SOURCES = src/uri/tests/check_uri_is_scheme.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_is_userinfo
+src_uri_tests_check_uri_is_userinfo_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_is_userinfo_SOURCES = src/uri/tests/check_uri_is_userinfo.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_parse_uri_reference
+src_uri_tests_check_uri_parse_uri_reference_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_parse_uri_reference_SOURCES = src/uri/tests/check_uri_parse_uri_reference.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_percent_decode
+src_uri_tests_check_uri_percent_decode_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_percent_decode_SOURCES = src/uri/tests/check_uri_percent_decode.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_percent_encode
+src_uri_tests_check_uri_percent_encode_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_percent_encode_SOURCES = src/uri/tests/check_uri_percent_encode.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_remove_dot_segments
+src_uri_tests_check_uri_remove_dot_segments_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_remove_dot_segments_SOURCES = src/uri/tests/check_uri_remove_dot_segments.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_remove_empty_segments
+src_uri_tests_check_uri_remove_empty_segments_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_remove_empty_segments_SOURCES = src/uri/tests/check_uri_remove_empty_segments.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_remove_last_path_segment
+src_uri_tests_check_uri_remove_last_path_segment_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_remove_last_path_segment_SOURCES = src/uri/tests/check_uri_remove_last_path_segment.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_validate
+src_uri_tests_check_uri_validate_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_validate_SOURCES = src/uri/tests/check_uri_validate.cpp
+
+check_PROGRAMS += src/uri/tests/check_uri_to_string
+src_uri_tests_check_uri_to_string_LDADD = src/uri/libclane_uri.la
+src_uri_tests_check_uri_to_string_SOURCES = src/uri/tests/check_uri_to_string.cpp
+
 #lib_LTLIBRARIES = libclane.la
 #libclane_AM_CXXFLAGS = $(BOOST_CPPFLAGS)
 #libclane_la_LIBADD = \
@@ -116,8 +221,6 @@ src_sync_tests_check_sync_wait_group_SOURCES = src/sync/tests/check_sync_wait_gr
 #	clane_http_route.hpp \
 #	clane_http_server.cpp \
 #	clane_http_server.hpp \
-#	clane_mime.cpp \
-#	clane_mime.hpp \
 #	clane_net_error.hpp \
 #	clane_net_event.cpp \
 #	clane_net_event.hpp \
@@ -126,7 +229,5 @@ src_sync_tests_check_sync_wait_group_SOURCES = src/sync/tests/check_sync_wait_gr
 #	clane_net_poller.cpp \
 #	clane_net_poller.hpp \
 #	clane_net_socket.cpp \
-#	clane_net_socket.hpp \
-#	clane_uri.cpp \
-#	clane_uri.hpp
+#	clane_net_socket.hpp
 

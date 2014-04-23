@@ -4,42 +4,14 @@
 
 // vim: set noet:
 
-#ifndef CLANE_URI_HPP
-#define CLANE_URI_HPP
+#ifndef CLANE__URI_HPP
+#define CLANE__URI_HPP
 
 /** @file */
 
-#include "clane_ascii.hpp"
-#include "clane_base.hpp"
-#include "include/clane_uri_pub.hpp"
-
-namespace clane {
-	namespace uri {
-
-		/** @brief Exception class for URI parse errors */
-		class error: public std::system_error {
-		public:
-			error(std::error_code const &e): std::system_error(e) {}
-		};
-
-		/** @brief URI parse error codes */
-		enum class error_code {
-			ok,
-			invalid_uri,
-			invalid_scheme,
-			invalid_user,
-			invalid_host,
-			invalid_port,
-			invalid_path,
-			invalid_query,
-			invalid_fragment
-		};
-	}
-}
-
-namespace std {
-	template <> struct is_error_code_enum<clane::uri::error_code>: public true_type {};
-}
+#include "../ascii/clane_ascii.hpp"
+#include "../clane_base.hpp"
+#include "../../include/clane_uri.hpp"
 
 namespace clane {
 	namespace uri {
@@ -183,4 +155,4 @@ namespace clane {
  	}
 }
 
-#endif // #ifndef CLANE_URI_HPP
+#endif // #ifndef CLANE__URI_HPP

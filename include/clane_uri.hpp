@@ -4,15 +4,43 @@
 
 // vim: set noet:
 
-#ifndef CLANE_URI_PUB_HPP
-#define CLANE_URI_PUB_HPP
+#ifndef CLANE_URI_HPP
+#define CLANE_URI_HPP
 
 /** @file
  *
  * @brief Uniform Resource Identifier */
 
-#include "clane_base_pub.hpp"
+#include "clane_base.hpp"
 #include <system_error>
+
+namespace clane {
+	namespace uri {
+
+		/** @brief Exception class for URI parse errors */
+		class error: public std::system_error {
+		public:
+			error(std::error_code const &e): std::system_error(e) {}
+		};
+
+		/** @brief URI parse error codes */
+		enum class error_code {
+			ok,
+			invalid_uri,
+			invalid_scheme,
+			invalid_user,
+			invalid_host,
+			invalid_port,
+			invalid_path,
+			invalid_query,
+			invalid_fragment
+		};
+	}
+}
+
+namespace std {
+	template <> struct is_error_code_enum<clane::uri::error_code>: public true_type {};
+}
 
 namespace clane {
 
@@ -196,4 +224,4 @@ namespace clane {
 	}
 }
 
-#endif // #ifndef CLANE_URI_PUB_HPP
+#endif // #ifndef CLANE_URI_HPP

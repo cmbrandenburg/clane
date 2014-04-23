@@ -9,26 +9,6 @@ TESTS = \
 	check_net_poll_event \
 	check_net_tcp_connect_accept \
 	check_net_tcp_connect_accept_nb \
-	check_uri_is_percent_encoded \
-	check_uri_percent_decode \
-	check_uri_percent_encode \
-	check_uri_is_scheme \
-	check_uri_is_userinfo \
-	check_uri_is_ipv4_address \
-	check_uri_is_ls32 \
-	check_uri_is_ipv6_address \
-	check_uri_is_ipvfut_address \
-	check_uri_is_reg_name \
-	check_uri_is_port \
-	check_uri_is_path \
-	check_uri_is_query \
-	check_uri_is_fragment \
-	check_uri_remove_last_path_segment \
-	check_uri_remove_dot_segments \
-	check_uri_remove_empty_segments \
-	check_parse_uri_reference \
-	check_uri_validate \
-	check_uri_to_string \
 	check_http_status_code \
 	check_http_header_map \
 	check_http_canonize_1x_header_name \
@@ -188,84 +168,4 @@ check_net_tcp_connect_accept_SOURCES = check_net_tcp_connect_accept.cpp
 check_PROGRAMS += check_net_tcp_connect_accept_nb
 check_net_tcp_connect_accept_nb_LDADD = ../libclane.la
 check_net_tcp_connect_accept_nb_SOURCES = check_net_tcp_connect_accept_nb.cpp
-
-check_PROGRAMS += check_parse_uri_reference
-check_parse_uri_reference_LDADD = ../libclane.la
-check_parse_uri_reference_SOURCES = check_parse_uri_reference.cpp
-
-check_PROGRAMS += check_uri_is_fragment
-check_uri_is_fragment_LDADD = ../libclane.la
-check_uri_is_fragment_SOURCES = check_uri_is_fragment.cpp
-
-check_PROGRAMS += check_uri_is_ipv4_address
-check_uri_is_ipv4_address_LDADD = ../libclane.la
-check_uri_is_ipv4_address_SOURCES = check_uri_is_ipv4_address.cpp
-
-check_PROGRAMS += check_uri_is_ipv6_address
-check_uri_is_ipv6_address_LDADD = ../libclane.la
-check_uri_is_ipv6_address_SOURCES = check_uri_is_ipv6_address.cpp
-
-check_PROGRAMS += check_uri_is_ipvfut_address
-check_uri_is_ipvfut_address_LDADD = ../libclane.la
-check_uri_is_ipvfut_address_SOURCES = check_uri_is_ipvfut_address.cpp
-
-check_PROGRAMS += check_uri_is_ls32
-check_uri_is_ls32_LDADD = ../libclane.la
-check_uri_is_ls32_SOURCES = check_uri_is_ls32.cpp
-
-check_PROGRAMS += check_uri_is_path
-check_uri_is_path_LDADD = ../libclane.la
-check_uri_is_path_SOURCES = check_uri_is_path.cpp
-
-check_PROGRAMS += check_uri_is_percent_encoded
-check_uri_is_percent_encoded_LDADD = ../libclane.la
-check_uri_is_percent_encoded_SOURCES = check_uri_is_percent_encoded.cpp
-
-check_PROGRAMS += check_uri_is_port
-check_uri_is_port_LDADD = ../libclane.la
-check_uri_is_port_SOURCES = check_uri_is_port.cpp
-
-check_PROGRAMS += check_uri_is_query
-check_uri_is_query_LDADD = ../libclane.la
-check_uri_is_query_SOURCES = check_uri_is_query.cpp
-
-check_PROGRAMS += check_uri_is_reg_name
-check_uri_is_reg_name_LDADD = ../libclane.la
-check_uri_is_reg_name_SOURCES = check_uri_is_reg_name.cpp
-
-check_PROGRAMS += check_uri_is_scheme
-check_uri_is_scheme_LDADD = ../libclane.la
-check_uri_is_scheme_SOURCES = check_uri_is_scheme.cpp
-
-check_PROGRAMS += check_uri_is_userinfo
-check_uri_is_userinfo_LDADD = ../libclane.la
-check_uri_is_userinfo_SOURCES = check_uri_is_userinfo.cpp
-
-check_PROGRAMS += check_uri_percent_decode
-check_uri_percent_decode_LDADD = ../libclane.la
-check_uri_percent_decode_SOURCES = check_uri_percent_decode.cpp
-
-check_PROGRAMS += check_uri_percent_encode
-check_uri_percent_encode_LDADD = ../libclane.la
-check_uri_percent_encode_SOURCES = check_uri_percent_encode.cpp
-
-check_PROGRAMS += check_uri_remove_dot_segments
-check_uri_remove_dot_segments_LDADD = ../libclane.la
-check_uri_remove_dot_segments_SOURCES = check_uri_remove_dot_segments.cpp
-
-check_PROGRAMS += check_uri_remove_empty_segments
-check_uri_remove_empty_segments_LDADD = ../libclane.la
-check_uri_remove_empty_segments_SOURCES = check_uri_remove_empty_segments.cpp
-
-check_PROGRAMS += check_uri_remove_last_path_segment
-check_uri_remove_last_path_segment_LDADD = ../libclane.la
-check_uri_remove_last_path_segment_SOURCES = check_uri_remove_last_path_segment.cpp
-
-check_PROGRAMS += check_uri_validate
-check_uri_validate_LDADD = ../libclane.la
-check_uri_validate_SOURCES = check_uri_validate.cpp
-
-check_PROGRAMS += check_uri_to_string
-check_uri_to_string_LDADD = ../libclane.la
-check_uri_to_string_SOURCES = check_uri_to_string.cpp
 
