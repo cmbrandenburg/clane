@@ -76,6 +76,7 @@ AC_CHECK_FUNCS([eventfd])
 
 AC_CONFIG_FILES(
 	Makefile
+	examples/Makefile
 	)
 AC_OUTPUT
 

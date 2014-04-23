@@ -2,8 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 all: doc amalgam
 
-# FIXME: reenable examples
-#SUBDIRS = . examples
+SUBDIRS = . examples
 
 pkginclude_HEADERS = \
 	include/clane.hpp \
