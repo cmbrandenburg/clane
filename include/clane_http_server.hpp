@@ -37,21 +37,20 @@ namespace clane {
 
 			/** @brief Headers to send
 			 *
-			 * @remark Applications may insert one or more HTTP headers into the @ref
-			 * headers member to send those headers as part of the response message.
-			 * Setting the @ref headers member has no effect after at least one byte
-			 * of the body has been inserted into the response_ostream instance. */
+			 * @remark Applications may insert zero or more HTTP headers into
+			 * the @ref headers member to send those headers as part of the
+			 * response message. Setting the @ref headers member has no effect
+			 * after at least one byte of the body has been inserted into the
+			 * response_ostream instance. */
 			header_map &headers;
 
 		public:
 			virtual ~response_ostream() {}
 			response_ostream(std::streambuf *sb, status_code &stat_code, header_map &hdrs);
 			response_ostream(response_ostream const &) = delete;
+			response_ostream(response_ostream &&) = delete;
 			response_ostream &operator=(response_ostream const &) = delete;
-#ifndef CLANE_HAVE_NO_DEFAULT_MOVE
-			response_ostream(response_ostream &&) = default;
-			response_ostream &operator=(response_ostream &&) = default;
-#endif
+			response_ostream &operator=(response_ostream &&) = delete;
 		};
 
 		inline response_ostream::response_ostream(std::streambuf *sb, status_code &stat_code, header_map &hdrs):
@@ -191,7 +190,7 @@ namespace clane {
 			std::chrono::steady_clock::duration write_timeout;
 
 		public:
-			~basic_server() = default;
+			~basic_server() {}
 			basic_server();
 			basic_server(Handler &&h);
 			basic_server(basic_server const &) = delete;
