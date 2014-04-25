@@ -14,6 +14,7 @@
 #include "../net/clane_net_event.hpp"
 #include "../uri/clane_uri.hpp"
 #include <streambuf>
+#include <thread>
 
 namespace clane {
 	namespace http {
@@ -51,6 +52,7 @@ namespace clane {
 			request_ostream(request_ostream &&) = delete;
 			request_ostream &operator=(request_ostream const &) = delete;
 			request_ostream &operator=(request_ostream &&) = delete;
+			void fin(); // XXX: implement
 		};
 
 		inline request_ostream::request_ostream(std::streambuf *sb, std::string &meth, uri::uri &uri, int &major_ver,
@@ -64,6 +66,7 @@ namespace clane {
 			trailers(trls) {}
 
 		class client_streambuf: public std::streambuf {
+			net::socket &sock;
 		public:
 			std::string out_meth;
 			uri::uri out_uri;
@@ -73,7 +76,7 @@ namespace clane {
 			header_map out_trls;
 		public:
 			virtual ~client_streambuf() {}
-			client_streambuf() {}
+			client_streambuf(net::socket &sock): sock(sock) {}
 			client_streambuf(client_streambuf const &) = default;
 			client_streambuf &operator=(client_streambuf const &) = default;
 #ifndef CLANE_HAVE_NO_DEFAULT_MOVE
@@ -92,14 +95,15 @@ namespace clane {
 			request_ostream rs;
 		public:
 			~client_context() {}
-			client_context();
+			client_context(net::socket &sock);
 			client_context(client_context const &) = delete;
 			client_context &operator=(client_context const &) = delete;
 			client_context(client_context &&) = delete;
 			client_context &operator=(client_context &&) = delete;
 		};
 
-		client_context::client_context():
+		client_context::client_context(net::socket &sock):
+			sb(sock),
 			resp{&sb},
 			rs{&sb, sb.out_meth, sb.out_uri, sb.out_major_ver, sb.out_minor_ver, sb.out_hdrs, sb.out_trls} {}
 
@@ -122,8 +126,7 @@ namespace clane {
 			client_request &operator=(client_request &&that) noexcept;
 #endif
 
-			void fin();
-			void wait();
+			void wait(); // XXX: implement
 		};
 
 #ifdef CLANE_HAVE_NO_DEFAULT_MOVE
@@ -137,12 +140,50 @@ namespace clane {
 
 #endif
 
+		/** @brief Stores information for uniquely describing a client connection */
+		struct client_target {
+			std::string addr;
+			// XXX: TLS or unsecure?
+		};
+
+		inline bool operator==(client_target const &a, client_target const &b) {
+			return a.addr == b.addr;
+		}
+
+		inline bool operator!=(client_target const &a, client_target const &b) { return !(a == b); }
+
+		inline bool operator<(client_target const &a, client_target const &b) {
+			return a.addr < b.addr;
+		}
+
+		inline bool operator<=(client_target const &a, client_target const &b) {
+			return a.addr <= b.addr;
+		}
+
+		inline bool operator>(client_target const &a, client_target const &b) { return b < a; }
+		inline bool operator>=(client_target const &a, client_target const &b) { return b <= a; }
+
+		class client_connection {
+		public:
+			~client_connection() {}
+			client_connection(std::string const &addr); // XXX: implement
+			client_connection(client_connection const &) = delete;
+			client_connection &operator=(client_connection const &) = delete;
+#ifndef CLANE_HAVE_NO_DEFAULT_MOVE
+			client_connection(client_connection &&) = default;
+			client_connection &operator=(client_connection &&) = default;
+#endif
+		};
+
 		/** @brief HTTP client */
 		class client {
 			static size_t const default_max_header_size = 8 * 1024;
 			static size_t const default_max_connections = 2;
 			size_t max_header_size;
 			size_t max_connections;
+			std::map<client_target, std::shared_ptr<client_connection>> conns; // shared pointer for copy semantics
+			std::mutex mtx;
+			std::condition_variable cv;
 		public:
 
 			enum class option {
@@ -163,7 +204,7 @@ namespace clane {
 			client &operator=(client &&that) noexcept;
 #endif
 
-			client_request new_request(char const *method, char const *uri, option_set opts = 0);
+			client_request new_request(char const *method, uri::uri uri, option_set opts = 0);
 		};
 
 		inline client::client():

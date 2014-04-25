@@ -57,6 +57,18 @@ AC_TRY_COMPILE(
 AC_LANG_POP([C++])
 
 AC_LANG_PUSH([C++])
+AC_MSG_CHECKING([for std::map::emplace])
+AC_TRY_COMPILE(
+	[#include <map>],
+	[std::map<int, int> m;
+m.emplace(1, 2);],
+	[AC_MSG_RESULT(yes) AC_DEFINE([HAVE_STD_MAP_EMPLACE], 1,
+	[Define to 1 if the standard library supports std::map::emplace])],
+	[AC_MSG_RESULT(no)]
+	)
+AC_LANG_POP([C++])
+
+AC_LANG_PUSH([C++])
 AC_MSG_CHECKING([for std::multimap::emplace])
 AC_TRY_COMPILE(
 	[#include <map>],

@@ -10,5 +10,6 @@
 /** @file */
 
 #include "../include/clane_base.hpp"
+#include "../config.h"
 
 #endif // #ifndef CLANE__BASE_HPP
