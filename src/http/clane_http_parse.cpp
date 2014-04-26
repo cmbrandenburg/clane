@@ -710,7 +710,7 @@ namespace clane {
 						v1x_headers_incparser::headers().clear(); // no trailers
 						return cur - beg; // already set as done
 					}
-					// fall through to next case
+					return cur - beg; // mandatory return before parsing any of the body
 				}
 
 				case state::body: {
@@ -789,7 +789,7 @@ namespace clane {
 						v1x_headers_incparser::headers().clear(); // no trailers
 						v1x_body_incparser::reset(v1x_body_incparser::infinite, 0); // body ends with connection
 					}
-					// fall through to next case
+					return cur - beg; // mandatory return before parsing any of the body
 				}
 
 				case state::body: {
