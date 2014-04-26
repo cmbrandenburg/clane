@@ -515,7 +515,9 @@ namespace clane {
 			// accessors:
 			// Use base class accessors, too. Request line, headers, and body
 			// offset and size are valid only after got_headers() returns true.
-			// Trailers are valid only after parsing completes.
+			// Trailers are valid only after parsing completes. The parse_some()
+			// method guarantees to return at least once such that got_headers() is
+			// true but before having parsed any of the body input data.
 			bool got_headers() const { return got_hdrs; }
 			header_map const &headers() const { return hdrs; }
 			header_map &headers() { return hdrs; }
@@ -553,6 +555,11 @@ namespace clane {
 			size_t parse_some(char const *beg, char const *end);
 
 			// accessors:
+			// Use base class accessors, too. Status line, headers, and body
+			// offset and size are valid only after got_headers() returns true.
+			// Trailers are valid only after parsing completes. The parse_some()
+			// method guarantees to return at least once such that got_headers() is
+			// true but before having parsed any of the body input data.
 			bool got_headers() const { return got_hdrs; }
 			header_map const &headers() const { return hdrs; }
 			header_map &headers() { return hdrs; }

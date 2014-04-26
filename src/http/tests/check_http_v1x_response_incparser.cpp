@@ -15,10 +15,15 @@ void check_ok(char const *content, int exp_major, int exp_minor, http::status_co
 	// as few passes as possible:
 	pars.reset();
 	size_t i = 0;
+	bool got_hdrs = false;
 	while (i < std::strlen(content)) {
 		size_t stat = pars.parse_some(content+i, content+std::strlen(content));
 		check(pars.error != stat);
 		if (pars.got_headers())
+			if (!got_hdrs) {
+				got_hdrs = true;
+				check(0 == pars.size());
+			}
 			got_body.append(content+i+pars.offset(), pars.size());
 		i += stat;
 	}
