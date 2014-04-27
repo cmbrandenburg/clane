@@ -109,6 +109,7 @@ namespace clane {
 					std::ostringstream ss;
 					ss << std::hex << chunk_len << "\r\n";
 					std::string chunk_line = ss.str();
+					// FIXME: implement send timeout
 					sock.send(chunk_line.data(), chunk_line.size(), net::all, e);
 					if (e)
 						return -1; // connection error

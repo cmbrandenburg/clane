@@ -187,6 +187,12 @@ namespace clane {
 			Handler root_handler;
 
 			size_t max_header_size;
+
+			// FIXME: replace these timeouts with more specific timeouts:
+			// 1. receive headers
+			// 2. receive body (intermittent)
+			// 3. send headers
+			// 4. send body (intermittent)
 			std::chrono::steady_clock::duration read_timeout;
 			std::chrono::steady_clock::duration write_timeout;
 
