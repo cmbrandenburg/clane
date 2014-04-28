@@ -22,28 +22,6 @@ AM_CONDITIONAL([BUILD_EXAMPLES], [test x$enable_examples == xyes ])
 AX_CHECK_COMPILE_FLAG([-std=c++0x], [CXXFLAGS="$CXXFLAGS -std=c++0x"], [AX_CXX_COMPILE_STDCXX_11(noext,optional)])
 
 AC_LANG_PUSH([C++])
-AC_MSG_CHECKING([for std::thread support for movable arguments])
-AC_TRY_COMPILE(
-	[#include <thread>
-struct alpha {
-	alpha() {}
-	alpha(alpha const &) = delete;
-	alpha &operator=(alpha const &) = delete;
-	alpha(alpha &&) {}
-	alpha &operator=(alpha &&) { return *this; }
-};
-
-void bravo(alpha &&) {}],
-	[alpha a;
-std::thread(bravo, std::move(a));],
-	[AC_MSG_RESULT(yes) AC_DEFINE([HAVE_STD_THREAD_MOVE_ARG], 1,
-	[Define to 1 if the standard library std::thread supports movable
-	 arguments])],
-	[AC_MSG_RESULT(no)]
-	)
-AC_LANG_POP([C++])
-
-AC_LANG_PUSH([C++])
 AC_MSG_CHECKING([for std::string::shrink_to_fit])
 AC_TRY_COMPILE(
 	[#include <string>],

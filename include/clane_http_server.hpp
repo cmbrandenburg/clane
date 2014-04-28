@@ -45,7 +45,7 @@ namespace clane {
 
 		public:
 			virtual ~response_ostream() {}
-			response_ostream(std::streambuf *sb, status_code &stat_code, header_map &hdrs);
+			response_ostream(std::streambuf *sb, status_code &scode, header_map &hdrs);
 			response_ostream(response_ostream const &) = delete;
 			response_ostream &operator=(response_ostream const &) = delete;
 #ifndef CLANE_HAVE_NO_DEFAULT_MOVE
@@ -54,78 +54,103 @@ namespace clane {
 #endif
 		};
 
-		inline response_ostream::response_ostream(std::streambuf *sb, status_code &stat_code, header_map &hdrs):
-		 	std::ostream{sb}, status(stat_code), headers(hdrs) {}
+		inline response_ostream::response_ostream(std::streambuf *sb, status_code &scode, header_map &hdrs):
+		 	std::ostream{sb}, status(scode), headers(hdrs) {}
+
+		struct server_options {
+
+			server_options():
+				max_header_size{8*1024},
+				header_timeout{std::chrono::minutes{2}},
+				read_timeout{std::chrono::minutes{2}},
+				write_timeout{std::chrono::minutes{2}} {}
+
+			size_t max_header_size;
+			std::chrono::steady_clock::duration header_timeout;
+			std::chrono::steady_clock::duration read_timeout;
+			std::chrono::steady_clock::duration write_timeout;
+		};
 
 		class server_streambuf: public std::streambuf {
-			struct buffer {
-				std::shared_ptr<char> p;
-				size_t size;
-			};
-			net::socket &sock;
-			int major_ver;
-			int minor_ver;
-		public:
-			status_code out_stat_code;
-			header_map out_hdrs;
 		private:
-			std::mutex in_mutex;
-			bool in_end;
-			std::deque<buffer> in_queue;
-			std::condition_variable in_cond;
-			std::mutex act_mutex;
-			std::condition_variable act_cond;
-			bool enabled;
-			bool active;
+			net::socket conn;
+			net::event &term_ev;
+			server_options const *sopts;
+		public:
+			header_map *in_trls;
+		private:
 			bool hdrs_written;
+			bool in_body;
 			bool chunked;
 			size_t content_len;
-			char out_buf[4096];
+
+			// input buffer offsets:
+			size_t ibeg;
+			size_t iend;
+
+			v1x_request_incparser pars;
+
+
+			// response attributes:
+			int out_major_ver;
+			int out_minor_ver;
+		public:
+			status_code out_scode;
+			header_map out_hdrs;
+		private:
+
+			char ibuf[4096]; // input buffer
+			char obuf[4096]; // output buffer
+
 		public:
 			virtual ~server_streambuf();
-			server_streambuf(net::socket &sock);
+			server_streambuf(net::socket &&conn, net::event &term_ev, server_options const *sopts);
 			server_streambuf(server_streambuf const &) = default;
 			server_streambuf &operator=(server_streambuf const &) = default;
 #ifndef CLANE_HAVE_NO_DEFAULT_MOVE
 			server_streambuf(server_streambuf &&) = default;
 			server_streambuf &operator=(server_streambuf &&) = default;
 #endif
-			void enable() { enabled = true; }
-			void set_version(int major, int minor) { major_ver = major; minor_ver = minor; }
-			void more_request_body(std::shared_ptr<char> const &p, size_t offset, size_t size);
-			void end_request_body();
-			void inactivate();
-			void activate();
+
+			// Returns true if and only if the headers have been received, false if
+			// and only if the connection should close. By returning whether the
+			// headers have been received (and not invoking the root handler for the
+			// request), the basic_server<> template class may call this function
+			// without the function definition residing in the header file, a la
+			// pimpl-lite. The cost, however, is a little more code complexity. The
+			// server_streambuf class has two contexts: (1) when it's receiving the
+			// headers, in which case the stream buffer is ignored, and (2) when it's
+			// invoked via virtual std::streambuf methods to obtain more body data, in
+			// which case the stream buffer is used.
+			bool recv_header();
+
+			// request accessors:
+			// These become available when the recv_header() method returns true.
+			std::string &method() { return pars.method(); }
+			uri::uri &uri() { return pars.uri(); }
+			int major_version() { return pars.major_version(); }
+			int minor_version() { return pars.minor_version(); }
+			header_map &headers() { return pars.headers(); }
+			header_map &trailers() { return pars.trailers(); }
+
 			bool headers_written() const { return hdrs_written; }
+
 		protected:
-			virtual int sync();
 			virtual int_type underflow();
+			virtual int sync();
 			virtual int_type overflow(int_type ch);
 		private:
+			bool recv_some();
+			size_t parse_some();
 			int flush(bool end = false);
 		};
 
-		class server_context {
-			sync::wait_group::reference wg_ref;
-		public:
-			server_streambuf sb;
-			request req;
-			response_ostream rs;
-		private:
-			std::mutex next_mutex;
-			std::shared_ptr<server_context> next_ctx;
-		public:
-			~server_context();
-			server_context(sync::wait_group::reference &&wg_ref, net::socket &sock): wg_ref{std::move(wg_ref)}, sb{sock},
-				req{&sb}, rs{&sb, sb.out_stat_code, sb.out_hdrs} {}
-			server_context(server_context const &) = delete;
-			server_context(server_context &&) = delete;
-			server_context &operator=(server_context const &) = delete;
-			server_context &operator=(server_context &&) = delete;
-			void set_next_context(std::shared_ptr<server_context> const &nc);
-		private:
-			void activate();
-		};
+		/** @brief Perform post-processing for a server root handler
+		 *
+		 * @remark Applications should not use the post_handler() function directly.
+		 *
+		 * @sa basic_server */
+		void post_handler(server_streambuf &sb, response_ostream &rs, request &req);
 
 		/** @brief HTTP server
 		 *
@@ -163,9 +188,9 @@ namespace clane {
 		template <typename Handler> class basic_server {
 			static size_t const default_max_header_size = 8 * 1024;
 			std::deque<clane::net::socket> listeners;
-			clane::net::event term_event;
+			clane::net::event term_ev;
 			std::deque<std::thread> thrds;
-			clane::sync::wait_group *conn_wg;
+			clane::sync::wait_group *conn_wg; // XXX: what to do with this?
 		public:
 
 			/** @brief @ref http_request_handling_page "HTTP request handler" that
@@ -186,19 +211,12 @@ namespace clane {
 			 * responses. */
 			Handler root_handler;
 
-			size_t max_header_size;
-
-			// FIXME: replace these timeouts with more specific timeouts:
-			// 1. receive headers
-			// 2. receive body (intermittent)
-			// 3. send headers
-			// 4. send body (intermittent)
-			std::chrono::steady_clock::duration read_timeout;
-			std::chrono::steady_clock::duration write_timeout;
+			/** @brief Options to control server behavior */
+			server_options options;
 
 		public:
 			~basic_server() = default;
-			basic_server();
+			basic_server() {}
 			basic_server(Handler &&h);
 			basic_server(basic_server const &) = delete;
 			basic_server &operator=(basic_server const &) = delete;
@@ -250,11 +268,11 @@ namespace clane {
 
 		private:
 			void listen_main(net::socket &&lis);
-#ifndef CLANE_HAVE_STD_THREAD_MOVE_ARG
+#ifdef CLANE_HAVE_NO_STD_THREAD_MOVE_ARG
 			void listen_main_move_wrapper(std::mutex &lis_mutex, std::condition_variable &lis_cond, net::socket **lis);
 #endif
-			void connection_main(net::socket &&conn);
-#ifndef CLANE_HAVE_STD_THREAD_MOVE_ARG
+			void connection_main(net::socket conn);
+#ifdef CLANE_HAVE_NO_STD_THREAD_MOVE_ARG
 			void connection_main_move_wrapper(std::mutex &conn_mutex, std::condition_variable &conn_cond, net::socket **conn);
 #endif
 		};
@@ -283,30 +301,18 @@ namespace clane {
 			return basic_server<Handler>(std::forward<Handler>(h));
 		}
 
-		template <typename Handler> basic_server<Handler>::basic_server():
-			max_header_size{default_max_header_size},
-			read_timeout{0},
-			write_timeout{0} {}
-
 		template <typename Handler> basic_server<Handler>::basic_server(Handler &&h):
-			root_handler{std::forward<Handler>(h)},
-			max_header_size{default_max_header_size},
-			read_timeout{0},
-			write_timeout{0} {}
+			root_handler{std::forward<Handler>(h)} {}
 
 #ifdef CLANE_HAVE_NO_DEFAULT_MOVE
 
 		template <typename Handler> basic_server<Handler>::basic_server(basic_server &&that) noexcept:
 			root_handler{std::move(that.root_handler)},
-			max_header_size{std::move(that.max_header_size)},
-			read_timeout{std::move(that.read_timeout)},
-			write_timeout{std::move(that.write_timeout)} {}
+			options{std::move(that.options)} {}
 
 		template <typename Handler> basic_server<Handler> &basic_server<Handler>::operator=(basic_server &&that) noexcept {	
 			root_handler = std::move(that.root_handler);
-			max_header_size = std::move(that.max_header_size);
-			read_timeout = std::move(that.read_timeout);
-			write_timeout = std::move(that.write_timeout);
+			options = std::move(that.options);
 			return *this;
 		}
 
@@ -335,11 +341,11 @@ namespace clane {
 			// unique thread for each listener:
 
 			while (!listeners.empty()) {
-#ifdef CLANE_HAVE_STD_THREAD_MOVE_ARG
+#ifndef CLANE_HAVE_NO_STD_THREAD_MOVE_ARG
 				thrds.push_back(std::thread(&basic_server::listen_main, this, std::move(listeners.front())));
 #else
 				// If std::thread doesn't support rvalue reference arguments then move
-				// the socket inside the thread.
+				// the socket from within the thread.
 				net::socket lis = std::move(listeners.front());
 				net::socket *plis = &lis;
 				std::mutex lis_mutex;
@@ -354,7 +360,7 @@ namespace clane {
 
 			// wait for the termination signal:
 			net::poller poller;
-			poller.add(term_event, poller.in);
+			poller.add(term_ev, poller.in);
 			poller.poll();
 
 			// wait for all listeners to stop:
@@ -367,7 +373,7 @@ namespace clane {
 		}
 
 		template <typename Handler> void basic_server<Handler>::terminate() {
-			term_event.signal();
+			term_ev.signal();
 		}
 
 #ifndef CLANE_HAVE_STD_THREAD_MOVE_ARG
@@ -385,7 +391,7 @@ namespace clane {
 		template <typename Handler> void basic_server<Handler>::listen_main(net::socket &&lis) {
 
 			net::poller poller;
-			size_t const iterm = poller.add(term_event, poller.in);
+			size_t const iterm = poller.add(term_ev, poller.in);
 			poller.add(lis, poller.in);
 
 			// accept incoming connections, and launch a unique thread for each new
@@ -396,11 +402,11 @@ namespace clane {
 				net::socket conn = lis.accept(e);
 				if (e)
 					continue; // ignore error
-#ifdef CLANE_HAVE_STD_THREAD_MOVE_ARG
+#ifndef CLANE_HAVE_NO_STD_THREAD_MOVE_ARG
 				std::thread conn_thrd(&basic_server::connection_main, this, std::move(conn));
 #else
 				// If std::thread doesn't support rvalue reference arguments then move
-				// the socket inside the thread.
+				// the socket from within the thread.
 				net::socket *pconn = &conn;
 				std::mutex conn_mutex;
 				std::condition_variable conn_cond;
@@ -414,7 +420,7 @@ namespace clane {
 			}
 		}
 
-#ifndef CLANE_HAVE_STD_THREAD_MOVE_ARG
+#ifdef CLANE_HAVE_NO_STD_THREAD_MOVE_ARG
 		template <typename Handler> void basic_server<Handler>::connection_main_move_wrapper(std::mutex &conn_mutex,
 		std::condition_variable &conn_cond, net::socket **conn) {
 			std::unique_lock<std::mutex> conn_lock(conn_mutex);
@@ -426,154 +432,31 @@ namespace clane {
 		}
 #endif
 
-		template <typename Handler> void handler_main(Handler &h, std::shared_ptr<server_context> ctx) {
-
-			// root handler:
-			h(ctx->rs, ctx->req);
-
-			// Special case: If the root handler responds with (1) an error status
-			// code (4xx or 5xx) and (2) an empty and non-flushed body then fill out
-			// the body with the status code reason phrase. This causes error
-			// responses to be human-meaningful by default but still allows
-			// applications to customize the error response page--even for error
-			// responses generated by built-in handlers such as the basic_router.
-
-			if (!ctx->sb.headers_written() && denotes_error(ctx->rs.status)) {
-				auto r = ctx->rs.headers.equal_range("content-type");
-				ctx->rs.headers.erase(r.first, r.second);
-#ifdef CLANE_HAVE_STD_MULTIMAP_EMPLACE
-				ctx->rs.headers.emplace("content-type", "text/plain");
-#else
-				ctx->rs.headers.insert(http::header("content-type", "text/plain"));
-#endif
-				ctx->rs << what(ctx->rs.status) << '\n';
-			}
-		}
-
-		template <typename Handler> void basic_server<Handler>::connection_main(net::socket &&conn) {
-
-			auto my_ref = conn_wg->new_reference();
-			sync::wait_group req_wg; // for waiting on request-handler threads to complete
+		template <typename Handler> void basic_server<Handler>::connection_main(net::socket conn) {
 
 			conn.set_nonblocking();
+			server_streambuf sb{std::move(conn), term_ev, &options};
 
-			// input buffer:
-			static size_t const incap = 4096;
-			std::shared_ptr<char> inbuf;
-			size_t inoff = incap;
-			size_t insiz;
-
-			// request-handler context:
-			auto cur_ctx = std::make_shared<server_context>(req_wg.new_reference(), conn);
-
-			// parsing:
-			v1x_request_incparser pars;
-			pars.reset();
-			pars.set_length_limit(max_header_size);
-			bool got_hdrs = false;
-
-			// I/O multiplexing:
-			std::chrono::steady_clock::time_point to;
-			if (std::chrono::steady_clock::duration::zero() != read_timeout)
-				to = std::chrono::steady_clock::now() + read_timeout;
-			net::poller poller;
-			size_t const iterm = poller.add(term_event, poller.in);
-			poller.add(conn, poller.in);
-
-			// consume incoming data from the connection:
 			while (true) {
 
-				// wait for event: data, termination, or timeout
-				auto poll_res = std::chrono::steady_clock::duration::zero() == to.time_since_epoch() ? poller.poll() : poller.poll(to);
-				if (!poll_res.index) {
-					// FIXME: timeout
-					goto done;
-				}
-				if (poll_res.index == iterm) {
-					// FIXME: termination
-					goto done;
-				}
+				// receive the headers for the next request:
+				bool done = !sb.recv_header();
+				if (done)
+					return;
 
-				// reallocate input buffer if full:
-				if (inoff == incap) {
-					inbuf = std::unique_ptr<char, std::default_delete<char[]>>(new char[incap]);
-					inoff = insiz = 0;
-				}
+				// launch the root handler:
+				response_ostream rs{&sb, sb.out_scode, sb.out_hdrs};
+				request req{&sb};
+				sb.in_trls = &req.trailers;
+				req.method = std::move(sb.method());
+				req.uri = std::move(sb.uri());
+				req.major_version = std::move(sb.major_version());
+				req.headers = std::move(sb.headers());
+				root_handler(rs, req);
 
-				// receive:
-				{
-					std::error_code e;
-					size_t xstat = conn.recv(reinterpret_cast<char *>(inbuf.get()) + inoff, incap - inoff, e);
-					if (e == std::errc::operation_would_block || e == std::errc::resource_unavailable_try_again)
-						continue; // go back to waiting
-					if (e) {
-						// FIXME: connection error
-						goto done;
-					}
-					if (!xstat) {
-						// FIXME: connection FIN
-						goto done;
-					}
-					insiz = xstat;
-				}
-
-				// process the received data:
-				while (insiz) {
-
-					// parse:
-					size_t pstat = pars.parse_some(inbuf.get()+inoff, inbuf.get()+inoff+insiz);
-					if (pars.error == pstat) {
-						// FIXME: error
-						goto done;
-					}
-
-					// FIXME: check HTTP version
-
-					if (pars.got_headers()) {
-
-						// got new request?
-						if (!got_hdrs) {
-
-							// set up request object:
-							got_hdrs = true;
-							cur_ctx->sb.enable();
-							cur_ctx->req.method = std::move(pars.method());
-							cur_ctx->req.uri = std::move(pars.uri());
-							cur_ctx->req.major_version = pars.major_version();
-							cur_ctx->req.minor_version = pars.minor_version();
-							cur_ctx->sb.set_version(cur_ctx->req.major_version, cur_ctx->req.minor_version);
-							cur_ctx->req.headers = std::move(pars.headers());
-
-							// start request handler:
-							std::thread(&handler_main<Handler>, std::ref(root_handler), cur_ctx).detach();
-						}
-
-						// feed body data to request object:
-						cur_ctx->sb.more_request_body(inbuf, inoff+pars.offset(), pars.size());
-					}
-
-					inoff += pstat;
-					insiz -= pstat;
-
-					if (pars)
-						continue;
-
-					// request is complete:
-					cur_ctx->req.trailers = std::move(pars.trailers());
-					cur_ctx->sb.end_request_body();
-
-					// prepare for next request:
-					{
-						auto next_ctx = std::make_shared<server_context>(req_wg.new_reference(), conn);
-						cur_ctx->set_next_context(next_ctx); // set up pipeline dependency
-						cur_ctx = std::move(next_ctx);
-						pars.reset();
-						got_hdrs = false;
-					}
-				}
+				// post-processing:
+				post_handler(sb, rs, req);
 			}
-done: // connection is finished, regardless whether graceful or not
-			{}
 		}
 
 	}

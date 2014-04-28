@@ -16,18 +16,17 @@
 // New compilers may require additional definitions.
 
 #if !defined DOXYGEN && !defined noexcept && (__GNUC__ == 4 && __GNUC_MINOR__ < 6)
-#define noexcept // partial support for noexcept
-#endif
-
-#if !defined DOXYGEN && !defined nullptr && (__GNUC__ == 4 && __GNUC_MINOR__ < 6)
-#define nullptr 0 // fake support for nullptr
-#endif
-
-#if !defined DOXYGEN && !defined steady_clock && (__GNUC__ == 4 && __GNUC_MINOR__ < 7)
-#define steady_clock monotonic_clock // fake support for steady_clock
+// Partial support for noexcept
+#define noexcept
+// Fake support for nullptr
+#define nullptr 0
+// No support for moving arguments into std::thread function
+#define CLANE_HAVE_NO_STD_THREAD_MOVE_ARG
 #endif
 
 #if !defined DOXYGEN && (__GNUC__ == 4 && __GNUC_MINOR__ < 7)
+// Fake support for steady_clock
+#define steady_clock monotonic_clock
 // No support for default move constructor or move assignment operator
 #define CLANE_HAVE_NO_DEFAULT_MOVE
 #endif
