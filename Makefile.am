@@ -165,7 +165,6 @@ TESTS = \
 	src/http/tests/check_http_v1x_request_incparser \
 	src/http/tests/check_http_v1x_response_incparser \
 	src/http/tests/check_http_response_record \
-	src/http/tests/check_http_default_error_handler \
 	src/http/tests/check_http_prefix_stripper \
 	src/http/tests/check_http_serve_file \
 	src/http/tests/check_http_file_server \
@@ -195,10 +194,6 @@ noinst_HEADERS += src/http/tests/clane_http_v1x_response.hpp
 check_PROGRAMS += src/http/tests/check_http_canonize_1x_header_name
 src_http_tests_check_http_canonize_1x_header_name_LDADD = src/http/libclane_http.la
 src_http_tests_check_http_canonize_1x_header_name_SOURCES = src/http/tests/check_http_canonize_1x_header_name.cpp
-
-check_PROGRAMS += src/http/tests/check_http_default_error_handler
-src_http_tests_check_http_default_error_handler_LDADD = src/http/libclane_http.la
-src_http_tests_check_http_default_error_handler_SOURCES = src/http/tests/check_http_default_error_handler.cpp
 
 check_PROGRAMS += src/http/tests/check_http_file_server
 src_http_tests_check_http_file_server_LDADD = src/http/libclane_http.la

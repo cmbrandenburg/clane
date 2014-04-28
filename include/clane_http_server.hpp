@@ -13,6 +13,7 @@
 #include "clane_http_message.hpp"
 #include "clane_net.hpp"
 #include "clane_sync.hpp"
+#include <cassert>
 #include <deque>
 #include <istream>
 #include <memory>
@@ -56,6 +57,43 @@ namespace clane {
 
 		inline response_ostream::response_ostream(std::streambuf *sb, status_code &scode, header_map &hdrs):
 		 	std::ostream{sb}, status(scode), headers(hdrs) {}
+
+		/** @brief HTTP server-side connection
+		 *
+		 * @remark Applications should not use the server_connection class directly.
+		 *
+		 * @sa basic_server */
+		class server_connection {
+		private:
+			net::socket conn;
+			net::event &term_ev;
+			char *icur_;
+			char *iend_;
+			char ibuf_[4096];
+			char *obeg_;
+			char *ocur_;
+			char obuf_[4096];
+		public:
+			~server_connection() {}
+			server_connection(net::socket &&conn, net::event &term_ev);
+			server_connection(server_connection const &) = delete;
+			server_connection &operator=(server_connection const &) = delete;
+			server_connection(server_connection &&) = delete;
+			server_connection &operator=(server_connection &&) = delete;
+
+			bool recv_if_none_avail(std::chrono::steady_clock::duration timeout = std::chrono::steady_clock::duration::zero());
+			bool send_all(std::chrono::steady_clock::duration timeout = std::chrono::steady_clock::duration::zero());
+
+			// buffer accessors:
+			char *ibeg() { return ibuf_; }
+			char *icur() { return icur_; }
+			char *iend() { return iend_; }
+			void ibump(size_t n) { icur_ += n; assert(icur_ <= iend_); }
+			char *obeg() { return obeg_; }
+			char *ocur() { return ocur_; }
+			char *oend() { return obuf_+sizeof(obuf_); }
+			void obump(size_t n) { ocur_ += n; assert(ocur_ <= oend()); }
+		};
 
 		struct server_options {
 

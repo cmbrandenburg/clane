@@ -20,13 +20,6 @@
 namespace clane {
 	namespace http {
 
-		/** @brief Default error handler
-		 *
-		 * @remark The default_error_handler() function inserts a simple
-		 * description of the given error into the `rs` response_ostream
-		 * instance. */
-		void default_error_handler(response_ostream &rs, request &req, status_code scode, std::string const &msg);
-
 		/** @brief Captures an HTTP response message in order to test a server-side
 		 * request handler
 		 *

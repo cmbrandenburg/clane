@@ -15,17 +15,95 @@
 namespace clane {
 	namespace http {
 
-		// FIXME: What to do with default_error_handler? Remove?
-		void default_error_handler(response_ostream &rs, request &req, status_code stat, std::string const &msg) {
-			rs.status = stat;
-#ifdef CLANE_HAVE_STD_MULTIMAP_EMPLACE
-			rs.headers.emplace("content-type", "text/plain");
-#else
-			rs.headers.insert(header("content-type", "text/plain"));
-#endif
-			rs << static_cast<int>(stat) << ' ' << what(stat) << '\n';
-			if (!msg.empty())
-				rs << msg << '\n';
+		server_connection::server_connection(net::socket &&conn, net::event &term_ev):
+			conn{std::move(conn)},
+			term_ev(term_ev),
+			icur_{ibuf_},
+			iend_{ibuf_},
+			obeg_{obuf_},
+			ocur_{obuf_}
+		{}
+
+		bool server_connection::recv_if_none_avail(std::chrono::steady_clock::duration timeout) {
+
+			if (icur() < iend())
+				return true; // data already available
+
+			icur_ = iend_ = ibuf_; // reset input buffer
+
+			// calculate absolute timeout:
+			std::chrono::steady_clock::time_point abs_timeout;
+			bool timed{};
+			if (std::chrono::steady_clock::duration::zero() != timeout) {
+				abs_timeout = std::chrono::steady_clock::now() + timeout;
+				timed = true;
+			}
+
+			// set up poller:
+			net::poller poller;
+			size_t const iterm = poller.add(term_ev, poller.in);
+			poller.add(conn, poller.in);
+
+			while (true) {
+
+				// wait for incoming data, termination, or timeout:
+				auto poll_res = timed ? poller.poll() : poller.poll(abs_timeout);
+				if (!poll_res.index)
+					return false; // timeout
+				if (poll_res.index == iterm)
+					return false; // termination
+
+				// receive:
+				std::error_code e;
+				size_t xstat = conn.recv(ibuf_, sizeof(ibuf_), e);
+				if (e == std::errc::operation_would_block || e == std::errc::resource_unavailable_try_again)
+					continue; // false positive from the poll operation--continue receiving
+				iend_ += xstat;
+				if (e)
+					return false; // connection error
+				if (!xstat)
+					return false; // connection FIN
+				return true; // data available, connection OK
+			}
+		}
+
+		bool server_connection::send_all(std::chrono::steady_clock::duration timeout) {
+
+			// calculate absolute timeout:
+			std::chrono::steady_clock::time_point abs_timeout;
+			bool timed{};
+			if (std::chrono::steady_clock::duration::zero() != timeout) {
+				abs_timeout = std::chrono::steady_clock::now() + timeout;
+				timed = true;
+			}
+
+			// set up poller:
+			net::poller poller;
+			size_t const iterm = poller.add(term_ev, poller.in);
+			poller.add(conn, poller.out);
+
+			// while output buffer is nonempty:
+			while (obeg() < ocur()) {
+
+				// wait for send readiness, termination, or timeout:
+				auto poll_res = timed ? poller.poll() : poller.poll(abs_timeout);
+				if (!poll_res.index)
+					return false; // timeout
+				if (poll_res.index == iterm)
+					return false; // termination
+
+				// send:
+				std::error_code e;
+				size_t xstat = conn.send(obeg(), ocur()-obeg(), e);
+				if (e == std::errc::operation_would_block || e == std::errc::resource_unavailable_try_again)
+					continue; // false positive from the poll operation--continue sending
+				obeg_ += xstat;
+				if (e)
+					return false; // connection error
+				if (!xstat)
+					return false; // connection FIN
+			}
+			return true; // all data sent, connection OK
 		}
 
 		server_streambuf::~server_streambuf() {
