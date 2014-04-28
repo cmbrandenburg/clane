@@ -220,7 +220,7 @@ namespace clane {
 						case ENOBUFS:
 						case ETIMEDOUT:
 							e.assign(errno, os_category());
-							return 0;
+							return tot;
 						default:
 							throw std::system_error(errno, os_category(), "send");
 					}
@@ -247,7 +247,7 @@ namespace clane {
 						case ENOMEM:
 						case ETIMEDOUT:
 							e.assign(errno, os_category());
-							return 0;
+							return tot;
 						default:
 							throw std::system_error(errno, os_category(), "recv");
 					}
