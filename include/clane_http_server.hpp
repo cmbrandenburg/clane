@@ -58,9 +58,11 @@ namespace clane {
 		inline response_ostream::response_ostream(std::streambuf *sb, status_code &scode, header_map &hdrs):
 		 	std::ostream{sb}, status(scode), headers(hdrs) {}
 
-		/** @brief HTTP server-side connection
+		/** @brief Server-side HTTP connection
 		 *
-		 * @remark Applications should not use the server_connection class directly.
+		 * @remark The server_connection class pairs a socket with its user-space
+		 * input and output buffers. Applications should not use the
+		 * server_connection class directly.
 		 *
 		 * @sa basic_server */
 		class server_connection {
@@ -110,39 +112,24 @@ namespace clane {
 		};
 
 		class server_streambuf: public std::streambuf {
-		private:
-			net::socket conn;
-			net::event &term_ev;
-			server_options const *sopts;
-		public:
+			friend class server_request;
+			server_connection *conn;
+			server_options const *opts;
 			header_map *in_trls;
-		private:
+
 			bool hdrs_written;
-			bool in_body;
 			bool chunked;
 			size_t content_len;
-
-			// input buffer offsets:
-			size_t ibeg;
-			size_t iend;
-
-			v1x_request_incparser pars;
-
 
 			// response attributes:
 			int out_major_ver;
 			int out_minor_ver;
-		public:
 			status_code out_scode;
 			header_map out_hdrs;
-		private:
-
-			char ibuf[4096]; // input buffer
-			char obuf[4096]; // output buffer
 
 		public:
 			virtual ~server_streambuf();
-			server_streambuf(net::socket &&conn, net::event &term_ev, server_options const *sopts);
+			server_streambuf(server_connection *conn, server_options const *opts);
 			server_streambuf(server_streambuf const &) = default;
 			server_streambuf &operator=(server_streambuf const &) = default;
 #ifndef CLANE_HAVE_NO_DEFAULT_MOVE
@@ -150,45 +137,35 @@ namespace clane {
 			server_streambuf &operator=(server_streambuf &&) = default;
 #endif
 
-			// Returns true if and only if the headers have been received, false if
-			// and only if the connection should close. By returning whether the
-			// headers have been received (and not invoking the root handler for the
-			// request), the basic_server<> template class may call this function
-			// without the function definition residing in the header file, a la
-			// pimpl-lite. The cost, however, is a little more code complexity. The
-			// server_streambuf class has two contexts: (1) when it's receiving the
-			// headers, in which case the stream buffer is ignored, and (2) when it's
-			// invoked via virtual std::streambuf methods to obtain more body data, in
-			// which case the stream buffer is used.
-			bool recv_header();
-
-			// request accessors:
-			// These become available when the recv_header() method returns true.
-			std::string &method() { return pars.method(); }
-			uri::uri &uri() { return pars.uri(); }
-			int major_version() { return pars.major_version(); }
-			int minor_version() { return pars.minor_version(); }
-			header_map &headers() { return pars.headers(); }
-			header_map &trailers() { return pars.trailers(); }
-
-			bool headers_written() const { return hdrs_written; }
-
 		protected:
 			virtual int_type underflow();
 			virtual int sync();
 			virtual int_type overflow(int_type ch);
 		private:
-			bool recv_some();
-			size_t parse_some();
 			int flush(bool end = false);
+			bool headers_written() const { return hdrs_written; }
 		};
-
-		/** @brief Perform post-processing for a server root handler
+		/** @brief Server-side HTTP request–response pair
 		 *
-		 * @remark Applications should not use the post_handler() function directly.
+		 * @remark Applications should not use the server_request class directly.
 		 *
 		 * @sa basic_server */
-		void post_handler(server_streambuf &sb, response_ostream &rs, request &req);
+		class server_request {
+			server_streambuf sb;
+		public:
+			response_ostream rs;
+			request req;
+		private:
+			v1x_request_incparser pars;
+		public:
+			~server_request();
+			server_request(server_connection &conn, server_options const &opts);
+			server_request(server_request const &) = delete;
+			server_request &operator=(server_request const &) = delete;
+			server_request(server_request &&) = delete;
+			server_request &operator=(server_request &&) = delete;
+			bool recv_headers();
+		};
 
 		/** @brief HTTP server
 		 *
@@ -472,28 +449,17 @@ namespace clane {
 
 		template <typename Handler> void basic_server<Handler>::connection_main(net::socket conn) {
 
-			conn.set_nonblocking();
-			server_streambuf sb{std::move(conn), term_ev, &options};
+			server_connection sc{std::move(conn), term_ev};
 
 			while (true) {
 
 				// receive the headers for the next request:
-				bool done = !sb.recv_header();
-				if (done)
+				server_request sreq{sc, options}; 
+				if (!sreq.recv_headers())
 					return;
 
 				// launch the root handler:
-				response_ostream rs{&sb, sb.out_scode, sb.out_hdrs};
-				request req{&sb};
-				sb.in_trls = &req.trailers;
-				req.method = std::move(sb.method());
-				req.uri = std::move(sb.uri());
-				req.major_version = std::move(sb.major_version());
-				req.headers = std::move(sb.headers());
-				root_handler(rs, req);
-
-				// post-processing:
-				post_handler(sb, rs, req);
+				root_handler(sreq.rs, sreq.req);
 			}
 		}
 

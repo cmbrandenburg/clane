@@ -22,7 +22,9 @@ namespace clane {
 			iend_{ibuf_},
 			obeg_{obuf_},
 			ocur_{obuf_}
-		{}
+		{
+			conn.set_nonblocking();
+		}
 
 		bool server_connection::recv_if_none_avail(std::chrono::steady_clock::duration timeout) {
 
@@ -110,123 +112,11 @@ namespace clane {
 			flush(true);
 		}
 
-		server_streambuf::server_streambuf(net::socket &&conn, net::event &term_ev, server_options const *sopts):
-			conn{std::move(conn)},
-			term_ev(term_ev),
-			sopts{sopts},
+		server_streambuf::server_streambuf(server_connection *conn, server_options const *opts):
+			conn{conn},
+			opts{opts},
 			in_trls{},
-			hdrs_written{},
-			in_body{},
-			ibeg{},
-			iend{}
-		{
-			pars.reset();
-			pars.set_length_limit(sopts->max_header_size);
-		}
-
-		bool server_streambuf::recv_header() {
-
-			// Here, the connection may be newly accepted, in which case the input
-			// buffer is empty. However, the connection may have already received and
-			// handled a request, in which case the input buffer may contain leftover
-			// data. The data may be an incomplete request or a complete request--or
-			// even multiple requests.
-
-			if (in_body) {
-
-				// The previous request handler may not have consumed all body data, so
-				// consume any leftover body and trailers now.
-				while (pars) {
-					if (ibeg == iend && !recv_some())
-						return false; // connection error
-					size_t pstat = parse_some();
-					if (pars.error == pstat)
-						return false; // invalid request
-					ibeg += pstat;
-				}
-
-				// prepare for another request:
-				in_body = false;
-				hdrs_written = false;
-				pars.reset();
-				out_hdrs.clear();
-			}
-
-			while (true) {
-
-				// receive:
-				if (ibeg == iend && !recv_some())
-					return false; // connection error
-
-				// parse:
-				size_t pstat = parse_some();
-				if (pars.error == pstat)
-					return false; // invalid request
-				ibeg += pstat;
-				
-				// still incomplete?
-				if (!pars.got_headers()) {
-					assert(ibeg == iend); // must have parsed everything if incomplete
-					continue; // headers are incomplete--continue receiving
-				}
-
-				// Headers are complete: prepare for steam buffering.
-				in_body = true;
-				out_major_ver = pars.major_version();
-				out_minor_ver = pars.minor_version();
-				out_scode = status_code::ok;
-				assert(out_hdrs.empty()); // already cleared
-				setp(obuf, obuf); // force overflow on first write
-				return true; // headers are complete and available
-			}
-		}
-
-		bool server_streambuf::recv_some() {
-			if (ibeg == iend)
-				ibeg = iend = 0;
-			while (true) {
-
-				// I/O multiplexing:
-				std::chrono::steady_clock::time_point to;
-				bool timed{};
-				// FIXME: Use either header_timeout or read_timeout, depending on ?
-				if (sopts->header_timeout.zero() != sopts->header_timeout) {
-					to = std::chrono::steady_clock::now() + sopts->header_timeout;
-					timed = true;
-				}
-				net::poller poller;
-				size_t const iterm = poller.add(term_ev, poller.in);
-				poller.add(conn, poller.in);
-
-				// wait for incoming data, termination, or timeout:
-				auto poll_res = timed ? poller.poll() : poller.poll(to);
-				if (!poll_res.index)
-					return false; // timeout
-				if (poll_res.index == iterm)
-					return false; // termination
-
-				// receive:
-				std::error_code e;
-				size_t xstat = conn.recv(ibuf+iend, sizeof(ibuf)-iend, e);
-				if (e == std::errc::operation_would_block || e == std::errc::resource_unavailable_try_again)
-					continue; // false positive from the poll operation--continue receiving
-				if (e)
-					return false; // connection error
-				if (!xstat)
-					return false; // connection FIN
-				iend += xstat;
-				return true; // connection okay
-			}
-		}
-
-		size_t server_streambuf::parse_some() {
-			size_t pstat = pars.parse_some(ibuf+ibeg, ibuf+iend);
-			if (pars.error == pstat) {
-				// FIXME: Send an error response to the client. The parser has the HTTP
-				// status code.
-			}
-			return pstat; // relay result, either success or error
-		}
+			hdrs_written{} {}
 
 		server_streambuf::int_type server_streambuf::underflow() {
 
@@ -234,28 +124,27 @@ namespace clane {
 			// request arrives.
 
 			if (gptr() < egptr())
-				return traits_type::to_int_type(*gptr());
-
-			// Here, a request handler is trying to get more body data. The input
-			// buffer may have leftover data in it.
+				return traits_type::to_int_type(*gptr()); // buffer already nonempty
 
 			while (true) {
 
-				if (ibeg == iend && !recv_some())
+				if (conn->icur() >= conn->iend() && !conn->recv_if_none_avail())
 					return traits_type::eof(); // connection error
 
 				// parse:
-				size_t pstat = parse_some();
-				if (pars.error == pstat)
+				size_t pstat = pars.parse_some(conn->icur(), conn->iend());
+				if (pars.error == pstat) {
+					// FIXME: Send error response to client?
 					return traits_type::eof(); // invalid request body
+				}
 				if (!pars) {
 					*in_trls = std::move(pars.trailers());
 					if (!pars.size())
 						return traits_type::eof(); // no body
 				}
 				if (pars.size()) {
-					setg(ibuf, ibuf+ibeg+pars.offset(), ibuf+ibeg+pars.size());
-					ibeg += pstat;
+					setg(conn->ibeg(), conn->icur()+pars.offset(), conn->icur()+pars.offset()+pars.size());
+					conn->ibump(pstat);
 					return traits_type::to_int_type(*gptr()); // success
 				}
 			}
@@ -349,26 +238,72 @@ namespace clane {
 			return 0; // success
 		}
 
-		void post_handler(server_streambuf &sb, response_ostream &rs, request &req) {
+		server_request::~server_request() {
 
-				// Special case: If the root handler responds with (1) an error status
-				// code (4xx or 5xx) and (2) an empty and non-flushed body then fill out
-				// the body with the status code reason phrase. This causes error
-				// responses to be human-meaningful by default but still allows
-				// applications to customize the error response page--even for error
-				// responses generated by built-in handlers such as the basic_router.
+			// Special case: If the root handler responds with (1) an error status
+			// code (4xx or 5xx) and (2) an empty and non-flushed body then fill out
+			// the body with the status code reason phrase. This causes error
+			// responses to be human-meaningful by default but still allows
+			// applications to customize the error response page--even for error
+			// responses generated by built-in handlers such as the basic_router.
 
-				if (!sb.headers_written() && denotes_error(rs.status)) {
-					auto r = rs.headers.equal_range("content-type");
-					rs.headers.erase(r.first, r.second);
+			if (!sb.headers_written() && denotes_error(rs.status)) {
+				auto r = rs.headers.equal_range("content-type");
+				rs.headers.erase(r.first, r.second);
 #ifdef CLANE_HAVE_STD_MULTIMAP_EMPLACE
-					rs.headers.emplace("content-type", "text/plain");
+				rs.headers.emplace("content-type", "text/plain");
 #else
-					rs.headers.insert(http::header("content-type", "text/plain"));
+				rs.headers.insert(http::header("content-type", "text/plain"));
 #endif
-					rs << what(rs.status) << '\n';
+				rs << what(rs.status) << '\n';
+			}
+		}
+
+		server_request::server_request(server_connection &conn, server_options const &opts):
+			sb{&conn, &opts},
+			rs{&sb, sb.out_scode, sb.out_hdrs},
+			req{&sb}
+		{
+			pars.set_length_limit(opts.max_header_size);
+		}
+
+		bool server_request::recv_headers() {
+
+			pars.reset();
+
+			while (true) {
+
+				// receive:
+				if (!sb.conn->recv_if_none_avail(sb.opts->header_timeout))
+					return false;
+
+				// parse:
+				size_t pstat = pars.parse_some(sb.conn->icur(), sb.conn->iend());
+				if (pars.error == pstat) {
+					// FIXME: Send an error response to the client. The parser has the HTTP
+					// status code.
+					return false;
+				}
+				sb.conn->ibump(pstat);
+
+				// still incomplete?
+				if (!pars.got_headers()) {
+					assert(sb.conn->icur() >= sb.conn->iend()); // must have parsed everything if incomplete
+					continue; // headers are incomplete--continue receiving
 				}
 
+				// Headers are complete: prepare for steam buffering.
+				sb.out_major_ver = pars.major_version();
+				sb.out_minor_ver = pars.minor_version();
+				sb.out_scode = status_code::ok;
+				sb.setp(nullptr, nullptr); // force overflow on first write
+				sb.in_trls = &req.trailers;
+				req.method = std::move(pars.method());
+				req.uri = std::move(pars.uri());
+				req.major_version = std::move(pars.major_version());
+				req.headers = std::move(pars.headers());
+				return true;
+			}
 		}
 
 	}
