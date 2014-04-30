@@ -58,11 +58,14 @@ namespace clane {
 		inline response_ostream::response_ostream(std::streambuf *sb, status_code &scode, header_map &hdrs):
 		 	std::ostream{sb}, status(scode), headers(hdrs) {}
 
+		// XXX: TEST CASE: Root handler doesn't consume all body data and a new
+		// request arrives.
+
 		/** @brief Server-side HTTP connection
 		 *
 		 * @remark The server_connection class pairs a socket with its user-space
-		 * input and output buffers. Applications should not use the
-		 * server_connection class directly.
+		 * input buffer. Applications should not use the server_connection class
+		 * directly.
 		 *
 		 * @sa basic_server */
 		class server_connection {
@@ -72,9 +75,6 @@ namespace clane {
 			char *icur_;
 			char *iend_;
 			char ibuf_[4096];
-			char *obeg_;
-			char *ocur_;
-			char obuf_[4096];
 		public:
 			~server_connection() {}
 			server_connection(net::socket &&conn, net::event &term_ev);
@@ -83,20 +83,21 @@ namespace clane {
 			server_connection(server_connection &&) = delete;
 			server_connection &operator=(server_connection &&) = delete;
 
+			net::socket &socket() { return conn; }
+
 			bool recv_if_none_avail(std::chrono::steady_clock::duration timeout = std::chrono::steady_clock::duration::zero());
-			bool send_all(std::chrono::steady_clock::duration timeout = std::chrono::steady_clock::duration::zero());
+			bool recv_some(std::chrono::steady_clock::duration timeout = std::chrono::steady_clock::duration::zero());
+			bool send_all(void const *p, size_t n,
+				std::chrono::steady_clock::duration timeout = std::chrono::steady_clock::duration::zero());
 
 			// buffer accessors:
 			char *ibeg() { return ibuf_; }
 			char *icur() { return icur_; }
 			char *iend() { return iend_; }
 			void ibump(size_t n) { icur_ += n; assert(icur_ <= iend_); }
-			char *obeg() { return obeg_; }
-			char *ocur() { return ocur_; }
-			char *oend() { return obuf_+sizeof(obuf_); }
-			void obump(size_t n) { ocur_ += n; assert(ocur_ <= oend()); }
 		};
 
+		/** @brief Set of options for an HTTP server */
 		struct server_options {
 
 			server_options():
@@ -111,60 +112,25 @@ namespace clane {
 			std::chrono::steady_clock::duration write_timeout;
 		};
 
-		class server_streambuf: public std::streambuf {
-			friend class server_request;
-			server_connection *conn;
-			server_options const *opts;
-			header_map *in_trls;
+		class server_request_impl;
 
-			bool hdrs_written;
-			bool chunked;
-			size_t content_len;
-
-			// response attributes:
-			int out_major_ver;
-			int out_minor_ver;
-			status_code out_scode;
-			header_map out_hdrs;
-
-		public:
-			virtual ~server_streambuf();
-			server_streambuf(server_connection *conn, server_options const *opts);
-			server_streambuf(server_streambuf const &) = default;
-			server_streambuf &operator=(server_streambuf const &) = default;
-#ifndef CLANE_HAVE_NO_DEFAULT_MOVE
-			server_streambuf(server_streambuf &&) = default;
-			server_streambuf &operator=(server_streambuf &&) = default;
-#endif
-
-		protected:
-			virtual int_type underflow();
-			virtual int sync();
-			virtual int_type overflow(int_type ch);
-		private:
-			int flush(bool end = false);
-			bool headers_written() const { return hdrs_written; }
-		};
 		/** @brief Server-side HTTP request–response pair
 		 *
 		 * @remark Applications should not use the server_request class directly.
 		 *
 		 * @sa basic_server */
 		class server_request {
-			server_streambuf sb;
-		public:
-			response_ostream rs;
-			request req;
-		private:
-			v1x_request_incparser pars;
+			std::unique_ptr<server_request_impl> impl;
 		public:
 			~server_request();
-			server_request(server_connection &conn, server_options const &opts);
+			server_request(server_connection *conn, server_options const *opts);
 			server_request(server_request const &) = delete;
 			server_request &operator=(server_request const &) = delete;
 			server_request(server_request &&) = delete;
 			server_request &operator=(server_request &&) = delete;
 			bool recv_headers();
+			http::response_ostream &response_ostream();
+			http::request &request();
 		};
 
 		/** @brief HTTP server
@@ -454,12 +420,12 @@ namespace clane {
 			while (true) {
 
 				// receive the headers for the next request:
-				server_request sreq{sc, options}; 
+				server_request sreq(&sc, &options);
 				if (!sreq.recv_headers())
 					return;
 
 				// launch the root handler:
-				root_handler(sreq.rs, sreq.req);
+				root_handler(sreq.response_ostream(), sreq.request());
 			}
 		}
 
