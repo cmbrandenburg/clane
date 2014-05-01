@@ -24,6 +24,7 @@ namespace clane {
 			header_map *in_trls;
 
 			v1x_request_incparser pars;
+			bool enabled;
 			bool hdrs_written;
 			bool chunked;
 			size_t content_len;
@@ -54,6 +55,7 @@ namespace clane {
 		private:
 			bool flush(bool end = false);
 			bool headers_written() const { return hdrs_written; }
+			void enable();
 		};
 
 		server_streambuf::~server_streambuf() {
@@ -64,6 +66,7 @@ namespace clane {
 			conn(conn),
 			opts(opts),
 			in_trls{},
+			enabled{},
 			hdrs_written{},
 			ocur(obuf)
 		{
@@ -117,6 +120,9 @@ namespace clane {
 
 		bool server_streambuf::flush(bool end) {
 
+			if (!enabled)
+				return true;
+
 			// FIXME: Each send operation has its own relative timeout. Because a
 			// single flush operation may comprise multiple send operations, the
 			// timeout value isn't reliable. The server option write_timeout should
@@ -147,6 +153,8 @@ namespace clane {
 				std::string hdr_lines = ss.str();
 				if (!conn->send_all(hdr_lines.data(), hdr_lines.size()))
 					return false; // connection error
+
+				hdrs_written = true;
 			}
 
 			// send chunk:
@@ -186,6 +194,10 @@ namespace clane {
 			}
 
 			return true; // success
+		}
+
+		void server_streambuf::enable() {
+			enabled = true;
 		}
 
 		class server_request_impl {
@@ -262,6 +274,7 @@ namespace clane {
 				req.uri = std::move(sb.pars.uri());
 				req.major_version = std::move(sb.pars.major_version());
 				req.headers = std::move(sb.pars.headers());
+				sb.enable();
 				return true;
 			}
 		}
@@ -272,7 +285,7 @@ namespace clane {
 			icur_{ibuf_},
 			iend_{ibuf_}
 		{
-			conn.set_nonblocking();
+			this->conn.set_nonblocking();
 		}
 
 		bool server_connection::recv_if_none_avail(std::chrono::steady_clock::duration timeout) {
