@@ -85,6 +85,8 @@ src_net_libclane_net_la_LIBADD = \
 	src/posix/libclane_posix.la \
 	-lpthread
 src_net_libclane_net_la_SOURCES = \
+	src/net/clane_net_connbuf.cpp \
+	src/net/clane_net_connbuf.hpp \
 	src/net/clane_net_error.hpp \
 	src/net/clane_net_event.cpp \
 	src/net/clane_net_event.hpp \
