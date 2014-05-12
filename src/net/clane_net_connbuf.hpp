@@ -19,8 +19,12 @@
 namespace clane {
 	namespace net {
 
+		// XXX: Move to public header.
+		// XXX: Document.
+		// Note that cancellation events override I/O readiness, and I/O readiness
+		// overrides timeouts.
 		class connbuf: public std::streambuf {
-			socket s;
+			net::socket s;
 			size_t icap;
 			std::unique_ptr<char> ibuf;
 			size_t ocap;
@@ -30,7 +34,7 @@ namespace clane {
 			event *ce;                                // cancellation event
 		public:
 			virtual ~connbuf();
-			connbuf(socket &&s, size_t icap, size_t ocap);
+			connbuf(net::socket &&s, size_t icap, size_t ocap);
 			connbuf(connbuf const &) = delete;
 			connbuf &operator=(connbuf const &) = delete;
 #ifndef CLANE_HAVE_NO_DEFAULT_MOVE
@@ -41,6 +45,8 @@ namespace clane {
 			connbuf &operator=(connbuf &&that) noexcept;
 #endif
 			void swap(connbuf &that) noexcept;
+
+			net::socket &socket() { return s; }
 
 			void set_read_timeout(std::chrono::steady_clock::time_point t = std::chrono::steady_clock::time_point()) { rt = t; }
 			void set_write_timeout(std::chrono::steady_clock::time_point t = std::chrono::steady_clock::time_point()) { wt = t; }

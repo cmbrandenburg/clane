@@ -14,7 +14,7 @@ namespace clane {
 
 		connbuf::~connbuf() {}
 
-		connbuf::connbuf(socket &&s, size_t icap, size_t ocap):
+		connbuf::connbuf(net::socket &&s, size_t icap, size_t ocap):
 			icap(icap),
 			ibuf(new char[icap]),
 			ocap(ocap),
@@ -30,9 +30,13 @@ namespace clane {
 			this->s = std::move(s); // won't throw
 		}
 		 
+#ifdef CLANE_HAVE_NO_DEFAULT_MOVE
+
 		connbuf::connbuf(connbuf &&that) { swap(that); }
 
 		connbuf &connbuf::operator=(connbuf &&that) { swap(that); return *this; }
+
+#endif
 
 		void connbuf::swap(connbuf &that) noexcept {
 			std::swap(s, that.s);
@@ -58,7 +62,7 @@ namespace clane {
 			while (true) {
 
 				// wait for write readiness, cancellation, or timeout:
-				auto poll_result = timed ? po.poll() : po.poll(wt);
+				auto poll_result = timed ? po.poll(wt) : po.poll();
 				if (!poll_result.index)
 					return -1; // timeout
 				if (poll_result.index == icancel)
@@ -110,7 +114,7 @@ namespace clane {
 			while (true) {
 
 				// wait for read readiness, cancellation, or timeout:
-				auto poll_result = timed ? po.poll() : po.poll(rt);
+				auto poll_result = timed ? po.poll(rt) : po.poll();
 				if (!poll_result.index)
 					return -1; // timeout
 				if (poll_result.index == icancel)
