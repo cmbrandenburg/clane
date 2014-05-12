@@ -7,6 +7,7 @@
 /** @file */
 
 #include "clane_net_connbuf.hpp"
+#include "clane_net_poller.hpp"
 
 namespace clane {
 	namespace net {
@@ -43,9 +44,6 @@ namespace clane {
 
 		int connbuf::send_all() {
 
-			if (pbase() == pptr())
-				return 0; // nothing to send--success
-
 			bool const timed = std::chrono::steady_clock::time_point() != wt;
 
 			// TODO: Optimize the special case in which there's no timeout _and_
@@ -54,26 +52,27 @@ namespace clane {
 
 			// set up poller:
 			poller po;
-			size_t const icancel = !ce ? 0 : po.add(ce, poller::in);
-			po.add(s, poller::in);
+			size_t const icancel = ce ? po.add(*ce, poller::in) : 0;
+			po.add(s, poller::out);
 
 			while (true) {
 
-				// wait for incoming data, cancellation, or timeout:
+				// wait for write readiness, cancellation, or timeout:
 				auto poll_result = timed ? po.poll() : po.poll(wt);
 				if (!poll_result.index)
-					return traits_type::eof(); // timeout
+					return -1; // timeout
 				if (poll_result.index == icancel)
-					return traits_type::eof(); // cancellation
+					return -1; // cancellation
 
 				// send:
 				std::error_code e;
 				size_t xstat = s.send(pbase(), pptr()-pbase(), all, e);
+				setp(pbase()+xstat, pptr()); 
 				if (e == std::errc::operation_would_block || e == std::errc::resource_unavailable_try_again)
-					continue; // false positive from the poll operation--try again
+					continue; // couldn't send everything
 				if (e)
 					return -1; // connection error
-				break; // everything was sent
+				break; // sent everything
 			}
 
 			setp(obuf.get(), obuf.get()+ocap);
@@ -90,6 +89,45 @@ namespace clane {
 			*pptr() = traits_type::to_char_type(c);
 			pbump(1);
 			return !traits_type::eof(); // success
+		}
+
+		int connbuf::recv_some() {
+
+			bool const timed = std::chrono::steady_clock::time_point() != rt;
+			if (gptr() >= egptr())
+				setg(eback(), eback(), eback());
+			char *const end = ibuf.get() + icap;
+
+			// TODO: Optimize the special case in which there's no timeout _and_
+			// there's no cancellation event by doing a straight send operation
+			// without polling.
+
+			// set up poller:
+			poller po;
+			size_t const icancel = ce ? po.add(*ce, poller::in) : 0;
+			po.add(s, poller::in);
+
+			while (true) {
+
+				// wait for read readiness, cancellation, or timeout:
+				auto poll_result = timed ? po.poll() : po.poll(rt);
+				if (!poll_result.index)
+					return -1; // timeout
+				if (poll_result.index == icancel)
+					return -1; // cancellation
+
+				// receive:
+				std::error_code e;
+				size_t xstat = s.recv(egptr(), end-egptr(), e);
+				setg(eback(), gptr(), egptr()+xstat);
+				if (e == std::errc::operation_would_block || e == std::errc::resource_unavailable_try_again)
+					continue; // try again
+				if (e)
+					return -1; // connection error
+				break; // received something
+			}
+
+			return 0; // success
 		}
 
 		connbuf::int_type connbuf::underflow() {

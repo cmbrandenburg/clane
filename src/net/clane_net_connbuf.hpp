@@ -51,6 +51,7 @@ namespace clane {
 			virtual int_type overflow(int_type c);
 			virtual int_type underflow();
 			int send_all();
+			int recv_some();
 		};
 
 	}

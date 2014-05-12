@@ -13,7 +13,9 @@
 #include "../../include/clane_net.hpp"
 
 namespace clane {
-	namespace net {}
+	namespace net {
+
+	}
 }
 
 #endif // #ifndef CLANE__NET_POLLER_HPP

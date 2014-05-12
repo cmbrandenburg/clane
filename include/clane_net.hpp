@@ -123,6 +123,8 @@ namespace clane {
 			posix::unique_fd const &descriptor() const { return fd; }
 		};
 
+		// FIXME: Move poller declarations into private header file.
+
 		class poll_result {
 		public:
 			size_t index;
@@ -162,7 +164,6 @@ namespace clane {
 		}
 
 	}
-
 }
 
 #endif // #ifndef CLANE_NET_HPP

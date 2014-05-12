@@ -149,6 +149,7 @@ TESTS = \
 	src/net/tests/check_net_poll_event \
 	src/net/tests/check_net_tcp_connect_accept \
 	src/net/tests/check_net_tcp_connect_accept_nb \
+	src/net/tests/check_net_connbuf \
 	src/http/tests/check_http_status_code \
 	src/http/tests/check_http_header_map \
 	src/http/tests/check_http_canonize_1x_header_name \
@@ -308,6 +309,10 @@ src_http_tests_check_http_v1x_status_line_incparser_SOURCES = src/http/tests/che
 check_PROGRAMS += src/mime/tests/check_mime_map
 src_mime_tests_check_mime_map_LDADD = src/mime/libclane_mime.la
 src_mime_tests_check_mime_map_SOURCES = src/mime/tests/check_mime_map.cpp
+
+check_PROGRAMS += src/net/tests/check_net_connbuf
+src_net_tests_check_net_connbuf_LDADD = src/net/libclane_net.la
+src_net_tests_check_net_connbuf_SOURCES = src/net/tests/check_net_connbuf.cpp
 
 check_PROGRAMS += src/net/tests/check_net_poll_event
 src_net_tests_check_net_poll_event_LDADD = src/net/libclane_net.la
