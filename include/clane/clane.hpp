@@ -13,6 +13,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 
 /** @brief Top-level project namespace */
 namespace clane {
@@ -21,6 +22,7 @@ namespace clane {
 	namespace http {
 
 		class server_transaction: public std::iostream {
+			friend class request_parser;
 
 			class streambuf: public std::streambuf {};
 
@@ -34,6 +36,15 @@ namespace clane {
 
 		};
 
+		/** @brief Server-side parser engine */
+		class request_parser {
+
+		public:
+
+			std::size_t parse(char const *p, std::size_t n, server_transaction &xact, std::error_code &ec);
+
+		};
+
 		template <typename Handler> class basic_server {
 
 			class connection {
@@ -43,44 +54,56 @@ namespace clane {
 				boost::asio::ip::tcp::endpoint peer_address;
 			private:
 				Handler &m_handler;
+				request_parser m_pars;
 				std::list<std::array<char, ibuf_cap>> m_ibufs;
+				std::list<std::shared_ptr<server_transaction>> m_xacts;
 
 				/** @brief Number of bytes in the last buffer */
 				std::size_t m_ilen{};
 
-				//request_parser
-
 			public:
 
-				connection(boost::asio::io_service &ios, Handler &h): socket{ios}, m_handler(h) {
+				connection(boost::asio::io_service &ios, Handler &h):
+					socket{ios},
+					m_handler(h)
+				{
 					m_ibufs.emplace_back();
+					new_transaction();
 				}
 
 				connection(connection &&) = default;
 				connection &operator=(connection &&) = default;
 
-				void start_async_read() {
-					socket.async_receive(
-						boost::asio::buffer(m_ibufs.back().data()+m_ilen, ibuf_cap-m_ilen),
-						std::bind(&connection::on_receive, this, std::placeholders::_1, std::placeholders::_2));
+				template <typename ReadHandler> void start_async_receive(ReadHandler h) {
+					socket.async_receive(boost::asio::buffer(m_ibufs.back().data()+m_ilen, ibuf_cap-m_ilen), h);
 				}
 
-				void on_receive(boost::system::error_code const &e, std::size_t n) {
-
-					std::cerr << "received: " << std::string(m_ibufs.back().data()+m_ilen, m_ibufs.back().data()+m_ilen+n) << '\n';
-
-					// Continue the chain--start another receive operation in the
-					// background.
-					m_ilen += n;
-					if (m_ilen == ibuf_cap) {
-						m_ibufs.emplace_back();
-						m_ilen = 0;
+				void consume(std::size_t n, std::error_code ec) {
+					while (n) {
+						auto c = m_pars.parse(m_ibufs.back().data()+m_ilen, n, *m_xacts.back(), ec);
+						if (ec)
+							return;
+						m_ilen += c;
+						n -= c;
+						if (m_ilen == ibuf_cap) {
+							assert(!n);
+							m_ibufs.emplace_back();
+							m_ilen = 0;
+						}
+						if (!c) {
+							// The parses is done with the current transaction object. Make a
+							// new one and continue parsing.
+							new_transaction();
+						}
 					}
-					start_async_read();
 
 				}
 
 			private:
+
+				void new_transaction() {
+					m_xacts.push_back(std::make_shared<server_transaction>());
+				}
 
 			};
 
@@ -137,14 +160,62 @@ namespace clane {
 
 			void start_async_accept(boost::asio::ip::tcp::acceptor &acc) {
 				m_conns.emplace_back(m_ios, handler);
+				auto iter = end(m_conns); --iter;
 				acc.async_accept(m_conns.back().socket, m_conns.back().peer_address,
-						std::bind(&basic_server::on_accept_connection, this, std::placeholders::_1, std::ref(acc), std::ref(m_conns.back())));
+						std::bind(&basic_server::on_accept_connection, this, std::placeholders::_1, std::ref(acc), iter));
 			}
 
-			void on_accept_connection(boost::system::error_code const &e, boost::asio::ip::tcp::acceptor &acc, connection &conn) {
+			void on_accept_connection(boost::system::error_code const &ec, boost::asio::ip::tcp::acceptor &acc,
+					typename decltype(m_conns)::iterator conn_iter) {
+				if (ec) {
+					std::cerr << "Accept error: " << ec.message() << "\n";
+					return;
+				}
+				auto &conn = *conn_iter;
 				start_async_accept(acc);
-				std::cerr << "accepted connection: " << conn.peer_address.address().to_string() << ":" << conn.peer_address.port() << "\n";
-				conn.start_async_read();
+				std::cerr << "Accepted connection: " << conn.peer_address.address().to_string() << ":" << conn.peer_address.port() << "\n";
+				start_async_receive(conn_iter);
+			}
+
+			void start_async_receive(typename decltype(m_conns)::iterator conn_iter) {
+				auto &conn = *conn_iter;
+				conn.start_async_receive(
+						std::bind(&basic_server::on_receive, this, std::placeholders::_1, std::placeholders::_2, conn_iter));
+			}
+
+			void on_receive(boost::system::error_code const &ec, std::size_t n, typename decltype(m_conns)::iterator conn_iter) {
+				auto &conn = *conn_iter;
+
+				if (ec) {
+
+					if (boost::asio::error::get_misc_category() == ec.category() &&
+					    boost::asio::error::misc_errors::eof == ec.value()) {
+						// This is a graceful disconnection. Destruct the connection object
+						// now. It has used shared pointers for any data that need to stay
+						// around until after all outstanding request handlers have
+						// returned.
+						m_conns.erase(conn_iter);
+						return;
+					}
+
+					// Otherwise, this is a harder error. Shut down the connection, same
+					// as a graceful end-of-file error.
+					std::cerr << "Receive error: " << ec.message() << ": Closing connection\n";
+					m_conns.erase(conn_iter);
+					return;
+				}
+
+				// TODO: Should we destruct the connection if this thread raises an
+				// exception while consuming the incoming data?
+
+				{
+					std::error_code ec;
+					conn.consume(n, ec);
+				}
+
+				// Continue the chain: start another receive operation in the
+				// background.
+				start_async_receive(conn_iter);
 			}
 
 		};
