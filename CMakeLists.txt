@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.0.2)
+project(clane LANGUAGES C CXX)
+find_package(Boost 1.55 REQUIRED)
+find_package(Doxygen)
+find_package(Threads REQUIRED)
+add_subdirectory(src)
+add_subdirectory(doc)
