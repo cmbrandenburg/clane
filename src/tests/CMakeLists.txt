@@ -1,3 +1,8 @@
-add_executable(check_server check_server.cpp)
-target_link_libraries(check_server clane)
-add_test(server ./check_server)
+macro(make_cxx_test name)
+	add_executable(check_${name} check_${name}.cpp)
+	target_link_libraries(check_${name} clane)
+	add_test(${name} ./check_${name})
+endmacro()
+
+make_cxx_test(parse_line)
+make_cxx_test(server)

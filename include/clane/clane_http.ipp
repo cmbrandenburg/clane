@@ -2,23 +2,21 @@
 
 /** @file */
 
-#ifndef CLANE_CLANE_HPP
-#define CLANE_CLANE_HPP
+#ifndef CLANE_HTTP_IPP
+#define CLANE_HTTP_IPP
 
 #include <array>
 #include <boost/asio.hpp>
 #include <istream>
 #include <list>
+#include <mutex>
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <system_error>
 
-/** @brief Top-level project namespace */
 namespace clane {
-
-	/** @brief Hypertext Transfer Protocol */
 	namespace http {
 
 		class server_transaction: public std::iostream {
@@ -39,13 +37,17 @@ namespace clane {
 		/** @brief Server-side parser engine */
 		class request_parser {
 
+			enum class state {
+				begin_request_line
+			} m_stat{state::begin_request_line};
+
+			std::string m_cur_line;
+
 		public:
-
-			std::size_t parse(char const *p, std::size_t n, server_transaction &xact, std::error_code &ec);
-
+			std::size_t parse(char const *p, std::size_t n, server_transaction &xact);
 		};
 
-		template <typename Handler> class basic_server {
+		template <typename Handler> class basic_server<Handler>::impl {
 
 			class connection {
 				static constexpr std::size_t ibuf_cap = 8192;
@@ -74,29 +76,35 @@ namespace clane {
 				connection(connection &&) = default;
 				connection &operator=(connection &&) = default;
 
+				void close() {
+					socket.close();
+				}
+
 				template <typename ReadHandler> void start_async_receive(ReadHandler h) {
 					socket.async_receive(boost::asio::buffer(m_ibufs.back().data()+m_ilen, ibuf_cap-m_ilen), h);
 				}
 
-				void consume(std::size_t n, std::error_code ec) {
+				int consume(std::size_t n) {
 					while (n) {
-						auto c = m_pars.parse(m_ibufs.back().data()+m_ilen, n, *m_xacts.back(), ec);
-						if (ec)
-							return;
+						auto c = m_pars.parse(m_ibufs.back().data()+m_ilen, n, *m_xacts.back());
+						if (std::string::npos == c)
+							return -1; // parser error
+						if (!c) {
+							// The parser is done with the current transaction object.
+							m_handler(*m_xacts.back());
+							new_transaction();
+							continue;
+						}
 						m_ilen += c;
 						n -= c;
 						if (m_ilen == ibuf_cap) {
+							// Ensure there's always free space to receive into.
 							assert(!n);
 							m_ibufs.emplace_back();
 							m_ilen = 0;
 						}
-						if (!c) {
-							// The parses is done with the current transaction object. Make a
-							// new one and continue parsing.
-							new_transaction();
-						}
 					}
-
+					return 0; // no error
 				}
 
 			private:
@@ -109,31 +117,38 @@ namespace clane {
 
 		private:
 			boost::asio::io_service &m_ios;
-		public:
-			Handler handler;
-		private:
+			Handler m_handler;
 			std::list<boost::asio::ip::tcp::acceptor> m_accs;
 			std::list<connection> m_conns;
 
 		public:
 
-			basic_server(boost::asio::io_service &ios, Handler const &h):
+			impl(boost::asio::io_service &ios, Handler const &h):
 				m_ios(ios),
-				handler{h}
+				m_handler{h}
 			{}
 
-			basic_server(boost::asio::io_service &ios, Handler &&h):
+			impl(boost::asio::io_service &ios, Handler &&h):
 				m_ios(ios),
-				handler{std::move(h)}
+				m_handler{std::move(h)}
 			{}
 
-			template <typename ...HandlerArgs> basic_server(boost::asio::io_service &ios, HandlerArgs&&... args):
+			template <typename ...HandlerArgs> impl(boost::asio::io_service &ios, HandlerArgs&&... args):
 				m_ios(ios),
-				handler{std::forward<HandlerArgs>(args)...}
+				m_handler{std::forward<HandlerArgs>(args)...}
 			{}
 
-			basic_server(basic_server &&) = default;
-			basic_server &operator=(basic_server &&) = default;
+			impl(impl &&) = default;
+			impl &operator=(impl &&) = default;
+
+			void close() {
+				std::for_each(begin(m_accs), end(m_accs), [](boost::asio::ip::tcp::acceptor &acc) {
+					acc.close();
+				});
+				std::for_each(begin(m_conns), end(m_conns), [](connection &conn) {
+					conn.close();
+				});
+			}
 
 			void add_listener(std::string const &addr) {
 
@@ -153,26 +168,34 @@ namespace clane {
 				boost::asio::ip::tcp::resolver::query q{host, service};
 				m_accs.emplace_back(m_ios, resolv.resolve(q)->endpoint()); // blocking resolver lookup
 				m_accs.back().listen();
-				start_async_accept(m_accs.back());
+				start_async_accept(--end(m_accs));
 			}
 
 		private:
 
-			void start_async_accept(boost::asio::ip::tcp::acceptor &acc) {
-				m_conns.emplace_back(m_ios, handler);
-				auto iter = end(m_conns); --iter;
+			void start_async_accept(typename decltype(m_accs)::iterator acc_iter) {
+				boost::asio::ip::tcp::acceptor &acc = *acc_iter;
+				m_conns.emplace_back(m_ios, m_handler);
+				auto conn_iter = end(m_conns); --conn_iter;
 				acc.async_accept(m_conns.back().socket, m_conns.back().peer_address,
-						std::bind(&basic_server::on_accept_connection, this, std::placeholders::_1, std::ref(acc), iter));
+						std::bind(&impl::on_accept_connection, this, std::placeholders::_1, acc_iter, conn_iter));
 			}
 
-			void on_accept_connection(boost::system::error_code const &ec, boost::asio::ip::tcp::acceptor &acc,
+			void on_accept_connection(boost::system::error_code const &ec, typename decltype(m_accs)::iterator acc_iter,
 					typename decltype(m_conns)::iterator conn_iter) {
+				boost::asio::ip::tcp::acceptor &acc = *acc_iter;
 				if (ec) {
-					std::cerr << "Accept error: " << ec.message() << "\n";
-					return;
+					if (boost::asio::error::get_system_category() == ec.category() &&
+							boost::asio::error::basic_errors::operation_aborted != ec.value()) {
+						m_accs.erase(acc_iter);
+						return;
+					}
+					std::ostringstream ess;
+					ess << "Accept error: " << ec.message();
+					throw std::runtime_error(ess.str());
 				}
 				auto &conn = *conn_iter;
-				start_async_accept(acc);
+				start_async_accept(acc_iter);
 				std::cerr << "Accepted connection: " << conn.peer_address.address().to_string() << ":" << conn.peer_address.port() << "\n";
 				start_async_receive(conn_iter);
 			}
@@ -180,7 +203,7 @@ namespace clane {
 			void start_async_receive(typename decltype(m_conns)::iterator conn_iter) {
 				auto &conn = *conn_iter;
 				conn.start_async_receive(
-						std::bind(&basic_server::on_receive, this, std::placeholders::_1, std::placeholders::_2, conn_iter));
+						std::bind(&impl::on_receive, this, std::placeholders::_1, std::placeholders::_2, conn_iter));
 			}
 
 			void on_receive(boost::system::error_code const &ec, std::size_t n, typename decltype(m_conns)::iterator conn_iter) {
@@ -191,18 +214,24 @@ namespace clane {
 					if (boost::asio::error::get_misc_category() == ec.category() &&
 					    boost::asio::error::misc_errors::eof == ec.value()) {
 						// This is a graceful disconnection. Destruct the connection object
-						// now. It has used shared pointers for any data that need to stay
-						// around until after all outstanding request handlers have
-						// returned.
+						// now. It uses shared pointers for any data that need to persist
+						// until after all outstanding request handlers have returned.
 						m_conns.erase(conn_iter);
 						return;
 					}
 
-					// Otherwise, this is a harder error. Shut down the connection, same
-					// as a graceful end-of-file error.
-					std::cerr << "Receive error: " << ec.message() << ": Closing connection\n";
+					if (boost::asio::error::get_system_category() == ec.category() &&
+					    boost::asio::error::basic_errors::operation_aborted == ec.value()) {
+						// Same as a graceful disconnection.
+						m_conns.erase(conn_iter);
+						return;
+					}
+
+					// Otherwise, this is a hard error. Shut down the connection.
 					m_conns.erase(conn_iter);
-					return;
+					std::ostringstream ess;
+					ess << "Receive error: " << ec.message() << ": Closing connection\n";
+					throw std::runtime_error(ess.str());
 				}
 
 				// TODO: Should we destruct the connection if this thread raises an
@@ -210,26 +239,19 @@ namespace clane {
 
 				{
 					std::error_code ec;
-					conn.consume(n, ec);
+					if (0 > conn.consume(n)) {
+						m_conns.erase(conn_iter);
+						return;
+					}
 				}
 
 				// Continue the chain: start another receive operation in the
 				// background.
 				start_async_receive(conn_iter);
 			}
-
 		};
-
-		template <typename Handler> basic_server<Handler> make_server(boost::asio::io_service &ios, Handler const &h) {
-			return basic_server<Handler>(ios, h);
-		}
-
-		template <typename Handler> basic_server<Handler> make_server(boost::asio::io_service &ios, Handler &&h) {
-			return basic_server<Handler>(ios, std::move(h));
-		}
-
 	}
-
 }
 
-#endif // #ifndef CLANE_CLANE_HPP
+
+#endif // #ifndef CLANE_HTTP_IPP

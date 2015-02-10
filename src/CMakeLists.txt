@@ -3,7 +3,7 @@ include_directories(BEFORE "${CMAKE_SOURCE_DIR}/include")
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${OPENSSL_INCLUDE_DIR})
 add_library(clane
-	clane_http.cpp)
+	clane_http_server.cpp)
 target_link_libraries(clane
 	${Boost_LIBRARIES}
 	${OPENSSL_LIBRARIES}
