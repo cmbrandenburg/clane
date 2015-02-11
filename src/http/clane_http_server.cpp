@@ -118,6 +118,7 @@ namespace clane {
 							return std::string::npos;
 						}
 						std::error_code ec;
+						throw std::logic_error("TODO: implement");
 #if 0
 						auto u = uri::make_uri(begin(m_cur_line)+sp1+1, begin(m_cur_line)+sp2, ec);
 						if (ec) {
@@ -125,11 +126,11 @@ namespace clane {
 							return std::string::npos;
 						}
 #endif
-						xact.set_method(&m_cur_line[0], &m_cur_line[sp1]);
 #if 0
+						xact.set_method(&m_cur_line[0], &m_cur_line[sp1]);
 						xact.set_uri(&m_cur_line[sp1+1], &m_cur_line[sp2]);
-#endif
 						xact.set_http_version(&m_cur_line[sp2+1], &m_cur_line[m_cur_line.size()]);
+#endif
 						m_stat = state::header;
 						continue;
 					}

@@ -1,12 +1,12 @@
-list(APPEND CMAKE_CXX_FLAGS "-std=c++14 -Wall -Werror")
+include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}")
 include_directories(BEFORE "${CMAKE_SOURCE_DIR}/include")
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${OPENSSL_INCLUDE_DIR})
-add_library(clane
-	clane_http_server.cpp
-	clane_uri_impl.cpp)
+list(APPEND CMAKE_CXX_FLAGS "-std=c++14 -Wall -Werror")
+add_subdirectory(check)
+add_subdirectory(http)
+add_subdirectory(uri)
+add_library(clane clane_main.cpp)
 target_link_libraries(clane
-	${Boost_LIBRARIES}
-	${OPENSSL_LIBRARIES}
-	${CMAKE_THREAD_LIBS_INIT})
-add_subdirectory(tests)
+	clane-http
+	clane-uri)

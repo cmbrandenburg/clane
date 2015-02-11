@@ -6,11 +6,13 @@
 
 /** @file */
 
-#include "clane/clane_uri.hpp"
-#include "clane_uri_impl.hpp"
+#ifndef CLANE_URI_URI_HPP
+#define CLANE_URI_URI_HPP
 
 namespace clane {
 	namespace uri {
 
 	}
 }
+
+#endif // #ifndef CLANE_URI_URI_HPP
