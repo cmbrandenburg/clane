@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 // vim: set noet:
 
 /** @file */
@@ -79,22 +83,59 @@ namespace clane {
 
 		void serve_error(server_transaction &xact, status_code c) {
 			// TODO: implement
+			throw std::logic_error("Unimplemented");
 		}
 
 		std::size_t request_parser::parse(char const *p, std::size_t n, server_transaction &xact) {
-			std::size_t len;
+			std::size_t tot=0, len;
 			bool complete;
 
 			while (true) {
 				switch (m_stat) {
-					case state::begin_request_line: {
-						if (0 > (len = parse_line(p, n, 8192, m_cur_line, complete))) {
+
+					case state::request_line: {
+						if (std::string::npos == (len = parse_line(p+tot, n-tot, 8192, m_cur_line, complete))) {
+							// If the request line is too long, does it make sense to serve a
+							// 414 "request URI too long" error instead of the generic "bad
+							// request?"
 							serve_error(xact, status_code::bad_request);
-							return -1;
+							return std::string::npos;
 						}
-						if (0 == len)
+						tot += len;
+						if (!complete)
 							return n;
-						// TODO: validate the request line fields
+						if (m_cur_line.empty())
+							continue; // allow empty lines to precede the request line
+						auto sp1 = m_cur_line.find(' ');
+						auto sp2 = m_cur_line.find(' ', sp1+1);
+						if (sp1 == std::string::npos || sp2 == std::string::npos) {
+							serve_error(xact, status_code::bad_request);
+							return std::string::npos;
+						}
+						if (!is_valid_method(begin(m_cur_line), begin(m_cur_line)+sp1) ||
+						    !is_valid_http_version(begin(m_cur_line)+sp2+1, end(m_cur_line))) {
+							serve_error(xact, status_code::bad_request);
+							return std::string::npos;
+						}
+						std::error_code ec;
+#if 0
+						auto u = uri::make_uri(begin(m_cur_line)+sp1+1, begin(m_cur_line)+sp2, ec);
+						if (ec) {
+							serve_error(xact, status_code::bad_request);
+							return std::string::npos;
+						}
+#endif
+						xact.set_method(&m_cur_line[0], &m_cur_line[sp1]);
+#if 0
+						xact.set_uri(&m_cur_line[sp1+1], &m_cur_line[sp2]);
+#endif
+						xact.set_http_version(&m_cur_line[sp2+1], &m_cur_line[m_cur_line.size()]);
+						m_stat = state::header;
+						continue;
+					}
+
+					case state::header: {
+						// TODO: implement
 						break;
 					}
 				}

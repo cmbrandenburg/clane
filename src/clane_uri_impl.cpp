@@ -6,13 +6,11 @@
 
 /** @file */
 
-#ifndef CLANE_HPP
-#define CLANE_HPP
-
-#include "clane/clane_http.hpp"
 #include "clane/clane_uri.hpp"
+#include "clane_uri_impl.hpp"
 
-/** @brief Top-level project namespace */
-namespace clane {}
+namespace clane {
+	namespace uri {
 
-#endif // #ifndef CLANE_HPP
+	}
+}

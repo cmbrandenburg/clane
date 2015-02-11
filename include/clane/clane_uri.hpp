@@ -6,13 +6,15 @@
 
 /** @file */
 
-#ifndef CLANE_HPP
-#define CLANE_HPP
+#ifndef CLANE_URI_HPP
+#define CLANE_URI_HPP
 
-#include "clane/clane_http.hpp"
-#include "clane/clane_uri.hpp"
+namespace clane {
 
-/** @brief Top-level project namespace */
-namespace clane {}
+	/** @brief Uniform Resource Identifier */
+	namespace uri {
 
-#endif // #ifndef CLANE_HPP
+	}
+}
+
+#endif // #ifndef CLANE_URI_HPP

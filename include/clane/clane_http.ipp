@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 // vim: set noet:
 
 /** @file */
@@ -32,14 +36,18 @@ namespace clane {
 				std::iostream{&m_sbuf}
 			{}
 
+		private:
+			void set_method(char const *first, char const *last);
+			void set_http_version(char const *first, char const *last);
 		};
 
 		/** @brief Server-side parser engine */
 		class request_parser {
 
 			enum class state {
-				begin_request_line
-			} m_stat{state::begin_request_line};
+				request_line,
+				header,
+			} m_stat{state::request_line};
 
 			std::string m_cur_line;
 
