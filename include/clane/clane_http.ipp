@@ -4,10 +4,10 @@
 
 // vim: set noet:
 
-/** @file */
-
 #ifndef CLANE_HTTP_IPP
 #define CLANE_HTTP_IPP
+
+/** @file */
 
 #include <array>
 #include <boost/asio.hpp>
@@ -41,7 +41,7 @@ namespace clane {
 			void set_http_version(char const *first, char const *last);
 		};
 
-		/** @brief Server-side parser engine */
+		/** Server-side parser engine */
 		class request_parser {
 
 			enum class state {
@@ -68,7 +68,7 @@ namespace clane {
 				std::list<std::array<char, ibuf_cap>> m_ibufs;
 				std::list<std::shared_ptr<server_transaction>> m_xacts;
 
-				/** @brief Number of bytes in the last buffer */
+				/** Number of bytes in the last buffer */
 				std::size_t m_ilen{};
 
 			public:

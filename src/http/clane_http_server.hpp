@@ -4,17 +4,17 @@
 
 // vim: set noet:
 
-/** @file */
-
 #ifndef CLANE_HTTP_SERVER_HPP
 #define CLANE_HTTP_SERVER_HPP
+
+/** @file */
 
 #include <string>
 
 namespace clane {
 	namespace http {
 
-		/** @brief Parses a line, handling both LF and CRLF line endings
+		/** Parses a line, handling both LF and CRLF line endings
 		 *
 		 * @param p Input buffer to parse.
 		 *

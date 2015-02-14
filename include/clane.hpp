@@ -4,15 +4,15 @@
 
 // vim: set noet:
 
-/** @file */
-
 #ifndef CLANE_HPP
 #define CLANE_HPP
+
+/** @file */
 
 #include "clane/clane_http.hpp"
 #include "clane/clane_uri.hpp"
 
-/** @brief Top-level project namespace */
+/** Top-level project namespace */
 namespace clane {}
 
 #endif // #ifndef CLANE_HPP

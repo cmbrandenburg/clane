@@ -4,14 +4,14 @@
 
 // vim: set noet:
 
-/** @file */
-
 #ifndef CLANE_URI_HPP
 #define CLANE_URI_HPP
 
+/** @file */
+
 namespace clane {
 
-	/** @brief Uniform Resource Identifier */
+	/** Uniform Resource Identifier */
 	namespace uri {
 
 	}

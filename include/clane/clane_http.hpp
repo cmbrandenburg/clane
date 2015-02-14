@@ -4,10 +4,10 @@
 
 // vim: set noet:
 
-/** @file */
-
 #ifndef CLANE_HTTP_HPP
 #define CLANE_HTTP_HPP
+
+/** @file */
 
 #include "clane_uri.hpp"
 #include <boost/asio.hpp>
@@ -15,10 +15,10 @@
 
 namespace clane {
 
-	/** @brief Hypertext Transfer Protocol */
+	/** Hypertext Transfer Protocol */
 	namespace http {
 
-		/** @brief HTTP status codes, defined in RFC 2616 */
+		/** HTTP status codes, defined in RFC 2616 */
 		enum class status_code {
 			cont                            = 100,
 			switching_protocols             = 101,
@@ -62,7 +62,7 @@ namespace clane {
 			http_version_not_supported      = 505,
 		};
 
-		/** @brief Returns a human-readable name of an HTTP status code */
+		/** Returns a human-readable name of an HTTP status code */
 		char const *what(status_code c);
 
 		template <typename Handler> class basic_server {
@@ -90,7 +90,7 @@ namespace clane {
 				m_impl->close();
 			}
 
-			/** @brief Binds the server to an address
+			/** Binds the server to an address
 			 *
 			 * @param addr Address to listen on. The address's format must be
 			 * `<host>:<service>`, e.g., `":8080"` or `"localhost:http"`.
