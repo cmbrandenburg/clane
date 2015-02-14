@@ -1,17 +1,20 @@
 // vim: set noet:
 
 #include "check/check.h"
+#include "../clane_uri_parse.hpp"
 
 #define check_ok(in, exp) \
 	do { \
-		uri::uri u = uri::parse_uri_reference(in); \
+		auto u = clane::uri::parse_uri_reference(in); \
 		std::string out = u.string(); \
 		check(out == exp); \
 	} while (false)
 
 int main() {
+	using clane::uri::uri;
 
-#if 0
+	// = PARSING AND STRING CONVERSION =
+
 	// empty:
 	check_ok("", "");
 
@@ -58,7 +61,24 @@ int main() {
 	// path only:
 	check_ok("/alpha/bravo",
 	         "/alpha/bravo");
-#endif
-	return 1;
+
+	// = CLASS OPERATION =
+
+	// construct and copy
+	uri u1;
+	check(u1.empty());
+	u1.scheme = "http";
+	u1.host = "alpha.com";
+	u1.path = "bravo/charlie";
+	check(!u1.empty());
+	uri u2 = u1;
+	u1.clear();
+	check(u1.empty());
+
+	// swap
+	check(!u2.empty());
+	swap(u1, u2);
+	check(!u1.empty());
+
 }
 

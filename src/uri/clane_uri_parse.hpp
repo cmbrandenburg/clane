@@ -12,6 +12,29 @@
 #include "../ascii/clane_ascii.hpp"
 #include <cctype>
 #include <string>
+#include <system_error>
+
+namespace clane {
+	namespace uri {
+
+		/** URI parser error codes */
+		enum class error_code {
+			ok,
+			invalid_uri,
+			invalid_scheme,
+			invalid_user,
+			invalid_host,
+			invalid_port,
+			invalid_path,
+			invalid_query,
+			invalid_fragment
+		};
+	}
+}
+
+namespace std {
+	template <> struct is_error_code_enum<clane::uri::error_code>: public true_type {};
+}
 
 namespace clane {
 	namespace uri {
@@ -97,16 +120,20 @@ namespace clane {
 			}
 		}
 
-#if 0 // FIXME
+		/** Removes dot segments ("." and "..") from a path string */
+		void remove_dot_segments(std::string &s);
+
+		/** Removes all empty segments ("//") from a path string */
+		void remove_empty_segments(std::string &s);
+
+		/** Removes the last segment from a URI path string */
+		char *remove_last_path_segment(char *beg, char *end);
 
 		/** Uniform Resource Identifier
 		 *
 		 * @remark The @ref uri class encapsulates a URI as its individual
 		 * components—e.g., scheme, path, etc. */
-		class uri {
-
-		public:
-
+		struct uri {
 			std::string scheme;
 			std::string user;
 			std::string host;
@@ -117,79 +144,20 @@ namespace clane {
 
 		public:
 
-			/** Destructs this @ref uri */
-			~uri() {}
-
 			/** Constructs this @ref uri as empty */
-			uri() {}
-
-			// FIXME: add parser constructors here
+			uri() = default;
 
 			/** Constructs this @ref uri from individual URI components */
 			template <typename Source>
 			uri(Source &&scheme, Source &&user, Source &&host, Source &&port, Source &&path, Source &&query, Source &&fragment):
-				scheme(std::forward(scheme)),
-				user(std::forward(user)),
-				host(std::forward(host)),
-				port(std::forward(port)),
-				path(std::forward(path)),
-				query(std::forward(query)),
-				fragment(std::forward(fragment)) {}
-
-			/** Constructs this @ref uri as a copy of another */
-			uri(uri const &that):
-				scheme(that.scheme),
-				user(that.user),
-				host(that.host),
-				port(that.port),
-				path(that.path),
-				query(that.query),
-				fragment(that.fragment) {}
-
-			/** Constructs this @ref uri as a move of another */
-			uri(uri &&that):
-				scheme(std::move(that.scheme)),
-				user(std::move(that.user)),
-				host(std::move(that.host)),
-				port(std::move(that.port)),
-				path(std::move(that.path)),
-				query(std::move(that.query)),
-				fragment(std::move(that.fragment)) {}
-
-			/** Assigns this @ref uri as a copy of another */
-			uri &operator=(uri const &that) {
-				scheme = that.scheme;
-				user = that.user;
-				host = that.host;
-				port = that.port;
-				path = that.path;
-				query = that.query;
-				fragment = that.fragment;
-				return *this;
-			}
-
-			/** Assigns this @ref uri as a move of another */
-			uri &operator=(uri &&that) {
-				scheme = std::move(that.scheme);
-				user = std::move(that.user);
-				host = std::move(that.host);
-				port = std::move(that.port);
-				path = std::move(that.path);
-				query = std::move(that.query);
-				fragment = std::move(that.fragment);
-				return *this;
-			}
-
-			/** Swaps this @ref uri with another */
-			void swap(uri &that) noexcept {
-				std::swap(scheme, that.scheme);
-				std::swap(user, that.user);
-				std::swap(host, that.host);
-				std::swap(port, that.port);
-				std::swap(path, that.path);
-				std::swap(query, that.query);
-				std::swap(fragment, that.fragment);
-			}
+				scheme(std::forward<Source>(scheme)),
+				user(std::forward<Source>(user)),
+				host(std::forward<Source>(host)),
+				port(std::forward<Source>(port)),
+				path(std::forward<Source>(path)),
+				query(std::forward<Source>(query)),
+				fragment(std::forward<Source>(fragment))
+			{}
 
 			/** Returns whether all URI components in this @ref uri are empty
 			 * */
@@ -215,10 +183,6 @@ namespace clane {
 				fragment.clear();
 			}
 
-			/** Modifies this @ref uri so as to remove dot segments ("." and
-			 * "..") and empty segments (""). */
-			void normalize_path(); // FIXME
-
 			/** Returns this @ref uri as a string
 			 *
 			 * @remark The string() function composes this @ref uri instance into a
@@ -226,8 +190,8 @@ namespace clane {
 			 *
 			 * @remark Not all combinations of URI components are valid for
 			 * composition. If this @ref uri instance is invalid then the string()
-			 * function throws an @ref error exception. See the validate() function
-			 * for more information about validity. */
+			 * function throws an exception. See the validate() function for more
+			 * information about validity. */
 			std::string string() const;
 
 			/** Confirms whether this @ref uri instance may be composed into a
@@ -267,40 +231,27 @@ namespace clane {
 			/** Returns whether this @ref uri has an authority super-component
 			 *
 			 * @remark The has_authority() function returns whether this @ref uri
-			 * instance has an authority—i.e., whether it has a user, host, and/or
-			 * port component */
+			 * instance has an authority—i.e., whether it has a nonempty user, host,
+			 * or port component */
 			bool has_authority() const {
 				return !user.empty() || !host.empty() || !port.empty();
 			}
+
+			/** Modifies this @ref uri so as to remove dot segments ("." and
+			 * "..") and empty segments (""). */
+			void normalize_path();
 		};
 
-		/** Exception class for URI parse errors */
-		class error: public std::system_error {
-		public:
-			error(std::error_code const &e): std::system_error(e) {}
-		};
-
-		/** URI parse error codes */
-		enum class error_code {
-			ok,
-			invalid_uri,
-			invalid_scheme,
-			invalid_user,
-			invalid_host,
-			invalid_port,
-			invalid_path,
-			invalid_query,
-			invalid_fragment
-		};
-	}
-}
-
-namespace std {
-	template <> struct is_error_code_enum<clane::uri::error_code>: public true_type {};
-}
-
-namespace clane {
-	namespace uri {
+		/** Swaps one @ref uri instance with another */
+		inline void swap(uri &a, uri &b) noexcept {
+			swap(a.scheme, b.scheme);
+			swap(a.user, b.user);
+			swap(a.host, b.host);
+			swap(a.port, b.port);
+			swap(a.path, b.path);
+			swap(a.query, b.query);
+			swap(a.fragment, b.fragment);
+		}
 
 		/** Parses a string as a URI
 		 *
@@ -332,17 +283,6 @@ namespace clane {
 				throw std::system_error(e);
 			return out;
 		}
-
-		/** Removes dot segments ("." and "..") from a path string */
-		void remove_dot_segments(std::string &s);
-
-		/** Removes all empty segments ("//") from a path string */
-		void remove_empty_segments(std::string &s);
-
-		/** Removes the last segment from a path string */
-		char *remove_last_path_segment(char *beg, char *end);
-
-#endif // #if 0
 	}
 }
 

@@ -1,6 +1,7 @@
 // vim: set noet:
 
 #include "check/check.h"
+#include "../clane_uri_parse.hpp"
 
 #define check_nok(u) \
 	do { \
@@ -10,9 +11,7 @@
 	} while (false)
 
 int main() {
-
-#if 0
-	uri::uri u;
+	clane::uri::uri u;
 
 	// authority with relative path:
 	u.clear();
@@ -29,7 +28,5 @@ int main() {
 	u.clear();
 	u.path = "alpha:bravo";
 	check_nok(u);
-#endif
-	return 1;
 }
 
