@@ -9,8 +9,8 @@
 
 /** @file */
 
-#include "../ascii/clane_ascii.hpp"
-#include "../../include/clane/clane_uri.hpp"
+#include "ascii/clane_ascii_impl.hpp"
+#include "clane/clane_uri.hpp"
 #include <cctype>
 
 namespace clane {

@@ -1,7 +1,7 @@
 // vim: set noet:
 
 #include "check/check.h"
-#include "../clane_ascii.hpp"
+#include "../clane_ascii_impl.hpp"
 #include <cstring>
 
 int main() {

@@ -14,6 +14,7 @@
 #include <boost/asio.hpp>
 #include <istream>
 #include <list>
+#include <map>
 #include <mutex>
 #include <ostream>
 #include <sstream>

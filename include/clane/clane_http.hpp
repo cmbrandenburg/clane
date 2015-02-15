@@ -9,6 +9,7 @@
 
 /** @file */
 
+#include "clane_ascii.hpp"
 #include "clane_uri.hpp"
 #include <boost/asio.hpp>
 #include <memory>
@@ -64,6 +65,61 @@ namespace clane {
 
 		/** Returns a human-readable name of an HTTP status code */
 		char const *what(status_code c);
+
+		struct header_name_less {
+			bool operator()(std::string const &a, std::string const &b) const {
+				return ascii::icase_compare(a, b) < 0;
+			}
+		};
+
+		/** @brief Map type for pairing HTTP header names to header values
+		 *
+		 * @remark Header names are case-insensitive, and header values are case
+		 * sensitive. */
+		typedef std::multimap<std::string, std::string, header_name_less> header_map;
+
+		/** @brief HTTP header name–value pair
+		 *
+		 * @remark Header names are case-insensitive, and header values are case
+		 * sensitive.
+		 *
+		 * @remark Headers are `typedef`'d as a `std::pair` owing to the use of a
+		 * `std::multimap` for the header_map type. Consequently, the header name is
+		 * stored as the pair's `first` member, and the header value is stored as
+		 * the pair's `second` member. */
+		typedef header_map::value_type header;
+
+		inline bool header_equal(header const &a, header const &b) {
+			return clane::ascii::icase_compare(a.first, b.first) == 0 && a.second == b.second;
+		}
+
+		inline bool header_less(header const &a, header const &b) {
+			int n = clane::ascii::icase_compare(a.first, b.first);
+			return n < 0 || (n == 0 && a.second < b.second);
+		}
+
+		inline bool header_less_equal(header const &a, header const &b) {
+			int n = clane::ascii::icase_compare(a.first, b.first);
+			return n < 0 || (n == 0 && a.second <= b.second);
+		}
+
+		inline bool operator==(header const &a, header const &b) { return header_equal(a, b); }
+		inline bool operator!=(header const &a, header const &b) { return !header_equal(a, b); }
+		inline bool operator<(header const &a, header const &b) { return header_less(a, b); }
+		inline bool operator<=(header const &a, header const &b) { return header_less_equal(a, b); }
+		inline bool operator>(header const &a, header const &b) { return !header_less_equal(a, b); }
+		inline bool operator>=(header const &a, header const &b) { return !header_less(a, b); }
+
+		inline bool operator==(header_map const &a, header_map const &b) {
+			return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), header_equal);
+		}
+		inline bool operator!=(header_map const &a, header_map const &b) { return !(a == b); }
+		inline bool operator<(header_map const &a, header_map const &b) {
+			return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end(), header_less);
+		}
+		inline bool operator<=(header_map const &a, header_map const &b) { return a == b || a < b; }
+		inline bool operator>(header_map const &a, header_map const &b) { return !(a <= b); }
+		inline bool operator>=(header_map const &a, header_map const &b) { return !(a < b); }
 
 		template <typename Handler> class basic_server {
 			class impl;

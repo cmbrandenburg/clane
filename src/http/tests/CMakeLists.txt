@@ -4,6 +4,7 @@ macro(make_cxx_test name)
 	add_test(http_${name} ./check_http_${name})
 endmacro()
 
+make_cxx_test(header_map)
 make_cxx_test(is_method)
 make_cxx_test(parse_http_version)
 make_cxx_test(parse_line)

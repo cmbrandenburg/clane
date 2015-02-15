@@ -4,8 +4,8 @@
 
 // vim: set noet:
 
-#ifndef CLANE_ASCII_HPP
-#define CLANE_ASCII_HPP
+#ifndef CLANE_ASCII_IMPL_HPP
+#define CLANE_ASCII_IMPL_HPP
 
 /** @file */
 
@@ -13,8 +13,6 @@
 #include <cstring>
 
 namespace clane {
-
-	/** ASCII-encoded strings */
 	namespace ascii {
 
 		/** Converts a hexadecimal character to its integer value (e.g., '5' → 5 and
@@ -46,4 +44,4 @@ namespace clane {
 	}
 }
 
-#endif // #ifndef CLANE_ASCII_HPP
+#endif // #ifndef CLANE_ASCII_IMPL_HPP

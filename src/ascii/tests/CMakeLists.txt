@@ -5,4 +5,5 @@ endmacro()
 
 make_cxx_test(has_prefix)
 make_cxx_test(hexch_to_int)
+make_cxx_test(icase_compare)
 make_cxx_test(int_to_hexch)
