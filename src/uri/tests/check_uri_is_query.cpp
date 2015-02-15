@@ -1,7 +1,7 @@
 // vim: set noet:
 
 #include "check/check.h"
-#include "../clane_uri_parse.hpp"
+#include "../clane_uri_impl.hpp"
 #include <cstring>
 
 #define check_ok(in) check(clane::uri::is_query(in, in+strlen(in)))

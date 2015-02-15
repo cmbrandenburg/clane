@@ -1,7 +1,7 @@
 // vim: set noet:
 
 #include "check/check.h"
-#include "../clane_uri_parse.hpp"
+#include "../clane_uri_impl.hpp"
 #include <cstring>
 
 #define check_ok(in, tst) check(clane::uri::is_percent_encoded(in, in+std::strlen(in), tst))

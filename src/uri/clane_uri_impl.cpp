@@ -6,7 +6,7 @@
 
 /** @file */
 
-#include "clane_uri_parse.hpp"
+#include "clane_uri_impl.hpp"
 #include <algorithm>
 #include <cassert>
 #include <cstring>

@@ -1,7 +1,7 @@
 // vim: set noet:
 
 #include "check/check.h"
-#include "../clane_uri_parse.hpp"
+#include "../clane_uri_impl.hpp"
 
 #define check_ok(in, test, exp) \
 	do { \
