@@ -44,12 +44,26 @@ namespace clane {
 		 * @remark The @ref uri class encapsulates a URI as its individual
 		 * components—e.g., scheme, path, etc. */
 		struct uri {
+
+			/** Scheme—e.g., `http` */
 			std::string scheme;
+
+			/** User info—e.g., `john_doe` */
 			std::string user;
+
+			/** Host—e.g., `example.com` */
 			std::string host;
+
+			/** Port—e.g., `80` */
 			std::string port;
+
+			/** Path—e.g., `/foo/bar` */
 			std::string path;
+
+			/** Query, without leading '?'—e.g., `alpha=bravo?charlie=delta` */
 			std::string query;
+
+			/** Fragment, without '#'—e.g., `chapter_2` */
 			std::string fragment;
 
 		public:
