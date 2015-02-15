@@ -13,11 +13,6 @@
 
 namespace {
 
-	bool has_prefix(char const *beg, char const *end, char const *key) {
-		assert(beg <= end);
-		return static_cast<size_t>(end-beg) >= std::strlen(key) && !std::strncmp(beg, key, std::strlen(key));
-	}
-
 	bool is_exact(char const *beg, char const *end, char const *s) {
 		assert(beg <= end);
 		size_t len = static_cast<size_t>(end - beg);
@@ -171,7 +166,7 @@ namespace clane {
 
 			char const *cur = beg;
 			int quad_cnt = 0;
-			if (has_prefix(cur, end, "::")) {
+			if (ascii::has_prefix(cur, end, "::")) {
 				cur += 2;
 			} else while (true) {
 				if (quad_cnt == 6 && is_ls32(cur, end))
@@ -183,7 +178,7 @@ namespace clane {
 				++quad_cnt;
 				if (quad_cnt == 8)
 					return cur == end;
-				if (has_prefix(cur, end, "::")) {
+				if (ascii::has_prefix(cur, end, "::")) {
 					cur += 2;
 					break;
 				}
@@ -321,11 +316,11 @@ namespace clane {
 
 				// A. If the input buffer begins with a prefix of "../" or "./", then
 				// remove that prefix from the input buffer; otherwise,
-				if (has_prefix(r, rend, "../")) {
+				if (ascii::has_prefix(r, rend, "../")) {
 					r += 3;
 					continue;
 				}
-				if (has_prefix(r, rend, "./")) {
+				if (ascii::has_prefix(r, rend, "./")) {
 					r += 2;
 					continue;
 				}
@@ -333,7 +328,7 @@ namespace clane {
 				// B. if the input buffer begins with a prefix of "/./" or "/.", where
 				// "." is a complete path segment, then replace that prefix with "/" in
 				// the input buffer; otherwise,
-				if (has_prefix(r, rend, "/./")) {
+				if (ascii::has_prefix(r, rend, "/./")) {
 					r += 2;
 					continue;
 				}
@@ -347,7 +342,7 @@ namespace clane {
 				// ".." is a complete path segment, then replace that prefix with "/" in
 				// the input buffer and remove the last segment and its preceding "/"
 				// (if any) from the output buffer; otherwise,
-				if (has_prefix(r, rend, "/../")) {
+				if (ascii::has_prefix(r, rend, "/../")) {
 					r += 3;
 					w = remove_last_path_segment(&s[0], w);
 					continue;
@@ -450,7 +445,7 @@ namespace clane {
 			// equivalent. If the next two characters are "//" then the next component
 			// is the authority.
 
-			if (has_prefix(r, end, "//")) {
+			if (ascii::has_prefix(r, end, "//")) {
 
 				r += 2;
 				has_authority = true;
@@ -625,7 +620,7 @@ namespace clane {
 				e.assign(static_cast<int>(error_code::invalid_path), ecat);
 				return;
 			}
-			if (!has_authority() && has_prefix(path.data(), path.data()+path.size(), "//")) {
+			if (!has_authority() && ascii::has_prefix(path.data(), path.data()+path.size(), "//")) {
 				e.assign(static_cast<int>(error_code::invalid_path), ecat);
 				return;
 			}

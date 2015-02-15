@@ -1,5 +1,5 @@
 #include "check/check.h"
-#include "../clane_http_server.hpp"
+#include "../clane_http_parse.hpp"
 
 int main() {
 	using clane::http::parse_line;
@@ -45,10 +45,10 @@ int main() {
 
 	// Case: incomplete line, but too long
 	line = "alpha ";
-	check(std::string::npos == parse_line("bravo charlie", 13, 10, line, complete));
+	check(0 == parse_line("bravo charlie", 13, 10, line, complete));
 
 	// Case: complete line, but too long
 	line = "alpha ";
-	check(std::string::npos == parse_line("bravo\ncharlie", 13, 10, line, complete));
+	check(0 == parse_line("bravo\ncharlie", 13, 10, line, complete));
 }
 

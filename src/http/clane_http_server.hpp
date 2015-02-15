@@ -13,33 +13,6 @@
 
 namespace clane {
 	namespace http {
-
-		/** Parses a line, handling both LF and CRLF line endings
-		 *
-		 * @param p Input buffer to parse.
-		 *
-		 * @param n Number of bytes to parse in the input buffer.
-		 *
-		 * @param max Maximum number of bytes to allow in the result string.
-		 *
-		 * @param oline The result string, excluding any line-ending characters.
-		 *
-		 * @param ocomplete Assigned true if and only if a full string is parsed.
-		 * Otherwise, assigned false.
-		 *
-		 * @return On success, returns the number of bytes parsed. Otherwise, if the
-		 * result string would exceed `max`, then returns `std::string::npos`. */
-		std::size_t parse_line(char const *p, std::size_t n, std::size_t max, std::string &oline, bool &ocomplete);
-
-		template <typename InputIter> bool is_valid_method(InputIter first, InputIter last) {
-			// TODO: implement
-			return false;
-		}
-
-		template <typename InputIter> bool is_valid_http_version(InputIter first, InputIter last) {
-			// TODO: implement
-			return false;
-		}
 	}
 }
 

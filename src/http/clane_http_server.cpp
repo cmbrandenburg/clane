@@ -7,6 +7,7 @@
 /** @file */
 
 #include "clane/clane_http.hpp"
+#include "clane_http_parse.hpp"
 #include "clane_http_server.hpp"
 
 namespace clane {
@@ -58,29 +59,6 @@ namespace clane {
 			}
 		}
 
-		std::size_t parse_line(char const *p, std::size_t n, std::size_t max, std::string &oline, bool &ocomplete) {
-			ocomplete = false;
-			char const *eol = std::find(p, p+n, '\n');
-			if (eol == p+n) {
-				if (oline.size() + n > max)
-					return std::string::npos; // line too long
-				oline.append(p, n);
-				return n; // incomplete
-			}
-			if (eol == p) {
-				if (!oline.empty() && oline.back() == '\r')
-					oline.pop_back();
-				ocomplete = true;
-				return 1; // complete
-			}
-			std::size_t m = eol-p - ('\r' == *(eol-1) ? 1 : 0);
-			if (oline.size() + m > max)
-				return std::string::npos; // line too long
-			oline.append(p, m);
-			ocomplete = true;
-			return 1 + eol-p; // complete
-		}
-
 		void serve_error(server_transaction &xact, status_code c) {
 			// TODO: implement
 			throw std::logic_error("Unimplemented");
@@ -94,10 +72,10 @@ namespace clane {
 				switch (m_stat) {
 
 					case state::request_line: {
-						if (std::string::npos == (len = parse_line(p+tot, n-tot, 8192, m_cur_line, complete))) {
-							// If the request line is too long, does it make sense to serve a
-							// 414 "request URI too long" error instead of the generic "bad
-							// request?"
+						if (0 == (len = parse_line(p+tot, n-tot, 8192, m_cur_line, complete))) {
+							// If the request line is too long, does it make sense to ever
+							// serve a 414 "request URI too long" error instead of the generic
+							// "bad request?"
 							serve_error(xact, status_code::bad_request);
 							return std::string::npos;
 						}
@@ -112,25 +90,18 @@ namespace clane {
 							serve_error(xact, status_code::bad_request);
 							return std::string::npos;
 						}
-						if (!is_valid_method(begin(m_cur_line), begin(m_cur_line)+sp1) ||
-						    !is_valid_http_version(begin(m_cur_line)+sp2+1, end(m_cur_line))) {
+						if (!is_method(&m_cur_line[0], &m_cur_line[sp1]) ||
+						    !parse_http_version(&m_cur_line[sp2+1], &m_cur_line[m_cur_line.size()], xact.m_major_ver, xact.m_minor_ver)) {
 							serve_error(xact, status_code::bad_request);
 							return std::string::npos;
 						}
 						std::error_code ec;
-						throw std::logic_error("TODO: implement");
-#if 0
-						auto u = uri::make_uri(begin(m_cur_line)+sp1+1, begin(m_cur_line)+sp2, ec);
+						xact.m_uri = uri::parse_uri_reference(&m_cur_line[sp1+1], &m_cur_line[sp2], ec);
 						if (ec) {
 							serve_error(xact, status_code::bad_request);
 							return std::string::npos;
 						}
-#endif
-#if 0
-						xact.set_method(&m_cur_line[0], &m_cur_line[sp1]);
-						xact.set_uri(&m_cur_line[sp1+1], &m_cur_line[sp2]);
-						xact.set_http_version(&m_cur_line[sp2+1], &m_cur_line[m_cur_line.size()]);
-#endif
+						xact.m_method.assign(&m_cur_line[0], &m_cur_line[sp1]);
 						m_stat = state::header;
 						continue;
 					}

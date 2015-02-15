@@ -9,6 +9,7 @@
 
 /** @file */
 
+#include "clane_uri.hpp"
 #include <array>
 #include <boost/asio.hpp>
 #include <istream>
@@ -31,14 +32,16 @@ namespace clane {
 		private:
 			streambuf m_sbuf;
 
+			unsigned    m_major_ver;
+			unsigned    m_minor_ver;
+			uri::uri    m_uri;
+			std::string m_method;
+
 		public:
 			server_transaction():
 				std::iostream{&m_sbuf}
 			{}
 
-		private:
-			void set_method(char const *first, char const *last);
-			void set_http_version(char const *first, char const *last);
 		};
 
 		/** Server-side parser engine */
@@ -50,6 +53,7 @@ namespace clane {
 			} m_stat{state::request_line};
 
 			std::string m_cur_line;
+			uri::uri m_uri;
 
 		public:
 			std::size_t parse(char const *p, std::size_t n, server_transaction &xact);

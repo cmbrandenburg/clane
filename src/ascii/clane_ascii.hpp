@@ -10,6 +10,7 @@
 /** @file */
 
 #include <cassert>
+#include <cstring>
 
 namespace clane {
 
@@ -35,6 +36,13 @@ namespace clane {
 				return '0' + n;
 			return 'A' + (n - 10);
 		}
+
+		/** Returns whether a string begins with an exact substring */
+		inline bool has_prefix(char const *beg, char const *end, char const *key) {
+			assert(beg <= end);
+			return static_cast<size_t>(end-beg) >= std::strlen(key) && !std::strncmp(beg, key, std::strlen(key));
+		}
+
 	}
 }
 
