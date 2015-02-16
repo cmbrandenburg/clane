@@ -4,8 +4,8 @@
 
 // vim: set noet:
 
-#ifndef CLANE_HTTP_PARSE_HPP
-#define CLANE_HTTP_PARSE_HPP
+#ifndef CLANE_HTTP_MESSAGE_HPP
+#define CLANE_HTTP_MESSAGE_HPP
 
 /** @file */
 
@@ -14,6 +14,13 @@
 namespace clane {
 	namespace http {
 
+		/** Returns whether a string is a valid HTTP method */
+		bool is_method(char const *beg, char const *end);
+
+		/** Returns whether a string is a valid HTTP version field */
+		bool parse_http_version(char const *beg, char const *end, unsigned &omajor, unsigned &ominor);
+
+#if 0 // FIXME
 		/** Parses a line, handling both LF and CRLF line endings
 		 *
 		 * @param p Input buffer to parse.
@@ -32,12 +39,8 @@ namespace clane {
 		 * parse_line() function returns zero. */
 		std::size_t parse_line(char const *p, std::size_t n, std::size_t max, std::string &oline, bool &ocomplete);
 
-		/** Returns whether a string is a valid HTTP method */
-		bool is_method(char const *beg, char const *end);
-
-		/** Returns whether a string is a valid HTTP version field */
-		bool parse_http_version(char const *beg, char const *end, unsigned &omajor, unsigned &ominor);
+#endif // #if 0
 	}
 }
 
-#endif // #ifndef CLANE_HTTP_PARSE_HPP
+#endif // #ifndef CLANE_HTTP_MESSAGE_HPP

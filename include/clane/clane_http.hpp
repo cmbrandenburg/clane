@@ -15,56 +15,7 @@
 #include <memory>
 
 namespace clane {
-
-	/** Hypertext Transfer Protocol */
 	namespace http {
-
-		/** HTTP status codes, defined in RFC 2616 */
-		enum class status_code {
-			cont                            = 100,
-			switching_protocols             = 101,
-			ok                              = 200,
-			created                         = 201,
-			accepted                        = 202,
-			non_authoritative_information   = 203,
-			no_content                      = 204,
-			reset_content                   = 205,
-			partial_content                 = 206,
-			multiple_choices                = 300,
-			moved_permanently               = 301,
-			found                           = 302,
-			see_other                       = 303,
-			not_modified                    = 304,
-			use_proxy                       = 305,
-			temporary_redirect              = 307,
-			bad_request                     = 400,
-			unauthorized                    = 401,
-			payment_required                = 402,
-			forbidden                       = 403,
-			not_found                       = 404,
-			method_not_allowed              = 405,
-			not_acceptable                  = 406,
-			proxy_authentication_required   = 407,
-			request_timeout                 = 408,
-			conflict                        = 409,
-			gone                            = 410,
-			length_required                 = 411,
-			precondition_failed             = 412,
-			request_entity_too_long         = 413,
-			request_uri_too_long            = 414,
-			unsupported_media_type          = 415,
-			requested_range_not_satisfiable = 416,
-			expectation_failed              = 417,
-			internal_server_error           = 500,
-			not_implemented                 = 501,
-			bad_gateway                     = 502,
-			service_unavailable             = 503,
-			gateway_timeout                 = 504,
-			http_version_not_supported      = 505,
-		};
-
-		/** Returns a human-readable name of an HTTP status code */
-		char const *what(status_code c);
 
 		struct header_name_less {
 			bool operator()(std::string const &a, std::string const &b) const {
@@ -74,8 +25,11 @@ namespace clane {
 
 		/** @brief Map type for pairing HTTP header names to header values
 		 *
-		 * @remark Header names are case-insensitive, and header values are case
-		 * sensitive. */
+		 * @remark A header_map is a `std::multimap` that pairs each header name to
+		 * one or more header values.
+		 *
+		 * @remark Header names are case-insensitive; header values are
+		 * case-sensitive. */
 		typedef std::multimap<std::string, std::string, header_name_less> header_map;
 
 		/** @brief HTTP header name–value pair
@@ -121,6 +75,8 @@ namespace clane {
 		inline bool operator>(header_map const &a, header_map const &b) { return !(a <= b); }
 		inline bool operator>=(header_map const &a, header_map const &b) { return !(a < b); }
 
+#if 0 // FIXME
+
 		template <typename Handler> class basic_server {
 			class impl;
 			std::unique_ptr<impl> m_impl;
@@ -165,6 +121,8 @@ namespace clane {
 		template <typename Handler> basic_server<Handler> make_server(boost::asio::io_service &ios, Handler &&h) {
 			return basic_server<Handler>(ios, std::move(h));
 		}
+
+#endif // #if 0
 	}
 }
 

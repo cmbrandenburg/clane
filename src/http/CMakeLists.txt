@@ -1,5 +1,5 @@
 add_library(clane-http STATIC
-	clane_http_parse.cpp
+	clane_http_message.cpp
 	clane_http_server.cpp)
 target_link_libraries(clane-http
 	clane-uri

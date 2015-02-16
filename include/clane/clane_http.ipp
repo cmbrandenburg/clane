@@ -23,8 +23,58 @@
 #include <system_error>
 
 namespace clane {
+
+	/** Hypertext Transfer Protocol */
 	namespace http {
 
+		/** HTTP status codes, defined in RFC 2616 */
+		enum class status_code {
+			xcontinue                       = 100,
+			switching_protocols             = 101,
+			ok                              = 200,
+			created                         = 201,
+			accepted                        = 202,
+			non_authoritative_information   = 203,
+			no_content                      = 204,
+			reset_content                   = 205,
+			partial_content                 = 206,
+			multiple_choices                = 300,
+			moved_permanently               = 301,
+			found                           = 302,
+			see_other                       = 303,
+			not_modified                    = 304,
+			use_proxy                       = 305,
+			temporary_redirect              = 307,
+			bad_request                     = 400,
+			unauthorized                    = 401,
+			payment_required                = 402,
+			forbidden                       = 403,
+			not_found                       = 404,
+			method_not_allowed              = 405,
+			not_acceptable                  = 406,
+			proxy_authentication_required   = 407,
+			request_timeout                 = 408,
+			conflict                        = 409,
+			gone                            = 410,
+			length_required                 = 411,
+			precondition_failed             = 412,
+			request_entity_too_long         = 413,
+			request_uri_too_long            = 414,
+			unsupported_media_type          = 415,
+			requested_range_not_satisfiable = 416,
+			expectation_failed              = 417,
+			internal_server_error           = 500,
+			not_implemented                 = 501,
+			bad_gateway                     = 502,
+			service_unavailable             = 503,
+			gateway_timeout                 = 504,
+			http_version_not_supported      = 505,
+		};
+
+		/** Returns a human-readable name of an HTTP status code */
+		char const *what(status_code c);
+
+#if 0 // FIXME
 		class server_transaction: public std::iostream {
 			friend class request_parser;
 
@@ -37,6 +87,8 @@ namespace clane {
 			unsigned    m_minor_ver;
 			uri::uri    m_uri;
 			std::string m_method;
+			header      m_cur_header;
+			header_map  m_headers;
 
 		public:
 			server_transaction():
@@ -51,12 +103,14 @@ namespace clane {
 			enum class state {
 				request_line,
 				header,
+				body,
 			} m_stat{state::request_line};
 
 			std::string m_cur_line;
 			uri::uri m_uri;
 
 		public:
+			static constexpr std::size_t nerror = -1;
 			std::size_t parse(char const *p, std::size_t n, server_transaction &xact);
 		};
 
@@ -100,7 +154,7 @@ namespace clane {
 				int consume(std::size_t n) {
 					while (n) {
 						auto c = m_pars.parse(m_ibufs.back().data()+m_ilen, n, *m_xacts.back());
-						if (std::string::npos == c)
+						if (m_pars.nerror == c)
 							return -1; // parser error
 						if (!c) {
 							// The parser is done with the current transaction object.
@@ -263,6 +317,8 @@ namespace clane {
 				start_async_receive(conn_iter);
 			}
 		};
+
+#endif // #if 0
 	}
 }
 
