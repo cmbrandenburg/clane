@@ -74,21 +74,44 @@ namespace clane {
 		/** Returns a human-readable name of an HTTP status code */
 		char const *what(status_code c);
 
-#if 0 // FIXME
-		class server_transaction: public std::iostream {
-			friend class request_parser;
+		/** Server-side object encapsulating both the incoming request and the
+		 * outgoing response */
+		class server_transaction {
+			friend class server_engine;
+			typedef uri::uri uri_type;
 
 			class streambuf: public std::streambuf {};
 
+		public:
+
+			/** Request method */
+			std::string   method;
+
+			/** Request URI */
+			uri::uri_type uri;
+
+			/** Request major version—e.g., 1 in `"HTTP/1.0"` */
+			unsigned      major_version;
+
+			/** Request minor version—e.g., 0 in `"HTTP/1.0"` */
+			unsigned      minor_version;
+
+			/** Request message headers */
+			header_map    request_headers;
+
+			/** Response message headers */
+			header_map    response_headers;
+
+			/** Body of both the request and the response
+			 *
+			 * @remark Reading from the @ref body member effects reading from the
+			 * request body. Writing to the @ref body member effects writing to the
+			 * response body. */
+			std::iostream body;
+
+
 		private:
 			streambuf m_sbuf;
-
-			unsigned    m_major_ver;
-			unsigned    m_minor_ver;
-			uri::uri    m_uri;
-			std::string m_method;
-			header      m_cur_header;
-			header_map  m_headers;
 
 		public:
 			server_transaction():
@@ -97,6 +120,10 @@ namespace clane {
 
 		};
 
+		class server_parser {
+		};
+
+#if 0 // FIXME
 		/** Server-side parser engine */
 		class request_parser {
 
