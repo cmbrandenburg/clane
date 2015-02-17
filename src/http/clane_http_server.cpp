@@ -13,6 +13,20 @@
 namespace clane {
 	namespace http {
 
+		server_parser::server_parser(server_transaction *xact) {
+			reset(xact);
+		}
+
+		void server_parser::reset(server_transaction *xact) {
+			m_phase = phase::request_line_method;
+			clear_state();
+		}
+
+		std::size_t server_parser::parse(char const *p, std::size_t n) {
+			throw std::logic_error("TODO: implement");
+			return 0;
+		}
+
 #if 0 // FIXME
 		void serve_error(server_transaction &xact, status_code c) {
 			// TODO: implement

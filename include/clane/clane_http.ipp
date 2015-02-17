@@ -82,25 +82,27 @@ namespace clane {
 
 			class streambuf: public std::streambuf {};
 
+			streambuf m_sbuf;
+
 		public:
 
 			/** Request method */
-			std::string   method;
+			std::string method;
 
 			/** Request URI */
-			uri::uri_type uri;
+			uri_type    uri;
 
 			/** Request major version—e.g., 1 in `"HTTP/1.0"` */
-			unsigned      major_version;
+			unsigned    major_version;
 
 			/** Request minor version—e.g., 0 in `"HTTP/1.0"` */
-			unsigned      minor_version;
+			unsigned    minor_version;
 
 			/** Request message headers */
-			header_map    request_headers;
+			header_map  request_headers;
 
 			/** Response message headers */
-			header_map    response_headers;
+			header_map  response_headers;
 
 			/** Body of both the request and the response
 			 *
@@ -109,18 +111,67 @@ namespace clane {
 			 * response body. */
 			std::iostream body;
 
-
-		private:
-			streambuf m_sbuf;
-
 		public:
 			server_transaction():
-				std::iostream{&m_sbuf}
+				body{&m_sbuf}
 			{}
 
 		};
 
+		/** Server-side message-parsing engine.
+		 *
+		 * The server_parser drives all server-side request handling. It takes
+		 * as input all data received on a connection and emits as output state
+		 * changes needed for handling any incoming requests on the connection.
+		 * */
 		class server_parser {
+			typedef http::status_code status_code_type;
+		public:
+			struct state {
+
+				/** The request is invalid: the server should close the
+				 * connection */
+				static constexpr int close = 1<<0;
+
+				/** The server should send an out-of-handler response */
+				static constexpr int ooh_response = 1<<0;
+
+				/** All headers received: begin handling the request */
+				static constexpr int xinit = 1<<1;
+
+				/** All content and footers received */
+				static constexpr int xeof  = 1<<2;
+			};
+
+		private:
+			enum class phase {
+				request_line_method
+			} m_phase;
+			int m_stat;
+			status_code_type m_stat_code;
+
+		public:
+
+			server_parser(server_transaction *xact);
+
+			/** Reuse parser to begin parsing a new request */
+			void reset(server_transaction *xact);
+
+			/** Returns the state flags
+			 *
+			 * @remark The state flags denote the latest result of parsing the
+			 * incoming connection data. */
+			int state() const { return m_stat; }
+
+			/** Set all state flags to zero */
+			void clear_state() { m_stat = 0; }
+
+			/** Returns the HTTP status code in case of error */
+			status_code_type status_code() const { return m_stat_code; }
+
+			/** Parse some incoming connection data */
+			std::size_t parse(char const *p, std::size_t n);
+
 		};
 
 #if 0 // FIXME
