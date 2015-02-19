@@ -35,34 +35,62 @@ namespace clane {
 		/** @brief HTTP header name–value pair
 		 *
 		 * @remark Header names are case-insensitive, and header values are case
-		 * sensitive.
-		 *
-		 * @remark Headers are `typedef`'d as a `std::pair` owing to the use of a
-		 * `std::multimap` for the header_map type. Consequently, the header name is
-		 * stored as the pair's `first` member, and the header value is stored as
-		 * the pair's `second` member. */
-		typedef header_map::value_type header;
+		 * sensitive. */
+		struct header {
+			std::string name;
+			std::string value;
 
-		inline bool header_equal(header const &a, header const &b) {
+			header() = default;
+			header(header const &) = default;
+			header(header &&) = default;
+			template <typename Name, typename Value> header(Name &&name, Value &&value):
+				name{std::forward<Name>(name)},
+				value{std::forward<Value>(value)}
+			{}
+			header(header_map::value_type const &that): name{that.first}, value{that.second} {}
+			header(header_map::value_type &&that): name{std::move(that.first)}, value{std::move(that.second)} {}
+			header &operator=(header const &) = default;
+			header &operator=(header &&) = default;
+			header &operator=(header_map::value_type const &that) {
+				name = that.first;
+				value = that.second;
+				return *this;
+			}
+			header &operator=(header_map::value_type &&that) {
+				name = std::move(that.first);
+				value = std::move(that.second);
+				return *this;
+			}
+			operator header_map::value_type() { return header_map::value_type{name, value}; }
+			void clear() {
+				name.clear();
+				value.clear();
+			}
+		};
+
+		inline bool operator==(header const &a, header const &b) {
+			return clane::ascii::icase_compare(a.name, b.name) == 0 && a.value == b.value;
+		}
+		inline bool operator!=(header const &a, header const &b) { return !(a == b); }
+		inline bool operator<(header const &a, header const &b) {
+			int n = clane::ascii::icase_compare(a.name, b.name);
+			return n < 0 || (n == 0 && a.value < b.value);
+		}
+		inline bool operator<=(header const &a, header const &b) {
+			int n = clane::ascii::icase_compare(a.name, b.name);
+			return n < 0 || (n == 0 && a.value <= b.value);
+		}
+		inline bool operator>(header const &a, header const &b) { return !(a <= b); }
+		inline bool operator>=(header const &a, header const &b) { return !(a < b); }
+
+		inline bool header_equal(header_map::value_type const &a, header_map::value_type const &b) {
 			return clane::ascii::icase_compare(a.first, b.first) == 0 && a.second == b.second;
 		}
 
-		inline bool header_less(header const &a, header const &b) {
+		inline bool header_less(header_map::value_type const &a, header_map::value_type const &b) {
 			int n = clane::ascii::icase_compare(a.first, b.first);
 			return n < 0 || (n == 0 && a.second < b.second);
 		}
-
-		inline bool header_less_equal(header const &a, header const &b) {
-			int n = clane::ascii::icase_compare(a.first, b.first);
-			return n < 0 || (n == 0 && a.second <= b.second);
-		}
-
-		inline bool operator==(header const &a, header const &b) { return header_equal(a, b); }
-		inline bool operator!=(header const &a, header const &b) { return !header_equal(a, b); }
-		inline bool operator<(header const &a, header const &b) { return header_less(a, b); }
-		inline bool operator<=(header const &a, header const &b) { return header_less_equal(a, b); }
-		inline bool operator>(header const &a, header const &b) { return !header_less_equal(a, b); }
-		inline bool operator>=(header const &a, header const &b) { return !header_less(a, b); }
 
 		inline bool operator==(header_map const &a, header_map const &b) {
 			return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), header_equal);

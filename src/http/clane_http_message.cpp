@@ -125,7 +125,7 @@ namespace clane {
 			return true;
 		}
 
-#if 0
+#if 0 // FIXME
 
 		std::size_t parse_line(char const *p, std::size_t n, std::size_t max, std::string &oline, bool &ocomplete) {
 			ocomplete = false;
@@ -151,6 +151,25 @@ namespace clane {
 		}
 
 #endif // #if 0
+
+		void v1x_headers_parser::reset() {
+			m_phase = phase::begin_name;
+			m_hdrs.clear();
+			m_cur.clear();
+		}
+
+		parse_result v1x_headers_parser::parse(char const *p, std::size_t n) {
+			while (true) {
+				switch (m_phase) {
+					case phase::begin_name: {
+						throw std::logic_error("TODO: implement");
+					}
+
+					default:
+						throw std::logic_error("bad parser state");
+				}
+			}
+		}
 
 	}
 }
