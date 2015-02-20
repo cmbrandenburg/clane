@@ -18,6 +18,10 @@ namespace {
 		return (0 <= c && c < 32) || c == 127;
 	}
 
+	bool is_lws_char(char c) {
+		return c == ' ' || c == '\t';
+	};
+
 	bool is_token_char(char c) {
 		// token      = 1*<any CHAR except CTLs or separators>
 		// separators = "(" | ")" | "<" | ">" | "@"
@@ -32,9 +36,30 @@ namespace {
 			'{' != c && '}' != c && ' ' != c && '\t' != c;
 	}
 
+	bool is_text(char const *beg, char const *end) {
+		// FIXME: test
+		return std::all_of(beg, end, [](char c) { return (32<=c && c<127) || is_lws_char(c); });
+	}
+
 	bool is_token(char const *beg, char const *end) {
+		// FIXME: test
 		// token      = 1*<any CHAR except CTLs or separators>
 		return beg<end && end == std::find_if_not(beg, end, is_token_char);
+	}
+
+	bool is_header_name(char const *beg, char const *end) {
+		// field-name     = token
+		return is_token(beg, end);
+	}
+
+	bool is_header_value(char const *beg, char const *end) {
+		// field-value    = *( field-content | LWS )
+		// field-content  = <the OCTETs making up the field-value
+		//                  and consisting of either *TEXT or combinations
+		//                  of token, separators, and quoted-string>
+		// TEXT           = <any OCTET except CTLs,
+		//                  but including LWS>
+		return is_text(beg, end);
 	}
 }
 
@@ -126,86 +151,75 @@ namespace clane {
 			return true;
 		}
 
-#if 0 // FIXME
-
-		std::size_t parse_line(char const *p, std::size_t n, std::size_t max, std::string &oline, bool &ocomplete) {
-			ocomplete = false;
-			char const *eol = std::find(p, p+n, '\n');
-			if (eol == p+n) {
-				if (oline.size() + n > max)
-					return 0; // line too long
-				oline.append(p, n);
-				return n; // incomplete
-			}
-			if (eol == p) {
-				if (!oline.empty() && oline.back() == '\r')
-					oline.pop_back();
-				ocomplete = true;
-				return 1; // complete
-			}
-			std::size_t m = eol-p - ('\r' == *(eol-1) ? 1 : 0);
-			if (oline.size() + m > max)
-				return 0; // line too long
-			oline.append(p, m);
-			ocomplete = true;
-			return 1 + eol-p; // complete
-		}
-
-#endif // #if 0
-
 		void v1x_headers_parser::reset() {
-			m_phase = phase::begin_line;
-			m_hdrs.clear();
-			m_cur.clear();
 			m_size = 0;
+			m_cur_line.clear();
+			m_cur_hdr.clear();
+			m_hdrs.clear();
 		}
 
 		parse_result v1x_headers_parser::parse(char const *p, std::size_t n) {
-			std::size_t off = 0;
-			while (n) {
-				std::size_t len = std::min(cap-m_size, n-off);
-				switch (m_phase) {
-					case phase::begin_line: {
-						if (ascii::has_prefix(p+off, p+off+len, "\n")) {
-							m_hdrs.insert(std::move(m_cur));
-							return parse_result{parse_result::done, 1};
-						}
-						if (ascii::has_prefix(p+off, p+off+len, "\r\n")) {
-							m_hdrs.insert(std::move(m_cur));
-							return parse_result{parse_result::done, 2};
-						}
-					case phase::continue_name:
-						auto sep = std::find(p+off, p+off+len, ':');
-						if (
-						m_size += sep-(p+off);
-						if (m_size == cap)
-							return parse_result{parse_result::error, 0, status_code::bad_request}; // too long
-						m_cur.name.append(p+off, sep);
-						if (!is_token(m_cur.name.data(), m_cur.name.data()+m_cur.name.size()))
-							return parse_result{parse_result::error, 0, status_code::bad_request}; // bad name token
-						if (sep == p+off+len) {
-							m_phase = phase::continue_name;
-							return parse_result{parse_result::not_done, len};
-						}
-						++m_size; // consume ':'
-						m_phase = phase::continue_value;
-						break;
+			// FIXME: test
+			std::size_t tot = 0; // number of bytes parsed
+			while (tot < n) {
+				std::size_t len = std::min(cap-m_size, n-tot);
+				char const *beg = p+tot, *end;
+				auto const eol = std::find(beg, beg+len, '\n');
+				tot += eol-beg;
+				if (eol != beg+len) {
+					std::string cur_line = std::move(m_cur_line);
+					m_cur_line.clear();
+					if (!cur_line.empty()) {
+						// Special case: the line has been parsed in two or more passes and
+						// is thus non-contiguous. Buffer the line into a contiguous
+						// buffer to make it easier to work with.
+						cur_line.append(beg, eol);
+						beg = cur_line.data();
+						end = cur_line.data()+cur_line.size();
+					} else {
+						// Normal case: we've received the line in its entirety in one pass.
+						end = eol;
 					}
-
-					case phase::continue_value: {
-						auto sep = std::find(p, p+len, '\n');
-						m_size += sep-p;
-						if (m_size == cap)
-							return parse_result{parse_result::error, 0, status_code::bad_request}; // too long
-						if (*
-						m_cur.value.append(p, sep);
+					if (beg < end && *(end-1) == '\r')
+						--end; // chomp CR
+					if (beg == end || !is_lws_char(*beg)) {
+						if (!m_cur_hdr.name.empty()) {
+							if (!is_header_value(&*begin(m_cur_hdr.value), &*std::end(m_cur_hdr.value)))
+								return parse_result{parse_result::error, 0, status_code::bad_request}; // invalid header value
+							m_hdrs.insert(std::move(m_cur_hdr));
+							m_cur_hdr.clear();
+						}
 					}
-
-					default:
-						throw std::logic_error("bad parser state");
+					if (beg == end)
+						return parse_result{parse_result::done, tot}; // no more headers
+					if (is_lws_char(*beg)) {
+						// Linear whitespace: this line is a continuation of the previous
+						// line.
+						if (m_cur_hdr.name.empty())
+							return parse_result{parse_result::error, 0, status_code::bad_request}; // missing header name
+						beg = std::find_if_not(beg, end, is_lws_char); // skip linear whitespace
+						if (beg < end) {
+							m_cur_hdr.value.push_back(' '); // replace all linear whitespace with single space character
+							m_cur_hdr.value.append(beg, end);
+						}
+						continue;
+					}
+					// Otherwise this line begins a new header.
+					auto const sep = std::find(beg, end, ':');
+					if (sep == end)
+						return parse_result{parse_result::error, 0, status_code::bad_request}; // missing ':' separator
+					if (!is_header_name(beg, sep))
+						return parse_result{parse_result::error, 0, status_code::bad_request}; // invalid header name
+					m_cur_hdr.name.assign(beg, sep);
+					beg = std::find_if_not(sep+1, end, is_lws_char); // skip linear whitespace at beginning of value
+					m_cur_hdr.value.assign(beg, end);
+					continue;
 				}
+				// This is an incomplete line.
+				m_cur_line.append(beg, eol);
+				break;
 			}
-			return parse_result{parse_result::not_done, n
+			return parse_result{parse_result::not_done, tot};
 		}
 
 	}
