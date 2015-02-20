@@ -33,7 +33,8 @@ namespace {
 	}
 
 	bool is_token(char const *beg, char const *end) {
-		return end == std::find_if_not(beg, end, is_token_char);
+		// token      = 1*<any CHAR except CTLs or separators>
+		return beg<end && end == std::find_if_not(beg, end, is_token_char);
 	}
 }
 
@@ -153,22 +154,58 @@ namespace clane {
 #endif // #if 0
 
 		void v1x_headers_parser::reset() {
-			m_phase = phase::begin_name;
+			m_phase = phase::begin_line;
 			m_hdrs.clear();
 			m_cur.clear();
+			m_size = 0;
 		}
 
 		parse_result v1x_headers_parser::parse(char const *p, std::size_t n) {
-			while (true) {
+			std::size_t off = 0;
+			while (n) {
+				std::size_t len = std::min(cap-m_size, n-off);
 				switch (m_phase) {
-					case phase::begin_name: {
-						throw std::logic_error("TODO: implement");
+					case phase::begin_line: {
+						if (ascii::has_prefix(p+off, p+off+len, "\n")) {
+							m_hdrs.insert(std::move(m_cur));
+							return parse_result{parse_result::done, 1};
+						}
+						if (ascii::has_prefix(p+off, p+off+len, "\r\n")) {
+							m_hdrs.insert(std::move(m_cur));
+							return parse_result{parse_result::done, 2};
+						}
+					case phase::continue_name:
+						auto sep = std::find(p+off, p+off+len, ':');
+						if (
+						m_size += sep-(p+off);
+						if (m_size == cap)
+							return parse_result{parse_result::error, 0, status_code::bad_request}; // too long
+						m_cur.name.append(p+off, sep);
+						if (!is_token(m_cur.name.data(), m_cur.name.data()+m_cur.name.size()))
+							return parse_result{parse_result::error, 0, status_code::bad_request}; // bad name token
+						if (sep == p+off+len) {
+							m_phase = phase::continue_name;
+							return parse_result{parse_result::not_done, len};
+						}
+						++m_size; // consume ':'
+						m_phase = phase::continue_value;
+						break;
+					}
+
+					case phase::continue_value: {
+						auto sep = std::find(p, p+len, '\n');
+						m_size += sep-p;
+						if (m_size == cap)
+							return parse_result{parse_result::error, 0, status_code::bad_request}; // too long
+						if (*
+						m_cur.value.append(p, sep);
 					}
 
 					default:
 						throw std::logic_error("bad parser state");
 				}
 			}
+			return parse_result{parse_result::not_done, n
 		}
 
 	}
