@@ -1,6 +1,6 @@
 add_library(clane-http STATIC
-	clane_http_message.cpp
-	clane_http_server.cpp)
+	clane_http_message.cxx
+	clane_http_server.cxx)
 target_link_libraries(clane-http
 	clane-uri
 	${Boost_LIBRARIES}

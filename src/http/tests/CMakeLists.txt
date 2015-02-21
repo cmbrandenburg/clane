@@ -1,5 +1,5 @@
 macro(make_cxx_test name)
-	add_executable(check_http_${name} check_http_${name}.cpp)
+	add_executable(check_http_${name} check_http_${name}.cxx)
 	target_link_libraries(check_http_${name} clane-http)
 	add_test(http_${name} ./check_http_${name})
 endmacro()

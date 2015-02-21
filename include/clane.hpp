@@ -10,7 +10,8 @@
 /** @file */
 
 #include "clane/clane_ascii.hpp"
-#include "clane/clane_http.hpp"
+#include "clane/clane_http_message.hpp"
+#include "clane/clane_http_server.hpp"
 #include "clane/clane_uri.hpp"
 
 /** Top-level project namespace */
