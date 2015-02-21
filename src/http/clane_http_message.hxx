@@ -17,6 +17,9 @@ namespace clane {
 		/** Returns whether a string is a valid HTTP method */
 		bool is_method(char const *beg, char const *end);
 
+		/** Returns whether a string is valid HTTP _TEXT_ (as according to RFC 2616) */
+		bool is_text(char const *beg, char const *end);
+
 		/** Returns whether a string is a valid HTTP version field */
 		bool parse_http_version(char const *beg, char const *end, unsigned &omajor, unsigned &ominor);
 

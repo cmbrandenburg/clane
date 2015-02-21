@@ -6,5 +6,6 @@ endmacro()
 
 make_cxx_test(header_map)
 make_cxx_test(is_method)
+make_cxx_test(is_text)
 make_cxx_test(parse_http_version)
 make_cxx_test(server)

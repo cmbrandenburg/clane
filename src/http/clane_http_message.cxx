@@ -37,13 +37,7 @@ namespace {
 			'{' != c && '}' != c && ' ' != c && '\t' != c;
 	}
 
-	bool is_text(char const *beg, char const *end) {
-		// FIXME: test
-		return std::all_of(beg, end, [](char c) { return (32<=c && c<127) || is_lws_char(c); });
-	}
-
 	bool is_token(char const *beg, char const *end) {
-		// FIXME: test
 		// token      = 1*<any CHAR except CTLs or separators>
 		return beg<end && end == std::find_if_not(beg, end, is_token_char);
 	}
@@ -51,16 +45,6 @@ namespace {
 	bool is_header_name(char const *beg, char const *end) {
 		// field-name     = token
 		return is_token(beg, end);
-	}
-
-	bool is_header_value(char const *beg, char const *end) {
-		// field-value    = *( field-content | LWS )
-		// field-content  = <the OCTETs making up the field-value
-		//                  and consisting of either *TEXT or combinations
-		//                  of token, separators, and quoted-string>
-		// TEXT           = <any OCTET except CTLs,
-		//                  but including LWS>
-		return is_text(beg, end);
 	}
 }
 
@@ -113,8 +97,24 @@ namespace clane {
 			}
 		}
 
+		bool is_header_value(char const *beg, char const *end) {
+			// field-value    = *( field-content | LWS )
+			// field-content  = <the OCTETs making up the field-value
+			//                  and consisting of either *TEXT or combinations
+			//                  of token, separators, and quoted-string>
+			// TEXT           = <any OCTET except CTLs,
+			//                  but including LWS>
+			return is_text(beg, end);
+		}
+
 		bool is_method(char const *beg, char const *end) {
 			return is_token(beg, end);
+		}
+
+		bool is_text(char const *beg, char const *end) {
+			// TEXT           = <any OCTET except CTLs,
+			//                  but including LWS>
+			return std::all_of(beg, end, [](char c) { return (32<=c && c<127) || is_lws_char(c); });
 		}
 
 		bool parse_http_version(char const *beg, char const *end, unsigned &omajor, unsigned &ominor) {
