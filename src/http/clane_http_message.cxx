@@ -153,94 +153,94 @@ namespace clane {
 			return true;
 		}
 
-		void v1x_headers_parser::reset() {
-			parser::reset();
+		void v1x_headers_parser::reset_derived() {
 			m_cur_line.clear();
 			m_cur_hdr.clear();
 			m_hdrs.clear();
 		}
 
-		std::size_t v1x_headers_parser::parse(char const *p, std::size_t n) {
+		void v1x_headers_parser::parse_some(char const *const p, std::size_t const n) {
 			// This parser could detect errors sooner than it does. Instead, the
 			// parser waits to read in the entire line, or two entire lines, before
 			// detecting whether, say, a header name or value is invalid. The
 			// expectation is that clients send their headers quickly, and it's not
 			// our responsibility to return an error to the client as soon as possible
 			// anyway.
-			assert(!bad());
-			assert(!fin());
-			std::size_t orig_size = size();
-			while (n) {
-				std::size_t len = std::min(capacity()-size(), n);
-				char const *beg = p, *end;
-				auto const eol = std::find(beg, beg+len, '\n');
-				if (eol != beg+len) {
-					size_t const delta = eol+1 - beg;
-					if (!increase_size(delta, false))
-						return set_bad(status_code_type::bad_request); // headers are too long
-					p += delta;
-					n -= delta;
-					std::string cur_line = std::move(m_cur_line);
-					m_cur_line.clear();
-					if (!cur_line.empty()) {
-						// Special case: this parse invocation is a continuation of the same
-						// line, so the line is dis-contiguous. Buffer the line into a
-						// contiguous buffer to make it easier to work with.
-						cur_line.append(beg, eol);
-						beg = cur_line.data();
-						end = cur_line.data()+cur_line.size();
-					} else {
-						// Normal case: we've received the line in its entirety in one pass.
-						end = eol;
-					}
-					if (beg < end && *(end-1) == '\r')
-						--end; // chomp CR
-					if (beg == end || !is_lws_char(*beg)) {
-						if (!m_cur_hdr.name.empty()) {
-							if (!is_header_value(&*begin(m_cur_hdr.value), &*std::end(m_cur_hdr.value)))
-								return set_bad(status_code_type::bad_request); // invalid header value
-							m_hdrs.insert(std::move(m_cur_hdr));
-							m_cur_hdr.clear();
-						}
-					}
-					if (beg == end)
-						return set_fin(orig_size); // no more headers
-					if (is_lws_char(*beg)) {
-						// Linear whitespace: this line is a continuation of the previous
-						// line.
-						if (m_cur_hdr.name.empty())
-							return set_bad(status_code_type::bad_request); // missing header name
-						beg = std::find_if_not(beg, end, is_lws_char); // skip leading linear whitespace
-						end = &*std::find_if_not(std::reverse_iterator<char const*>{end}, std::reverse_iterator<char const *>{beg},
-								is_lws_char) + 1; // skip trailing linear whitespace
-						if (beg < end) {
-							m_cur_hdr.value.push_back(' '); // replace all linear whitespace with single space character
-							m_cur_hdr.value.append(beg, end);
-						}
-						continue;
-					}
-					// Otherwise this line begins a new header.
-					auto const sep = std::find(beg, end, ':');
-					if (sep == end)
-						return set_bad(status_code_type::bad_request); // missing ':' separator
-					if (!is_header_name(beg, sep))
-						return set_bad(status_code_type::bad_request); // invalid header name
-					m_cur_hdr.name.assign(beg, sep);
-					beg = std::find_if_not(sep+1, end, is_lws_char); // skip leading linear whitespace
-					end = &*std::find_if_not(std::reverse_iterator<char const*>{end}, std::reverse_iterator<char const *>{beg},
-							is_lws_char) + 1; // skip trailing linear whitespace
-					m_cur_hdr.value.assign(beg, end);
-					continue;
-				}
+			std::size_t len = std::min(capacity()-size(), n);
+			char const *beg, *end;
+			auto const eol = std::find(p, p+len, '\n');
+			if (eol == p+len) {
 				// This is an incomplete line.
-				if (!increase_size(eol - beg, true))
+				if (!increase_size(eol - p, true))
 					return set_bad(status_code_type::bad_request); // headers are too long
-				m_cur_line.append(beg, eol);
-				break;
+				m_cur_line.append(p, eol);
+				return;
 			}
-			return size() - orig_size; // parsing is incomplete
+			size_t const delta = eol+1 - p;
+			if (!increase_size(delta, false))
+				return set_bad(status_code_type::bad_request); // headers are too long
+			std::string cur_line = std::move(m_cur_line);
+			m_cur_line.clear();
+			if (!cur_line.empty()) {
+				// Special case: this parse invocation is a continuation of the same
+				// line, so the line is dis-contiguous. Buffer the line into a
+				// contiguous buffer to make it easier to work with.
+				cur_line.append(p, eol);
+				beg = cur_line.data();
+				end = cur_line.data()+cur_line.size();
+			} else {
+				// Normal case: we've received the line in its entirety in one pass.
+				beg = p;
+				end = eol;
+			}
+			if (beg < end && *(end-1) == '\r')
+				--end; // chomp CR
+			if (beg == end || !is_lws_char(*beg)) {
+				if (!m_cur_hdr.name.empty()) {
+					// We store a header only after we know that the next line doesn't
+					// continue the header with linear whitespace at beginning of the
+					// line.
+					if (!is_header_value(&*begin(m_cur_hdr.value), &*std::end(m_cur_hdr.value)))
+						return set_bad(status_code_type::bad_request); // invalid header value
+					m_hdrs.insert(std::move(m_cur_hdr));
+					m_cur_hdr.clear();
+				}
+			}
+			if (beg == end)
+				return set_fin(); // no more headers
+			if (is_lws_char(*beg)) {
+				// Linear whitespace: this line is a continuation of the previous
+				// line.
+				if (m_cur_hdr.name.empty())
+					return set_bad(status_code_type::bad_request); // missing header name
+				beg = std::find_if_not(beg, end, is_lws_char); // skip leading linear whitespace
+				end = &*std::find_if_not(std::reverse_iterator<char const*>{end}, std::reverse_iterator<char const *>{beg},
+						is_lws_char) + 1; // skip trailing linear whitespace
+				if (beg < end) {
+					m_cur_hdr.value.push_back(' '); // replace all linear whitespace with single space character
+					m_cur_hdr.value.append(beg, end);
+				}
+				return;
+			}
+			// Otherwise this line begins a new header.
+			auto const sep = std::find(beg, end, ':');
+			if (sep == end)
+				return set_bad(status_code_type::bad_request); // missing ':' separator
+			if (!is_header_name(beg, sep))
+				return set_bad(status_code_type::bad_request); // invalid header name
+			m_cur_hdr.name.assign(beg, sep);
+			beg = std::find_if_not(sep+1, end, is_lws_char); // skip leading linear whitespace
+			end = &*std::find_if_not(std::reverse_iterator<char const*>{end}, std::reverse_iterator<char const *>{beg},
+					is_lws_char) + 1; // skip trailing linear whitespace
+			m_cur_hdr.value.assign(beg, end);
 		}
 
+		void v1x_request_line_parser::reset_derived() {
+			m_cur_line.clear();
+		}
+
+		void v1x_request_line_parser::parse_some(char const *p, std::size_t n) {
+		}
 	}
 }
 

@@ -11,6 +11,7 @@
 
 #include <cassert>
 #include "clane/clane_http_message.hpp"
+#include "clane/clane_uri.hpp"
 
 namespace clane {
 	namespace http {
@@ -28,27 +29,12 @@ namespace clane {
 		template <typename Derived> struct parser {
 			typedef http::status_code status_code_type;
 		private:
-			bool             m_bad;
-			bool             m_fin;
-			std::size_t      m_size;
+			bool             m_bad{};
+			bool             m_fin{};
+			std::size_t      m_size{};
 			status_code_type m_stat_code;
 
 		public:
-
-			static struct no_init_type {} const no_init;
-
-			/** Constructs a parser that's ready to parse */
-			parser():
-				m_bad{},
-				m_fin{},
-				m_size{}
-			{}
-
-			/** Constructs an uninitialized parser
-			 *
-			 * @remark The application _must_ call the reset() function to initialize
-			 * the parser prior to calling any other parser methods. */
-			parser(no_init_type const &) {}
 
 			/** Returns whether the parser has stopped because of an error */
 			bool bad() const { return m_bad; }
@@ -58,6 +44,38 @@ namespace clane {
 
 			/** Returns the HTTP status code representing the parser error, if any */
 			status_code_type status_code() const { return m_stat_code; }
+
+			/** Reinitializes the parser so it may parse again */
+			void reset() {
+				m_bad = false;
+				m_fin = false;
+				m_size = 0;
+				static_cast<Derived*>(this)->reset_derived();
+			}
+
+			/** Parses the given buffer
+			 *
+			 * @remark The parse() function continues parsing input until either the
+			 * parser fully consumes the input buffer `p` or else the parser stop due
+			 * to either error or success. */
+			std::size_t parse(char const *p, std::size_t n) {
+				assert(!bad());
+				assert(!fin());
+				std::size_t size0 = size();
+				while (n) {
+					std::size_t size1 = size();
+					static_cast<Derived*>(this)->parse_some(p, n);
+					if (bad())
+						return 0;
+					if (fin())
+						break;
+					std::size_t const delta = size()-size1;
+					assert(delta);
+					p += delta;
+					n -= delta;
+				}
+				return size() - size0;
+			}
 
 		protected:
 
@@ -75,50 +93,56 @@ namespace clane {
 			 * @return Returns true if the number of bytes, after addition, is still
 			 * within the parser's capacity. */
 			bool increase_size(std::size_t delta, bool more) {
-				if (m_size + delta + (more?1:0) > Derived::capacity())
+				if (m_size + delta + (more?1:0) > static_cast<Derived*>(this)->capacity())
 					return false; // error: too big
 				m_size += delta;
 				return true; // okay
 			}
 
-			/** Reinitializes the parser so it may parse again */
-			void reset() {
-				m_bad = false;
-				m_fin = false;
-				m_size = 0;
-			}
-
 			/** Sets the parser into a stopped state due to error */
-			std::size_t set_bad(status_code_type stat_code) {
+			void set_bad(status_code_type stat_code) {
 				assert(!bad());
 				assert(!fin());
 				m_bad = true;
 				m_stat_code = stat_code;
-				return 0;
 			}
 
 			/** Sets the parser into a stopped state due to success */
-			std::size_t set_fin(std::size_t orig_size) {
+			void set_fin() {
 				assert(!bad());
 				assert(!fin());
 				m_fin = true;
-				return m_size - orig_size;
 			}
 		};
 
-		/** Parser for HTTP 1.x-style headers list */
+		/** Parser for an HTTP-1.x-style headers list */
 		class v1x_headers_parser: public parser<v1x_headers_parser> {
+			friend class parser;
 			std::string      m_cur_line;
 			header           m_cur_hdr;
 			header_map       m_hdrs;
 		public:
 			static std::size_t constexpr capacity() { return 16384; }
-			void reset();
-			std::size_t parse(char const *p, std::size_t n);
 			header_map &headers() { return m_hdrs; }
+		private:
+			void reset_derived();
+			void parse_some(char const *p, std::size_t n);
 		};
 
+		/** Parser for an HTTP-1.x-style request line */
 		class v1x_request_line_parser: public parser<v1x_request_line_parser> {
+			friend class parser;
+			typedef uri::uri uri_type;
+			std::string m_cur_line;
+			std::string m_method;
+			uri_type m_uri;
+			unsigned m_major_ver;
+			unsigned m_minor_ver;
+		public:
+			static std::size_t constexpr capacity() { return 8192; }
+		private:
+			void reset_derived();
+			void parse_some(char const *p, std::size_t n);
 		};
 	}
 }
