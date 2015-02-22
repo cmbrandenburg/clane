@@ -9,9 +9,10 @@
 
 /** @file */
 
-#include <cassert>
 #include "clane/clane_http_message.hpp"
 #include "clane/clane_uri.hpp"
+#include <algorithm>
+#include <cassert>
 
 namespace clane {
 	namespace http {
@@ -21,6 +22,9 @@ namespace clane {
 
 		/** Returns whether a string is valid HTTP _TEXT_ (as according to RFC 2616) */
 		bool is_text(char const *beg, char const *end);
+
+		/** Returns whether a string is a valid HTTP chunk size line */
+		bool parse_chunk_size(char const *beg, char const *end, std::size_t *osize);
 
 		/** Returns whether a string is a valid HTTP version field */
 		bool parse_http_version(char const *beg, char const *end, unsigned *omajor, unsigned *ominor);
@@ -116,9 +120,62 @@ namespace clane {
 			}
 		};
 
+		/** Base class for line-oriented parsers
+		 *
+		 * @remark A line-oriented parser is a parser that parses line-by-line. The
+		 * v1x_line_parser class takes care of buffering each line into a contiguous
+		 * buffer, as needed, so that derived classes need only implement logic for
+		 * handling lines in their entirety. */
+		template <typename Derived> class v1x_line_parser: public parser<v1x_line_parser<Derived>> {
+			friend class parser<v1x_line_parser<Derived>>;
+			std::string m_cur_line;
+
+			std::size_t constexpr capacity() const {
+				return static_cast<Derived const*>(this)->capacity();
+			}
+
+			void reset_derived() {
+				m_cur_line.clear();
+				static_cast<Derived*>(this)->reset_derived();
+			}
+
+			std::size_t parse_some(char const *p, std::size_t n) {
+				char const *const eol = std::find(p, p+n, '\n');
+				if (eol == p+n) {
+					// This is an incomplete line.
+					m_cur_line.append(p, eol);
+					return n;
+				}
+				char const *beg, *end;
+				std::string cur_line = std::move(m_cur_line);
+				m_cur_line.clear();
+				if (!cur_line.empty()) {
+					// Special case: This input buffer completes a line started in a
+					// different buffer. Buffer the line into a contiguous buffer to make it
+					// easier to work with.
+					cur_line.append(p, eol);
+					beg = &cur_line[0];
+					end = &cur_line[cur_line.size()];
+				} else {
+					// Normal case: This input buffer contains the line in its entirety.
+					beg = p;
+					end = eol;
+				}
+				if (beg < end && *(end-1) == '\r')
+					--end; // chomp CR
+				// We don't use the return value from the derived class's parse_some()
+				// function, but check it with some asserts for consistency with the
+				// overall parse_some() pattern.
+				static_cast<Derived*>(this)->parse_line(beg, end-beg);
+				if (parser<v1x_line_parser>::bad())
+					return 0;
+				return eol+1 - p;
+			}
+		};
+
 		/** Parser for an HTTP-1.x-style headers list */
-		class v1x_headers_parser: public parser<v1x_headers_parser> {
-			friend class parser;
+		class v1x_headers_parser: public v1x_line_parser<v1x_headers_parser> {
+			friend class v1x_line_parser;
 			std::string      m_cur_line;
 			header           m_cur_hdr;
 			header_map       m_hdrs;
@@ -127,12 +184,12 @@ namespace clane {
 			header_map &headers() { return m_hdrs; }
 		private:
 			void reset_derived();
-			std::size_t parse_some(char const *p, std::size_t n);
+			std::size_t parse_line(char const *p, std::size_t n);
 		};
 
 		/** Parser for an HTTP-1.x-style request line */
-		class v1x_request_line_parser: public parser<v1x_request_line_parser> {
-			friend class parser;
+		class v1x_request_line_parser: public v1x_line_parser<v1x_request_line_parser> {
+			friend class v1x_line_parser;
 			typedef uri::uri uri_type;
 			std::string m_cur_line;
 			std::string m_method;
@@ -147,7 +204,29 @@ namespace clane {
 			unsigned minor_version() const { return m_minor_ver; }
 		private:
 			void reset_derived();
-			std::size_t parse_some(char const *p, std::size_t n);
+			std::size_t parse_line(char const *p, std::size_t n);
+		};
+
+		/** Parser for an HTTP-1.1-style chunk-size line */
+		class v1x_chunk_size_parser: public v1x_line_parser<v1x_chunk_size_parser> {
+			friend class v1x_line_parser;
+			std::size_t m_chunk_size;
+		public:
+			static std::size_t constexpr capacity() { return 1024; }
+			std::size_t chunk_size() const { return m_chunk_size; }
+		private:
+			void reset_derived() {}
+			std::size_t parse_line(char const *p, std::size_t n);
+		};
+
+		/** Parser for an HTTP-1.x-style empty line */
+		class v1x_empty_line_parser: public v1x_line_parser<v1x_empty_line_parser> {
+			friend class v1x_line_parser;
+		public:
+			static std::size_t constexpr capacity() { return 2; }
+		private:
+			void reset_derived() {}
+			std::size_t parse_line(char const *p, std::size_t n);
 		};
 	}
 }

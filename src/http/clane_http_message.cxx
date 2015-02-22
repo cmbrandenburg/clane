@@ -9,7 +9,6 @@
 #include "ascii/clane_ascii.hxx"
 #include "clane/clane_http_message.hpp"
 #include "clane_http_message.hxx"
-#include <algorithm>
 #include <iterator>
 
 namespace {
@@ -118,6 +117,21 @@ namespace clane {
 			return std::all_of(beg, end, [](char c) { return (32<=c && c<127) || is_lws_char(c); });
 		}
 
+		bool parse_chunk_size(char const *beg, char const *end, std::size_t *osize) {
+			assert(beg <= end);
+			if (beg==end || !std::all_of(beg, end, [](char c) { return std::isxdigit(c); }))
+				return false;
+			if (static_cast<std::size_t>(end-beg) > sizeof(std::size_t)*2)
+				return false; // overflow
+			std::size_t x = 0;
+			for (auto i = beg; i < end; ++i) {
+				x *= 16;
+				x += ascii::hexch_to_int(*i);
+			}
+			*osize = x;
+			return true;
+		}
+
 		bool parse_http_version(char const *beg, char const *end, unsigned *omajor, unsigned *ominor) {
 
 			// HTTP-Version = "HTTP" "/" 1*DIGIT "." 1*DIGIT
@@ -159,36 +173,14 @@ namespace clane {
 			m_hdrs.clear();
 		}
 
-		std::size_t v1x_headers_parser::parse_some(char const *const p, std::size_t const n) {
+		std::size_t v1x_headers_parser::parse_line(char const *const p, std::size_t const n) {
 			// This parser could detect errors sooner than it does. Instead, the
 			// parser waits to read in the entire line, or two entire lines, before
 			// detecting whether, say, a header name or value is invalid. The
 			// expectation is that clients send their headers quickly, and it's not
 			// our responsibility to return an error to the client as soon as possible
 			// anyway.
-			char const *beg, *end;
-			char const *const eol = std::find(p, p+n, '\n');
-			if (eol == p+n) {
-				// This is an incomplete line.
-				m_cur_line.append(p, eol);
-				return n;
-			}
-			std::string cur_line = std::move(m_cur_line);
-			m_cur_line.clear();
-			if (!cur_line.empty()) {
-				// Special case: This input buffer completes a line started in a
-				// different buffer. Buffer the line into a contiguous buffer to make it
-				// easier to work with.
-				cur_line.append(p, eol);
-				beg = cur_line.data();
-				end = cur_line.data()+cur_line.size();
-			} else {
-				// Normal case: This input buffer contains the line in its entirety.
-				beg = p;
-				end = eol;
-			}
-			if (beg < end && *(end-1) == '\r')
-				--end; // chomp CR
+			char const *beg = p, *end = p+n;
 			if (beg == end || !is_lws_char(*beg)) {
 				if (!m_cur_hdr.name.empty()) {
 					// We store a header only after we know that the next line doesn't
@@ -201,7 +193,7 @@ namespace clane {
 				}
 			}
 			if (beg == end)
-				return set_as_fin(eol-p + 1); // no more headers
+				return set_as_fin(n); // no more headers
 			if (is_lws_char(*beg)) {
 				// Linear whitespace: this line is a continuation of the previous
 				// line.
@@ -214,7 +206,7 @@ namespace clane {
 					m_cur_hdr.value.push_back(' '); // replace all linear whitespace with single space character
 					m_cur_hdr.value.append(beg, end);
 				}
-				return eol-p + 1;
+				return n;
 			}
 			// Otherwise this line begins a new header.
 			auto const sep = std::find(beg, end, ':');
@@ -227,37 +219,15 @@ namespace clane {
 			end = &*std::find_if_not(std::reverse_iterator<char const*>{end}, std::reverse_iterator<char const *>{beg},
 					is_lws_char) + 1; // skip trailing linear whitespace
 			m_cur_hdr.value.assign(beg, end);
-			return eol-p + 1;
+			return n;
 		}
 
 		void v1x_request_line_parser::reset_derived() {
 			m_cur_line.clear();
 		}
 
-		std::size_t v1x_request_line_parser::parse_some(char const *p, std::size_t n) {
-			char const *const eol = std::find(p, p+n, '\n');
-			if (eol == p+n) {
-				// This is an incomplete line.
-				m_cur_line.append(p, eol);
-				return n;
-			}
-			char const *beg, *end;
-			std::string cur_line = std::move(m_cur_line);
-			m_cur_line.clear();
-			if (!cur_line.empty()) {
-				// Special case: This input buffer completes a line started in a
-				// different buffer. Buffer the line into a contiguous buffer to make it
-				// easier to work with.
-				cur_line.append(p, eol);
-				beg = &cur_line[0];
-				end = &cur_line[cur_line.size()];
-			} else {
-				// Normal case: This input buffer contains the line in its entirety.
-				beg = p;
-				end = eol;
-			}
-			if (beg < end && *(end-1) == '\r')
-				--end; // chomp CR
+		std::size_t v1x_request_line_parser::parse_line(char const *p, std::size_t n) {
+			char const *beg = p, *end = p+n;
 			auto sp1 = std::find(beg, end, ' ');
 			auto sp2 = std::find(sp1+1, end, ' ');
 			if (sp2 == end)
@@ -273,7 +243,19 @@ namespace clane {
 			m_method.assign(beg, sp1);
 			m_uri = std::move(u);
 			m_uri.normalize_path();
-			return set_as_fin(eol-p + 1);
+			return set_as_fin(n);
+		}
+
+		std::size_t v1x_chunk_size_parser::parse_line(char const *p, std::size_t n) {
+			if (!parse_chunk_size(p, p+n, &m_chunk_size))
+				return set_as_bad(status_code_type::bad_request); // invalid chunk size
+			return set_as_fin(n);
+		}
+
+		std::size_t v1x_empty_line_parser::parse_line(char const *p, std::size_t n) {
+			if (n)
+				return set_as_bad(status_code_type::bad_request);
+			return set_as_fin(n);
 		}
 	}
 }
