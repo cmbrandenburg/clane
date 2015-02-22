@@ -11,7 +11,7 @@
 #define check_ok(in, exp_major, exp_minor) \
 	do { \
 		unsigned major, minor; \
-		check(clane::http::parse_http_version(in, in+std::strlen(in), major, minor)); \
+		check(clane::http::parse_http_version(in, in+std::strlen(in), &major, &minor)); \
 		check(major == exp_major); \
 		check(minor == exp_minor); \
 	} while (false)
@@ -19,7 +19,7 @@
 #define check_nok(in) \
 	do { \
 		unsigned major, minor; \
-		check(!clane::http::parse_http_version(in, in+std::strlen(in), major, minor)); \
+		check(!clane::http::parse_http_version(in, in+std::strlen(in), &major, &minor)); \
 	} while (false)
 
 int main() {

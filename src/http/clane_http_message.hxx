@@ -23,7 +23,7 @@ namespace clane {
 		bool is_text(char const *beg, char const *end);
 
 		/** Returns whether a string is a valid HTTP version field */
-		bool parse_http_version(char const *beg, char const *end, unsigned &omajor, unsigned &ominor);
+		bool parse_http_version(char const *beg, char const *end, unsigned *omajor, unsigned *ominor);
 
 		/** Base class for parsers */
 		template <typename Derived> struct parser {
@@ -86,7 +86,7 @@ namespace clane {
 					if (fin())
 						break;
 					if (m_size == cap)
-						return set_bad(status_code_type::bad_request);
+						return set_as_bad(status_code_type::bad_request);
 				}
 				return tot;
 			}
@@ -94,7 +94,7 @@ namespace clane {
 		protected:
 
 			/** Sets the parser into a stopped state due to error */
-			std::size_t set_bad(status_code_type stat_code) {
+			std::size_t set_as_bad(status_code_type stat_code) {
 				assert(!bad());
 				assert(!fin());
 				m_bad = true;
@@ -103,15 +103,15 @@ namespace clane {
 			}
 
 			/** Sets the parser into a stopped state due to success */
-			void set_fin() {
+			void set_as_fin() {
 				assert(!bad());
 				assert(!fin());
 				m_fin = true;
 			}
 
 			/** Sets the parser into a stopped state due to success */
-			std::size_t set_fin(std::size_t ret) {
-				set_fin();
+			std::size_t set_as_fin(std::size_t ret) {
+				set_as_fin();
 				return ret;
 			}
 		};
@@ -141,6 +141,10 @@ namespace clane {
 			unsigned m_minor_ver;
 		public:
 			static std::size_t constexpr capacity() { return 8192; }
+			std::string &method() { return m_method; }
+			uri_type &uri() { return m_uri; }
+			unsigned major_version() const { return m_major_ver; }
+			unsigned minor_version() const { return m_minor_ver; }
 		private:
 			void reset_derived();
 			std::size_t parse_some(char const *p, std::size_t n);
