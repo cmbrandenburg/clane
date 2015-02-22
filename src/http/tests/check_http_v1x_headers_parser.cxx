@@ -15,8 +15,8 @@ void okay(clane::http::v1x_headers_parser &p, char const *in, clane::http::heade
 	std::string q{in};
 	q.append("EXTRA");
 	auto n = p.parse(q.data(), q.size());
-	check(p.okay());
-	check(p.done());
+	check(!p.bad());
+	check(p.fin());
 	check(n == std::strlen(in));
 	check(p.headers() == exp_hdrs);
 
@@ -24,13 +24,13 @@ void okay(clane::http::v1x_headers_parser &p, char const *in, clane::http::heade
 	p.reset();
 	for (std::size_t i = 0; i+1 < std::strlen(in); ++i) {
 		n = p.parse(in+i, 1);
-		check(p.okay());
-		check(!p.done());
+		check(!p.bad());
+		check(!p.fin());
 		check(1 == n);
 	}
 	n = p.parse(in+std::strlen(in)-1, 1);
-	check(p.okay());
-	check(p.done());
+	check(!p.bad());
+	check(p.fin());
 	check(1 == n);
 	check(p.headers() == exp_hdrs);
 }
@@ -42,7 +42,7 @@ void not_okay(clane::http::v1x_headers_parser &p, char const *ok, char const *no
 	std::string q{ok};
 	q.append(nok);
 	auto n = p.parse(q.data(), q.size());
-	check(!p.okay());
+	check(p.bad());
 	check(0 == n);
 	check(p.status_code() == exp_stat_code);
 
@@ -50,12 +50,12 @@ void not_okay(clane::http::v1x_headers_parser &p, char const *ok, char const *no
 	p.reset();
 	for (std::size_t i = 0; i < std::strlen(ok); ++i) {
 		n = p.parse(ok+i, 1);
-		check(p.okay());
-		check(!p.done());
+		check(!p.bad());
+		check(!p.fin());
 		check(1 == n);
 	}
 	n = p.parse(nok, 1);
-	check(!p.okay());
+	check(p.bad());
 	check(0 == n);
 	check(p.status_code() == exp_stat_code);
 }
@@ -119,7 +119,7 @@ int main() {
 	{
 		std::string s{"Content-Length: 1234\r\n"};
 		s.append("User-Agent: ");
-		while (s.size() < p.cap-1)
+		while (s.size() < p.capacity()-1)
 			s.push_back('X');
 		check_call(&not_okay, p, s.c_str(), "X\r\n", clane::http::status_code::bad_request);
 	}
@@ -128,7 +128,7 @@ int main() {
 	{
 		std::string s{"Content-Length: 1234\r\n"};
 		s.append("User-Agent: ");
-		while (s.size() < p.cap-2)
+		while (s.size() < p.capacity()-2)
 			s.push_back('X');
 		s.append("\r\n");
 		check_call(&not_okay, p, s.c_str(), "\r\n", clane::http::status_code::bad_request);
@@ -139,7 +139,7 @@ int main() {
 		std::string s{"Content-Length: 1234\r\n"};
 		s.append("User-Agent: ");
 		std::string val;
-		while (s.size() < p.cap-4) {
+		while (s.size() < p.capacity()-4) {
 			s.push_back('X');
 			val.push_back('X');
 		}

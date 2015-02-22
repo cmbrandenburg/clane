@@ -154,9 +154,7 @@ namespace clane {
 		}
 
 		void v1x_headers_parser::reset() {
-			m_bad = false;
-			m_done = false;
-			m_size = 0;
+			parser::reset();
 			m_cur_line.clear();
 			m_cur_hdr.clear();
 			m_hdrs.clear();
@@ -169,25 +167,17 @@ namespace clane {
 			// expectation is that clients send their headers quickly, and it's not
 			// our responsibility to return an error to the client as soon as possible
 			// anyway.
-			std::size_t orig_size = m_size;
-			auto fin_error = [this](status_code_type stat_code) {
-				m_bad = true;
-				m_stat_code = stat_code;
-				return 0;
-			};
-			auto fin_done = [this, &orig_size]() {
-				m_done = true;
-				return m_size - orig_size;
-			};
+			assert(!bad());
+			assert(!fin());
+			std::size_t orig_size = size();
 			while (n) {
-				std::size_t len = std::min(cap-m_size, n);
-				if (!len)
-					return fin_error(status_code_type::bad_request); // headers are too long
+				std::size_t len = std::min(capacity()-size(), n);
 				char const *beg = p, *end;
 				auto const eol = std::find(beg, beg+len, '\n');
 				if (eol != beg+len) {
 					size_t const delta = eol+1 - beg;
-					m_size += delta;
+					if (!increase_size(delta, false))
+						return set_bad(status_code_type::bad_request); // headers are too long
 					p += delta;
 					n -= delta;
 					std::string cur_line = std::move(m_cur_line);
@@ -208,18 +198,18 @@ namespace clane {
 					if (beg == end || !is_lws_char(*beg)) {
 						if (!m_cur_hdr.name.empty()) {
 							if (!is_header_value(&*begin(m_cur_hdr.value), &*std::end(m_cur_hdr.value)))
-								return fin_error(status_code_type::bad_request); // invalid header value
+								return set_bad(status_code_type::bad_request); // invalid header value
 							m_hdrs.insert(std::move(m_cur_hdr));
 							m_cur_hdr.clear();
 						}
 					}
 					if (beg == end)
-						return fin_done(); // no more headers
+						return set_fin(orig_size); // no more headers
 					if (is_lws_char(*beg)) {
 						// Linear whitespace: this line is a continuation of the previous
 						// line.
 						if (m_cur_hdr.name.empty())
-							return fin_error(status_code_type::bad_request); // missing header name
+							return set_bad(status_code_type::bad_request); // missing header name
 						beg = std::find_if_not(beg, end, is_lws_char); // skip leading linear whitespace
 						end = &*std::find_if_not(std::reverse_iterator<char const*>{end}, std::reverse_iterator<char const *>{beg},
 								is_lws_char) + 1; // skip trailing linear whitespace
@@ -232,9 +222,9 @@ namespace clane {
 					// Otherwise this line begins a new header.
 					auto const sep = std::find(beg, end, ':');
 					if (sep == end)
-						return fin_error(status_code_type::bad_request); // missing ':' separator
+						return set_bad(status_code_type::bad_request); // missing ':' separator
 					if (!is_header_name(beg, sep))
-						return fin_error(status_code_type::bad_request); // invalid header name
+						return set_bad(status_code_type::bad_request); // invalid header name
 					m_cur_hdr.name.assign(beg, sep);
 					beg = std::find_if_not(sep+1, end, is_lws_char); // skip leading linear whitespace
 					end = &*std::find_if_not(std::reverse_iterator<char const*>{end}, std::reverse_iterator<char const *>{beg},
@@ -243,13 +233,12 @@ namespace clane {
 					continue;
 				}
 				// This is an incomplete line.
-				m_size += eol - beg;
-				if (m_size == cap)
-					return fin_error(status_code_type::bad_request); // headers are too long
+				if (!increase_size(eol - beg, true))
+					return set_bad(status_code_type::bad_request); // headers are too long
 				m_cur_line.append(beg, eol);
 				break;
 			}
-			return m_size - orig_size; // parsing is incomplete
+			return size() - orig_size; // parsing is incomplete
 		}
 
 	}
