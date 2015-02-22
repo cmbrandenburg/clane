@@ -23,40 +23,25 @@ namespace clane {
 		/** Returns whether a string is a valid HTTP version field */
 		bool parse_http_version(char const *beg, char const *end, unsigned &omajor, unsigned &ominor);
 
-		/** Encapsulates the result of one iteration of interruptible parsing
-		 *
-		 * @remark A parse_result signifies one of three categories of parser
-		 * results:
-		 * -# _Unrecoverable error_, in which case the connection should be
-		 * closed,
-		 * -# _Complete_, in which case the headers are available,
-		 * -# _Incomplete_, in which case the headers are _not_ available.
-		 *
-		 * @remark If an error occurs then there's an associated HTTP status
-		 * code signifying the type of error. Otherwise, there's an associated
-		 * size quantifying how many bytes of input the parser consumed. */
-		struct parse_result {
-			enum {
-				error,
-				done,
-				not_done
-			} category;
-			std::size_t size;
-			status_code stat_code;
-		};
-
 		/** Parser for HTTP 1.x-style headers list */
 		class v1x_headers_parser {
+			typedef http::status_code status_code_type;
 		public:
 			static constexpr std::size_t cap = 16384; // maximum size of all headers, in bytes
 		private:
-			std::size_t m_size;     // number of input bytes parsed
-			std::string m_cur_line;
-			header      m_cur_hdr;
-			header_map  m_hdrs;
+			bool             m_bad{};
+			bool             m_done{};
+			status_code_type m_stat_code;
+			std::size_t      m_size{};   // number of input bytes parsed
+			std::string      m_cur_line;
+			header           m_cur_hdr;
+			header_map       m_hdrs;
 		public:
+			bool okay() const { return !m_bad; }
+			bool done() const { return m_done; }
+			status_code_type status_code() const { return m_stat_code; }
 			void reset();
-			parse_result parse(char const *p, std::size_t n);
+			std::size_t parse(char const *p, std::size_t n);
 			header_map &headers() { return m_hdrs; }
 		};
 

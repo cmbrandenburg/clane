@@ -10,6 +10,7 @@
 #include "clane/clane_http_message.hpp"
 #include "clane_http_message.hxx"
 #include <algorithm>
+#include <iterator>
 
 namespace {
 
@@ -153,27 +154,43 @@ namespace clane {
 		}
 
 		void v1x_headers_parser::reset() {
+			m_bad = false;
+			m_done = false;
 			m_size = 0;
 			m_cur_line.clear();
 			m_cur_hdr.clear();
 			m_hdrs.clear();
 		}
 
-		parse_result v1x_headers_parser::parse(char const *p, std::size_t n) {
+		std::size_t v1x_headers_parser::parse(char const *p, std::size_t n) {
 			// FIXME: test
-			std::size_t tot = 0; // number of bytes parsed
-			while (tot < n) {
-				std::size_t len = std::min(cap-m_size, n-tot);
-				char const *beg = p+tot, *end;
+			std::size_t orig_size = m_size;
+			auto fin_error = [this](status_code_type stat_code) {
+				m_bad = true;
+				m_stat_code = stat_code;
+				return 0;
+			};
+			auto fin_done = [this, &orig_size]() {
+				m_done = true;
+				return m_size - orig_size;
+			};
+			while (n) {
+				std::size_t len = std::min(cap-m_size, n);
+				if (!len)
+					return fin_error(status_code_type::bad_request); // headers are too long
+				char const *beg = p, *end;
 				auto const eol = std::find(beg, beg+len, '\n');
-				tot += eol-beg;
 				if (eol != beg+len) {
+					size_t const line_size = eol+1 - beg;
+					m_size += line_size;
+					p += line_size;
+					n -= line_size;
 					std::string cur_line = std::move(m_cur_line);
 					m_cur_line.clear();
 					if (!cur_line.empty()) {
-						// Special case: the line has been parsed in two or more passes and
-						// is thus non-contiguous. Buffer the line into a contiguous
-						// buffer to make it easier to work with.
+						// Special case: this parse invocation is a continuation of the same
+						// line, so the line is dis-contiguous. Buffer the line into a
+						// contiguous buffer to make it easier to work with.
 						cur_line.append(beg, eol);
 						beg = cur_line.data();
 						end = cur_line.data()+cur_line.size();
@@ -186,19 +203,21 @@ namespace clane {
 					if (beg == end || !is_lws_char(*beg)) {
 						if (!m_cur_hdr.name.empty()) {
 							if (!is_header_value(&*begin(m_cur_hdr.value), &*std::end(m_cur_hdr.value)))
-								return parse_result{parse_result::error, 0, status_code::bad_request}; // invalid header value
+								return fin_error(status_code_type::bad_request); // invalid header value
 							m_hdrs.insert(std::move(m_cur_hdr));
 							m_cur_hdr.clear();
 						}
 					}
 					if (beg == end)
-						return parse_result{parse_result::done, tot}; // no more headers
+						return fin_done(); // no more headers
 					if (is_lws_char(*beg)) {
 						// Linear whitespace: this line is a continuation of the previous
 						// line.
 						if (m_cur_hdr.name.empty())
-							return parse_result{parse_result::error, 0, status_code::bad_request}; // missing header name
-						beg = std::find_if_not(beg, end, is_lws_char); // skip linear whitespace
+							return fin_error(status_code_type::bad_request); // missing header name
+						beg = std::find_if_not(beg, end, is_lws_char); // skip leading linear whitespace
+						end = &*std::find_if_not(std::reverse_iterator<char const*>{end}, std::reverse_iterator<char const *>{beg},
+								is_lws_char) + 1; // skip trailing linear whitespace
 						if (beg < end) {
 							m_cur_hdr.value.push_back(' '); // replace all linear whitespace with single space character
 							m_cur_hdr.value.append(beg, end);
@@ -208,19 +227,22 @@ namespace clane {
 					// Otherwise this line begins a new header.
 					auto const sep = std::find(beg, end, ':');
 					if (sep == end)
-						return parse_result{parse_result::error, 0, status_code::bad_request}; // missing ':' separator
+						return fin_error(status_code_type::bad_request); // missing ':' separator
 					if (!is_header_name(beg, sep))
-						return parse_result{parse_result::error, 0, status_code::bad_request}; // invalid header name
+						return fin_error(status_code_type::bad_request); // invalid header name
 					m_cur_hdr.name.assign(beg, sep);
-					beg = std::find_if_not(sep+1, end, is_lws_char); // skip linear whitespace at beginning of value
+					beg = std::find_if_not(sep+1, end, is_lws_char); // skip leading linear whitespace
+					end = &*std::find_if_not(std::reverse_iterator<char const*>{end}, std::reverse_iterator<char const *>{beg},
+							is_lws_char) + 1; // skip trailing linear whitespace
 					m_cur_hdr.value.assign(beg, end);
 					continue;
 				}
 				// This is an incomplete line.
+				m_size += eol - beg;
 				m_cur_line.append(beg, eol);
 				break;
 			}
-			return parse_result{parse_result::not_done, tot};
+			return m_size - orig_size; // parsing is incomplete
 		}
 
 	}

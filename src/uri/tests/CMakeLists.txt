@@ -1,6 +1,6 @@
 macro(make_cxx_test name)
 	add_executable(check_uri_${name} check_uri_${name}.cxx)
-	target_link_libraries(check_uri_${name} clane-uri)
+	target_link_libraries(check_uri_${name} clane-check clane-uri)
 	add_test(uri_${name} ./check_uri_${name})
 endmacro()
 

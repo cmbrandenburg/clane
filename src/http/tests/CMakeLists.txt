@@ -1,6 +1,6 @@
 macro(make_cxx_test name)
 	add_executable(check_http_${name} check_http_${name}.cxx)
-	target_link_libraries(check_http_${name} clane-http)
+	target_link_libraries(check_http_${name} clane-check clane-http)
 	add_test(http_${name} ./check_http_${name})
 endmacro()
 
@@ -9,3 +9,4 @@ make_cxx_test(is_method)
 make_cxx_test(is_text)
 make_cxx_test(parse_http_version)
 make_cxx_test(server)
+make_cxx_test(v1x_headers_parser)
