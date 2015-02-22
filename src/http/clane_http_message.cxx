@@ -163,7 +163,12 @@ namespace clane {
 		}
 
 		std::size_t v1x_headers_parser::parse(char const *p, std::size_t n) {
-			// FIXME: test
+			// This parser could detect errors sooner than it does. Instead, the
+			// parser waits to read in the entire line, or two entire lines, before
+			// detecting whether, say, a header name or value is invalid. The
+			// expectation is that clients send their headers quickly, and it's not
+			// our responsibility to return an error to the client as soon as possible
+			// anyway.
 			std::size_t orig_size = m_size;
 			auto fin_error = [this](status_code_type stat_code) {
 				m_bad = true;
@@ -181,10 +186,10 @@ namespace clane {
 				char const *beg = p, *end;
 				auto const eol = std::find(beg, beg+len, '\n');
 				if (eol != beg+len) {
-					size_t const line_size = eol+1 - beg;
-					m_size += line_size;
-					p += line_size;
-					n -= line_size;
+					size_t const delta = eol+1 - beg;
+					m_size += delta;
+					p += delta;
+					n -= delta;
 					std::string cur_line = std::move(m_cur_line);
 					m_cur_line.clear();
 					if (!cur_line.empty()) {
@@ -239,6 +244,8 @@ namespace clane {
 				}
 				// This is an incomplete line.
 				m_size += eol - beg;
+				if (m_size == cap)
+					return fin_error(status_code_type::bad_request); // headers are too long
 				m_cur_line.append(beg, eol);
 				break;
 			}

@@ -6,7 +6,6 @@
 
 #include "check/clane_check.hxx"
 #include "../clane_http_message.hxx"
-#include "clane_http_parser_check.hxx"
 #include <cstring>
 
 void okay(clane::http::v1x_headers_parser &p, char const *in, clane::http::header_map const &exp_hdrs) {
@@ -115,5 +114,62 @@ int main() {
 			" no-transform\t\t\t\r\n"
 			"\r\n",
 			header_map{header{"cache-control", "no-cache no-store no-transform"}});
+
+	// Case: headers are too long (line extends too long)
+	{
+		std::string s{"Content-Length: 1234\r\n"};
+		s.append("User-Agent: ");
+		while (s.size() < p.cap-1)
+			s.push_back('X');
+		check_call(&not_okay, p, s.c_str(), "X\r\n", clane::http::status_code::bad_request);
+	}
+
+	// Case: headers are too long (line ends at capacity)
+	{
+		std::string s{"Content-Length: 1234\r\n"};
+		s.append("User-Agent: ");
+		while (s.size() < p.cap-2)
+			s.push_back('X');
+		s.append("\r\n");
+		check_call(&not_okay, p, s.c_str(), "\r\n", clane::http::status_code::bad_request);
+	}
+
+	// Case: headers are exactly as long as possible
+	{
+		std::string s{"Content-Length: 1234\r\n"};
+		s.append("User-Agent: ");
+		std::string val;
+		while (s.size() < p.cap-4) {
+			s.push_back('X');
+			val.push_back('X');
+		}
+		s.append("\r\n\r\n");
+		check_call(&okay, p, s.c_str(), header_map{
+			header{"Content-Length", "1234"},
+			header{"User-Agent", val},
+		});
+	}
+
+	// Case: first line is a line continuation
+	check_call(&not_okay, p,
+			" Cache-Control: no-cache\r",
+			"\n\r\n",
+			clane::http::status_code::bad_request);
+	check_call(&not_okay, p,
+			"\tCache-Control: no-cache\r",
+			"\n\r\n",
+			clane::http::status_code::bad_request);
+
+	// Case: invalid header name
+	check_call(&not_okay, p, "[]: alpha\r", "\n\r\n", clane::http::status_code::bad_request);
+
+	// Case: invalid header value (last header)
+	check_call(&not_okay, p, "alpha: \x01\x02\r\n\r", "\n", clane::http::status_code::bad_request);
+
+	// Case: invalid header value (not last header)
+	check_call(&not_okay, p, "alpha: \x01\x02\r\ncharlie: delta\r", "\n\r\n", clane::http::status_code::bad_request);
+
+	// Case: missing ':' separator
+	check_call(&not_okay, p, "alpha bravo\r", "\n\r\n", clane::http::status_code::bad_request);
 }
 
