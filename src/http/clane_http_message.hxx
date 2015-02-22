@@ -55,56 +55,51 @@ namespace clane {
 
 			/** Parses the given buffer
 			 *
+			 * @param p Input to parse.
+			 *
+			 * @param n Number of bytes in the input.
+			 *
+			 * @return On success, number of bytes parsed. On error, zero.
+			 *
 			 * @remark The parse() function continues parsing input until either the
-			 * parser fully consumes the input buffer `p` or else the parser stop due
-			 * to either error or success. */
+			 * parser fully consumes the input buffer `p` or else the parser stops
+			 * (due to error or success).
+			 *
+			 * @remark The parse() function works by repeatedly calling the
+			 * derived class's `parse_some()` function member. The `parse_some()`
+			 * function need only parse at least one byte or otherwise advance its
+			 * state. Meanwhile, the parse() function takes care of common chores,
+			 * such as checking whether the parser has reached is input-length
+			 * capacity or if the parser stopped. */
 			std::size_t parse(char const *p, std::size_t n) {
 				assert(!bad());
 				assert(!fin());
-				std::size_t size0 = size();
-				while (n) {
-					std::size_t size1 = size();
-					static_cast<Derived*>(this)->parse_some(p, n);
+				std::size_t tot = 0;
+				while (tot < n) {
+					std::size_t const cap = static_cast<Derived*>(this)->capacity();
+					std::size_t const len = cap ? std::min(cap-m_size, n-tot) : n-tot;
+					std::size_t const x = static_cast<Derived*>(this)->parse_some(p+tot, len);
 					if (bad())
 						return 0;
+					tot += x;
+					m_size += x;
 					if (fin())
 						break;
-					std::size_t const delta = size()-size1;
-					assert(delta);
-					p += delta;
-					n -= delta;
+					if (m_size == cap)
+						return set_bad(status_code_type::bad_request);
 				}
-				return size() - size0;
+				return tot;
 			}
 
 		protected:
 
-			/** Returns the number of input bytes parsed */
-			std::size_t size() const { return m_size; }
-
-			/** Increases the number of input bytes parsed
-			 *
-			 * @param delta Number of bytes to increase by.
-			 *
-			 * @param more True if and only if there must be at least one more byte in
-			 * addition to those numbered by `delta` in order for parsing to complete
-			 * with success.
-			 *
-			 * @return Returns true if the number of bytes, after addition, is still
-			 * within the parser's capacity. */
-			bool increase_size(std::size_t delta, bool more) {
-				if (m_size + delta + (more?1:0) > static_cast<Derived*>(this)->capacity())
-					return false; // error: too big
-				m_size += delta;
-				return true; // okay
-			}
-
 			/** Sets the parser into a stopped state due to error */
-			void set_bad(status_code_type stat_code) {
+			std::size_t set_bad(status_code_type stat_code) {
 				assert(!bad());
 				assert(!fin());
 				m_bad = true;
 				m_stat_code = stat_code;
+				return 0;
 			}
 
 			/** Sets the parser into a stopped state due to success */
@@ -112,6 +107,12 @@ namespace clane {
 				assert(!bad());
 				assert(!fin());
 				m_fin = true;
+			}
+
+			/** Sets the parser into a stopped state due to success */
+			std::size_t set_fin(std::size_t ret) {
+				set_fin();
+				return ret;
 			}
 		};
 
@@ -126,7 +127,7 @@ namespace clane {
 			header_map &headers() { return m_hdrs; }
 		private:
 			void reset_derived();
-			void parse_some(char const *p, std::size_t n);
+			std::size_t parse_some(char const *p, std::size_t n);
 		};
 
 		/** Parser for an HTTP-1.x-style request line */
@@ -142,7 +143,7 @@ namespace clane {
 			static std::size_t constexpr capacity() { return 8192; }
 		private:
 			void reset_derived();
-			void parse_some(char const *p, std::size_t n);
+			std::size_t parse_some(char const *p, std::size_t n);
 		};
 	}
 }

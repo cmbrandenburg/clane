@@ -159,26 +159,20 @@ namespace clane {
 			m_hdrs.clear();
 		}
 
-		void v1x_headers_parser::parse_some(char const *const p, std::size_t const n) {
+		std::size_t v1x_headers_parser::parse_some(char const *const p, std::size_t const n) {
 			// This parser could detect errors sooner than it does. Instead, the
 			// parser waits to read in the entire line, or two entire lines, before
 			// detecting whether, say, a header name or value is invalid. The
 			// expectation is that clients send their headers quickly, and it's not
 			// our responsibility to return an error to the client as soon as possible
 			// anyway.
-			std::size_t len = std::min(capacity()-size(), n);
 			char const *beg, *end;
-			auto const eol = std::find(p, p+len, '\n');
-			if (eol == p+len) {
+			char const *const eol = std::find(p, p+n, '\n');
+			if (eol == p+n) {
 				// This is an incomplete line.
-				if (!increase_size(eol - p, true))
-					return set_bad(status_code_type::bad_request); // headers are too long
 				m_cur_line.append(p, eol);
-				return;
+				return n;
 			}
-			size_t const delta = eol+1 - p;
-			if (!increase_size(delta, false))
-				return set_bad(status_code_type::bad_request); // headers are too long
 			std::string cur_line = std::move(m_cur_line);
 			m_cur_line.clear();
 			if (!cur_line.empty()) {
@@ -207,7 +201,7 @@ namespace clane {
 				}
 			}
 			if (beg == end)
-				return set_fin(); // no more headers
+				return set_fin(eol-p + 1); // no more headers
 			if (is_lws_char(*beg)) {
 				// Linear whitespace: this line is a continuation of the previous
 				// line.
@@ -220,7 +214,7 @@ namespace clane {
 					m_cur_hdr.value.push_back(' '); // replace all linear whitespace with single space character
 					m_cur_hdr.value.append(beg, end);
 				}
-				return;
+				return eol-p + 1;
 			}
 			// Otherwise this line begins a new header.
 			auto const sep = std::find(beg, end, ':');
@@ -233,13 +227,15 @@ namespace clane {
 			end = &*std::find_if_not(std::reverse_iterator<char const*>{end}, std::reverse_iterator<char const *>{beg},
 					is_lws_char) + 1; // skip trailing linear whitespace
 			m_cur_hdr.value.assign(beg, end);
+			return eol-p + 1;
 		}
 
 		void v1x_request_line_parser::reset_derived() {
 			m_cur_line.clear();
 		}
 
-		void v1x_request_line_parser::parse_some(char const *p, std::size_t n) {
+		std::size_t v1x_request_line_parser::parse_some(char const *p, std::size_t n) {
+			return 0;
 		}
 	}
 }
