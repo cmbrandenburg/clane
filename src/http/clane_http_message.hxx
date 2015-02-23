@@ -23,8 +23,14 @@ namespace clane {
 		/** Returns whether a string is valid HTTP _TEXT_ (as according to RFC 2616) */
 		bool is_text(char const *beg, char const *end);
 
+		/** Returns whether the headers specify a chunked transfer coding */
+		bool is_chunked(header_map const &hdrs);
+
 		/** Returns whether a string is a valid HTTP chunk size line */
 		bool parse_chunk_size(char const *beg, char const *end, std::size_t *osize);
+
+		/** Returns whether the string is a valid HTTP Content-Length value */
+		bool parse_content_length(char const *beg, char const *end, std::size_t *olen);
 
 		/** Returns whether a string is a valid HTTP version field */
 		bool parse_http_version(char const *beg, char const *end, unsigned *omajor, unsigned *ominor);

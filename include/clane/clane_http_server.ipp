@@ -53,6 +53,9 @@ namespace clane {
 			/** Request message headers */
 			header_map  request_headers;
 
+			/** Request message footers */
+			header_map  request_footers;
+
 			/** Response message headers */
 			header_map  response_headers;
 
@@ -68,43 +71,48 @@ namespace clane {
 				body{&m_sbuf}
 			{}
 
+		private:
+			void more_body(char const *p, size_t n);
 		};
 
 		/** Server-side message-parsing engine.
 		 *
-		 * The server_parser drives all server-side request handling. It takes
+		 * The server_engine drives all server-side request handling. It takes
 		 * as input all data received on a connection and emits as output state
 		 * changes needed for handling any incoming requests on the connection.
 		 * */
-		class server_parser {
+		class server_engine {
 			typedef http::status_code status_code_type;
+			class impl;
 		public:
 			struct state {
 
-				/** The request is invalid: the server should close the
-				 * connection */
+				/** The server should close the connection */
 				static constexpr int close = 1<<0;
 
-				/** The server should send an out-of-handler response */
-				static constexpr int ooh_response = 1<<0;
+				/** The server should send a response without invoking the request
+				 * handler */
+				static constexpr int no_handler = 1<<1;
 
-				/** All headers received: begin handling the request */
-				static constexpr int xinit = 1<<1;
+				/** The server should invoke the request handler */
+				static constexpr int body_init = 1<<2;
 
-				/** All content and footers received */
-				static constexpr int xeof  = 1<<2;
+				/** The server should terminate the request body stream */
+				static constexpr int body_eof = 1<<3;
+
+				/** The server should handle the request body content */
+				static constexpr int body_more = 1<<4;
+
+				/** The server should generate an I/O error for incoming body content */
+				static constexpr int body_error = 1<<5;
 			};
 
 		private:
-			enum class phase {
-				request_line_method
-			} m_phase;
-			int m_stat;
-			status_code_type m_stat_code;
+			std::unique_ptr<impl> m_impl;
 
 		public:
 
-			server_parser(server_transaction *xact);
+			server_engine(server_transaction *xact);
 
 			/** Reuse parser to begin parsing a new request */
 			void reset(server_transaction *xact);
@@ -113,37 +121,20 @@ namespace clane {
 			 *
 			 * @remark The state flags denote the latest result of parsing the
 			 * incoming connection data. */
-			int state() const { return m_stat; }
+			int state() const;
 
 			/** Set all state flags to zero */
-			void clear_state() { m_stat = 0; }
+			void clear_state();
 
 			/** Returns the HTTP status code in case of error */
-			status_code_type status_code() const { return m_stat_code; }
+			status_code_type status_code();
 
 			/** Parse some incoming connection data */
-			std::size_t parse(char const *p, std::size_t n);
+			std::size_t parse_some(char const *p, std::size_t n);
 
 		};
 
 #if 0 // FIXME
-		/** Server-side parser engine */
-		class request_parser {
-
-			enum class state {
-				request_line,
-				header,
-				body,
-			} m_stat{state::request_line};
-
-			std::string m_cur_line;
-			uri::uri m_uri;
-
-		public:
-			static constexpr std::size_t nerror = -1;
-			std::size_t parse(char const *p, std::size_t n, server_transaction &xact);
-		};
-
 		template <typename Handler> class basic_server<Handler>::impl {
 
 			class connection {
