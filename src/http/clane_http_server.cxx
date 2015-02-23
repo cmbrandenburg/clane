@@ -26,7 +26,6 @@ namespace clane {
 				indefinite_length_body,
 				chunk_empty_line,
 				chunk_footers,
-				chunk_fin,
 			} m_phase;
 			status_code_type m_stat_code;
 			server_transaction *m_xact;
@@ -58,7 +57,6 @@ namespace clane {
 					case phase::chunk_content:
 						break; // nothing to do
 					case phase::chunk_empty_line:
-					case phase::chunk_fin:
 						m_parser.v1x_empty_line.~v1x_empty_line_parser();
 						break;
 					case phase::fixed_length_body:
@@ -229,23 +227,9 @@ namespace clane {
 						}
 						if (m_parser.v1x_headers.fin()) {
 							m_xact->request_footers = std::move(m_parser.v1x_headers.headers());
-							m_parser.v1x_headers.~v1x_headers_parser();
-							new (&m_parser.v1x_empty_line) v1x_empty_line_parser;
-							m_phase = phase::chunk_fin;
-						}
-						return x;
-					}
-
-					case phase::chunk_fin: {
-						auto x = m_parser.v1x_empty_line.parse(p, n);
-						if (m_parser.v1x_empty_line.bad()) {
-							m_stat |= state::close | state::no_handler;
-							return 0;
-						}
-						if (m_parser.v1x_empty_line.fin()) {
 							m_stat |= state::body_eof;
-							m_parser.v1x_empty_line.~v1x_empty_line_parser();
-							new (&m_parser.v1x_request_line) v1x_request_line_parser();
+							m_parser.v1x_headers.~v1x_headers_parser();
+							new (&m_parser.v1x_request_line) v1x_request_line_parser;
 							m_phase = phase::request_line;
 						}
 						return x;
