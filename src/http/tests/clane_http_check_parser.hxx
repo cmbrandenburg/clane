@@ -10,17 +10,22 @@
 #include "check/clane_check.hxx"
 #include <string>
 
+// This source file defines a mini test framework for testing incremental
+// parsers.
+
 // Tests an incremental parser for success by parsing an input string two times:
 // one time all at once and again byte-by-byte.
-template <typename Parser, typename PostCheck> class ok_checker {
+template <typename Parser, typename Reset, typename PostCheck> class ok_checker {
 	Parser &    m_parser;
 	std::string m_good;
+	Reset       m_reset;
 	PostCheck   m_post_check;
 
 public:
-	ok_checker(Parser &parser, char const *good, PostCheck &&chk):
+	ok_checker(Parser &parser, char const *good, Reset &&rst, PostCheck &&chk):
 		m_parser(parser),
 		m_good{good},
+		m_reset{std::forward<Reset>(rst)},
 		m_post_check{std::forward<PostCheck>(chk)}
 	{}
 
@@ -32,7 +37,7 @@ public:
 	void operator()() {
 
 		// parse the entire input string all at once:
-		m_parser.reset();
+		m_reset();
 		std::string q{m_good};
 		q.append("EXTRA");
 		auto n = m_parser.parse(q.data(), q.size());
@@ -42,7 +47,7 @@ public:
 		m_post_check();
 
 		// parse the input one character at a time:
-		m_parser.reset();
+		m_reset();
 		for (std::size_t i = 0; i+1 < m_good.size(); i++) {
 			n = m_parser.parse(&m_good[i], 1);
 			check(!m_parser.bad());
@@ -61,24 +66,26 @@ public:
 	}
 };
 
-template <typename Parser, typename PostCheck>
-ok_checker<Parser, PostCheck> make_ok_checker(Parser &parser, char const *good, PostCheck &&chk) {
-	return ok_checker<Parser, PostCheck>{parser, good, std::forward<PostCheck>(chk)};
+template <typename Parser, typename Reset, typename PostCheck>
+ok_checker<Parser, Reset, PostCheck> make_ok_checker(Parser &parser, char const *good, Reset &&rst, PostCheck &&chk) {
+	return ok_checker<Parser, Reset, PostCheck>{parser, good, std::forward<Reset>(rst), std::forward<PostCheck>(chk)};
 }
 
 // Tests an incremental parser for error by parsing an input string two times:
 // one time all at once and again byte-by-byte.
-template <typename Parser, typename PostCheck> class nok_checker {
+template <typename Parser, typename Reset, typename PostCheck> class nok_checker {
 	Parser &    m_parser;
 	std::string m_good;
 	std::string m_bad;
+	Reset       m_reset;
 	PostCheck   m_post_check;
 
 public:
-	nok_checker(Parser &parser, char const *good, char const *bad, PostCheck &&chk):
+	nok_checker(Parser &parser, char const *good, char const *bad, Reset &&rst, PostCheck &&chk):
 		m_parser(parser),
 		m_good{good},
 		m_bad{bad},
+		m_reset{std::forward<Reset>(rst)},
 		m_post_check{std::forward<PostCheck>(chk)}
 	{}
 
@@ -89,7 +96,7 @@ public:
 
 	void operator()() {
 		// parse the entire input string all at once:
-		m_parser.reset();
+		m_reset();
 		std::string q{m_good};
 		q.append(m_bad);
 		auto n = m_parser.parse(q.data(), q.size());
@@ -98,7 +105,7 @@ public:
 		m_post_check();
 
 		// parse the input one character at a time:
-		m_parser.reset();
+		m_reset();
 		for (std::size_t i = 0; i < m_good.size(); ++i) {
 			n = m_parser.parse(&m_good[i], 1);
 			check(!m_parser.bad());
@@ -116,9 +123,9 @@ public:
 	}
 };
 
-template <typename Parser, typename PostCheck>
-nok_checker<Parser, PostCheck> make_nok_checker(Parser &parser, char const *good, char const *bad, PostCheck &&chk) {
-	return nok_checker<Parser, PostCheck>{parser, good, bad, std::forward<PostCheck>(chk)};
+template <typename Parser, typename Reset, typename PostCheck> nok_checker<Parser, Reset, PostCheck>
+make_nok_checker(Parser &parser, char const *good, char const *bad, Reset &&rst, PostCheck &&chk) {
+	return nok_checker<Parser, Reset, PostCheck>{parser, good, bad, std::forward<Reset>(rst), std::forward<PostCheck>(chk)};
 }
 
 #endif // #ifndef CLANE_HTTP_CHECK_PARSER_HXX

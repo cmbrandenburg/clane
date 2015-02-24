@@ -31,10 +31,12 @@ namespace clane {
 			server_transaction *m_xact;
 			union parser_group {
 				std::size_t             body_remaining;
+#if 0 // FIXME
 				v1x_chunk_size_parser   v1x_chunk_size;
 				v1x_empty_line_parser   v1x_empty_line;
 				v1x_headers_parser      v1x_headers;
 				v1x_request_line_parser v1x_request_line;
+#endif // #if 0
 				~parser_group() {}
 				parser_group() {}
 			} m_parser;
@@ -43,6 +45,7 @@ namespace clane {
 
 			~impl()
 			{
+#if 0 // FIXME
 				switch (m_phase) {
 					case phase::request_line:
 						m_parser.v1x_request_line.~v1x_request_line_parser();
@@ -64,7 +67,7 @@ namespace clane {
 					case phase::indefinite_length_body:
 						break; // nothing to do
 				}
-
+#endif // #if 0
 			}
 
 			impl(server_transaction *xact)
@@ -74,7 +77,9 @@ namespace clane {
 
 			void reset(server_transaction *xact) {
 				clear_state();
+#if 0 // FIXME
 				new (&m_parser.v1x_request_line) v1x_request_line_parser;
+#endif
 				m_phase = phase::request_line;
 				m_xact = xact;
 			}
@@ -85,6 +90,7 @@ namespace clane {
 
 			std::size_t parse_some(char const *p, std::size_t n) {
 
+#if 0 // FIXME
 				// Special case: end-of-file. Be explicit and notify the caller to close
 				// the connection. Try to serve an error response first--just in case
 				// the client has gracefully shut down its sending but can still
@@ -236,6 +242,7 @@ namespace clane {
 					}
 				}
 
+#endif // #if 0
 				assert(false);
 				return 0;
 			}

@@ -83,6 +83,15 @@ namespace clane {
 				fragment(std::forward<Source>(fragment))
 			{}
 
+			uri(uri const &) = default;
+			uri(uri &&) = default;
+			uri &operator=(uri const &) = default;
+			uri &operator=(uri &&) = default;
+
+			template <typename T> void assign(T &&that) {
+				*this = std::forward<T>(that);
+			}
+
 			/** Returns whether all URI components in this @ref uri are empty
 			 * */
 			bool empty() const {

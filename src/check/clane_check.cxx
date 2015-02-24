@@ -7,6 +7,7 @@
 /** @file */
 
 #include "clane_check.hxx"
+#include <cstdlib>
 #include <iostream>
 
 namespace {

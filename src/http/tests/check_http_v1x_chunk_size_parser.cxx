@@ -9,13 +9,19 @@
 #include <cstring>
 
 void ok(clane::http::v1x_chunk_size_parser &parser, char const *good, std::size_t exp_chunk_size) {
-	make_ok_checker(parser, good, [&parser, exp_chunk_size]() {
-		check(parser.chunk_size() == exp_chunk_size);
+	std::size_t chunk_size;
+	make_ok_checker(parser, good, [&parser, &chunk_size]() {
+		parser.reset(&chunk_size);
+	}, [&chunk_size, exp_chunk_size]() {
+		check(chunk_size == exp_chunk_size);
 	})();
 }
 
 void nok(clane::http::v1x_chunk_size_parser &parser, char const *good, char const *bad) {
-	make_nok_checker(parser, good, bad, [&parser]() {
+	std::size_t chunk_size;
+	make_nok_checker(parser, good, bad, [&parser, &chunk_size]() {
+		parser.reset(&chunk_size);
+	}, [&parser]() {
 		check(parser.status_code() == clane::http::status_code::bad_request);
 	})();
 }

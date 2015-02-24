@@ -65,6 +65,18 @@ namespace clane {
 		/** Returns a human-readable name of an HTTP status code */
 		char const *what(status_code c);
 
+		/** HTTP protocol version, e.g., `HTTP/1.1` */
+		struct protocol_version {
+			int major;
+			int minor;
+		};
+
+		inline bool operator==(protocol_version const &a, protocol_version const &b) {
+			return a.major == b.major && a.minor == b.minor;
+		}
+
+		inline bool operator!=(protocol_version const &a, protocol_version const &b) { return !(a == b); }
+
 		struct header_name_less {
 			bool operator()(std::string const &a, std::string const &b) const {
 				return ascii::icase_compare(a, b) < 0;

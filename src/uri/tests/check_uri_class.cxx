@@ -84,5 +84,9 @@ int main() {
 	swap(u1, u2);
 	check(!u1.empty());
 
+	// assign() method
+	u1.assign(clane::uri::parse_uri_reference("mailto:john_doe@example.com"));
+	check(u1.string() == "mailto:john_doe@example.com");
+
 }
 

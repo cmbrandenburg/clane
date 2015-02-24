@@ -9,11 +9,11 @@
 #include <cstring>
 
 void ok(clane::http::v1x_empty_line_parser &parser, char const *good, std::size_t exp_chunk_size) {
-	make_ok_checker(parser, good, []() {});
+	make_ok_checker(parser, good, [&parser]() { parser.reset(); }, []() {});
 }
 
 void nok(clane::http::v1x_empty_line_parser &parser, char const *good, char const *bad) {
-	make_nok_checker(parser, good, bad, [&parser]() {
+	make_nok_checker(parser, good, bad, [&parser]() { parser.reset(); }, [&parser]() {
 		check(parser.status_code() == clane::http::status_code::bad_request);
 	})();
 }

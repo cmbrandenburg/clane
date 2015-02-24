@@ -9,6 +9,7 @@
 #include "ascii/clane_ascii.hxx"
 #include "clane/clane_http_message.hpp"
 #include "clane_http_message.hxx"
+#include <algorithm>
 #include <iterator>
 
 namespace {
@@ -132,7 +133,7 @@ namespace clane {
 			return true;
 		}
 
-		bool parse_http_version(char const *beg, char const *end, unsigned *omajor, unsigned *ominor) {
+		bool parse_http_version(char const *beg, char const *end, protocol_version *o_ver) {
 
 			// HTTP-Version = "HTTP" "/" 1*DIGIT "." 1*DIGIT
 
@@ -162,15 +163,74 @@ namespace clane {
 			++p;
 			if (!parse_number(minor))
 				return false;
-			*omajor = major;
-			*ominor = minor;
+			o_ver->major = major;
+			o_ver->minor = minor;
 			return true;
 		}
 
-		void v1x_headers_parser::reset_derived() {
+		template <typename Derived> std::size_t parser<Derived>::parse(char const *p, std::size_t n) {
+			assert(!bad());
+			assert(!fin());
+			std::size_t tot = 0;
+			while (tot < n) {
+				std::size_t const cap = static_cast<Derived*>(this)->capacity();
+				std::size_t const len = cap ? std::min(cap-m_size, n-tot) : n-tot;
+				std::size_t const x = static_cast<Derived*>(this)->parse_some(p+tot, len);
+				if (bad())
+					return 0;
+				tot += x;
+				m_size += x;
+				if (fin())
+					break;
+				if (m_size == cap)
+					return mark_bad(status_code_type::bad_request); // size limit reached without being finished
+			}
+			return tot;
+		}
+
+		template <typename Derived> std::size_t v1x_line_parser<Derived>::parse_some(char const *p, std::size_t n) {
+			char const *const eol = std::find(p, p+n, '\n');
+			if (eol == p+n) {
+				// This is an incomplete line.
+				m_cur_line.append(p, eol);
+				return n;
+			}
+			char const *beg, *end;
+			std::string cur_line = std::move(m_cur_line);
 			m_cur_line.clear();
-			m_cur_hdr.clear();
-			m_hdrs.clear();
+			if (!cur_line.empty()) {
+				// Special case: This input buffer completes a line started in a
+				// different buffer. Buffer the line into a contiguous buffer to make it
+				// easier to work with.
+				cur_line.append(p, eol);
+				beg = &cur_line[0];
+				end = &cur_line[cur_line.size()];
+			} else {
+				// Normal case: This input buffer contains the line in its entirety.
+				beg = p;
+				end = eol;
+			}
+			if (beg < end && *(end-1) == '\r')
+				--end; // chomp CR
+			// We don't use the return value from the derived class's parse_some()
+			// function, but check it with some asserts for consistency with the
+			// overall parse_some() pattern.
+			static_cast<Derived*>(this)->parse_line(beg, end-beg);
+			if (parser<v1x_line_parser>::bad())
+				return 0;
+			return eol+1 - p;
+		}
+
+		std::size_t v1x_empty_line_parser::parse_line(char const *p, std::size_t n) {
+			if (n)
+				return mark_bad(status_code_type::bad_request);
+			return mark_fin(n);
+		}
+
+		std::size_t v1x_chunk_size_parser::parse_line(char const *p, std::size_t n) {
+			if (!parse_chunk_size(p, p+n, m_chunk_size))
+				return mark_bad(status_code_type::bad_request); // invalid chunk size
+			return mark_fin(n);
 		}
 
 		std::size_t v1x_headers_parser::parse_line(char const *const p, std::size_t const n) {
@@ -187,18 +247,18 @@ namespace clane {
 					// continue the header with linear whitespace at beginning of the
 					// line.
 					if (!is_header_value(&*begin(m_cur_hdr.value), &*std::end(m_cur_hdr.value)))
-						return set_as_bad(status_code_type::bad_request); // invalid header value
-					m_hdrs.insert(std::move(m_cur_hdr));
+						return mark_bad(status_code_type::bad_request); // invalid header value
+					m_hdrs->insert(std::move(m_cur_hdr));
 					m_cur_hdr.clear();
 				}
 			}
 			if (beg == end)
-				return set_as_fin(n); // no more headers
+				return mark_fin(n); // no more headers
 			if (is_lws_char(*beg)) {
 				// Linear whitespace: this line is a continuation of the previous
 				// line.
 				if (m_cur_hdr.name.empty())
-					return set_as_bad(status_code_type::bad_request); // missing header name
+					return mark_bad(status_code_type::bad_request); // missing header name
 				beg = std::find_if_not(beg, end, is_lws_char); // skip leading linear whitespace
 				end = &*std::find_if_not(std::reverse_iterator<char const*>{end}, std::reverse_iterator<char const *>{beg},
 						is_lws_char) + 1; // skip trailing linear whitespace
@@ -211,9 +271,9 @@ namespace clane {
 			// Otherwise this line begins a new header.
 			auto const sep = std::find(beg, end, ':');
 			if (sep == end)
-				return set_as_bad(status_code_type::bad_request); // missing ':' separator
+				return mark_bad(status_code_type::bad_request); // missing ':' separator
 			if (!is_header_name(beg, sep))
-				return set_as_bad(status_code_type::bad_request); // invalid header name
+				return mark_bad(status_code_type::bad_request); // invalid header name
 			m_cur_hdr.name.assign(beg, sep);
 			beg = std::find_if_not(sep+1, end, is_lws_char); // skip leading linear whitespace
 			end = &*std::find_if_not(std::reverse_iterator<char const*>{end}, std::reverse_iterator<char const *>{beg},
@@ -222,41 +282,33 @@ namespace clane {
 			return n;
 		}
 
-		void v1x_request_line_parser::reset_derived() {
-			m_cur_line.clear();
-		}
-
 		std::size_t v1x_request_line_parser::parse_line(char const *p, std::size_t n) {
 			char const *beg = p, *end = p+n;
 			auto sp1 = std::find(beg, end, ' ');
 			auto sp2 = std::find(sp1+1, end, ' ');
 			if (sp2 == end)
-				return set_as_bad(status_code_type::bad_request); // missing one or two space-character separators
+				return mark_bad(status_code_type::bad_request); // missing one or two space-character separators
 			if (!is_method(beg, sp1))
-				return set_as_bad(status_code_type::bad_request); // invalid method
+				return mark_bad(status_code_type::bad_request); // invalid method
 			std::error_code ec;
 			auto u = uri::parse_uri_reference(sp1+1, sp2, ec);
 			if (ec)
-				return set_as_bad(status_code_type::bad_request); // invalid URI
-			if (!parse_http_version(sp2+1, end, &m_major_ver, &m_minor_ver))
-				return set_as_bad(status_code_type::bad_request); // invalid HTTP version
-			m_method.assign(beg, sp1);
-			m_uri = std::move(u);
-			m_uri.normalize_path();
-			return set_as_fin(n);
+				return mark_bad(status_code_type::bad_request); // invalid URI
+			if (!parse_http_version(sp2+1, end, m_ver))
+				return mark_bad(status_code_type::bad_request); // invalid HTTP version
+			m_method->assign(beg, sp1);
+			m_uri->assign(std::move(u));
+			m_uri->normalize_path();
+			return mark_fin(n);
 		}
 
-		std::size_t v1x_chunk_size_parser::parse_line(char const *p, std::size_t n) {
-			if (!parse_chunk_size(p, p+n, &m_chunk_size))
-				return set_as_bad(status_code_type::bad_request); // invalid chunk size
-			return set_as_fin(n);
-		}
-
-		std::size_t v1x_empty_line_parser::parse_line(char const *p, std::size_t n) {
-			if (n)
-				return set_as_bad(status_code_type::bad_request);
-			return set_as_fin(n);
-		}
+		// Explicit template instantiations: These allow the parser templates to
+		// be defined (in part) in this source file, instead of the header file,
+		// to reduce compilation time.
+		template class parser<v1x_line_parser<v1x_chunk_size_parser>>;
+		template class parser<v1x_line_parser<v1x_empty_line_parser>>;
+		template class parser<v1x_line_parser<v1x_headers_parser>>;
+		template class parser<v1x_line_parser<v1x_request_line_parser>>;
 	}
 }
 
