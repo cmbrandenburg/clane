@@ -35,7 +35,7 @@ void nok(clane::http::v1x_request_line_parser &parser, char const *good, char co
 }
 
 int main() {
-	clane::http::v1x_request_line_parser p;
+	clane::http::v1x_request_line_parser p{nullptr, nullptr, nullptr};
 
 	// Case: empty line
 	check_call(&nok, p, "\r", "\n");

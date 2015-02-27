@@ -8,25 +8,28 @@
 #include "../clane_http_message.hxx"
 #include <cstring>
 
-#if 0 // FIXME
 void ok(clane::http::v1x_headers_parser &parser, char const *good, clane::http::header_map const &exp_hdrs) {
-	make_ok_checker(parser, good, [&parser, &exp_hdrs]() {
-		check(parser.headers() == exp_hdrs);
-	})();
+	clane::http::header_map got_hdrs;
+	make_ok_checker(parser, good, [&parser, &got_hdrs]() {
+			parser.reset(&got_hdrs);
+		}, [&parser, &got_hdrs, &exp_hdrs]() {
+			check(got_hdrs == exp_hdrs);
+		})();
 }
 
 void nok(clane::http::v1x_headers_parser &parser, char const *good, char const *bad) {
-	make_nok_checker(parser, good, bad, [&parser]() {
-		check(parser.status_code() == clane::http::status_code::bad_request);
-	})();
+	clane::http::header_map got_hdrs;
+	make_nok_checker(parser, good, bad, [&parser, &got_hdrs]() {
+		   parser.reset(&got_hdrs);
+		}, [&parser]() {
+			check(parser.status_code() == clane::http::status_code::bad_request);
+		})();
 }
-#endif // #if 0
 
 int main() {
-#if 0 // FIXME
 	using clane::http::header;
 	using clane::http::header_map;
-	clane::http::v1x_headers_parser p;
+	clane::http::v1x_headers_parser p{nullptr};
 
 	// Case: no headers
 	check_call(&ok, p, "\r\n", header_map{}); 
@@ -128,6 +131,5 @@ int main() {
 
 	// Case: missing ':' separator
 	check_call(&nok, p, "alpha bravo\r", "\n\r\n");
-#endif
 }
 

@@ -27,7 +27,7 @@ void nok(clane::http::v1x_chunk_size_parser &parser, char const *good, char cons
 }
 
 int main() {
-	clane::http::v1x_chunk_size_parser p;
+	clane::http::v1x_chunk_size_parser p{nullptr};
 	check_call(&ok, p, "0\r\n", 0);
 	check_call(&ok, p, "0\n", 0);
 	check_call(&ok, p, "12Ab\r\n", 0x12ab);

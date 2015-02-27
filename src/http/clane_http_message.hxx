@@ -158,12 +158,17 @@ namespace clane {
 			std::size_t *m_chunk_size;
 
 		public:
-			static std::size_t constexpr capacity() { return 1024; }
+
+			v1x_chunk_size_parser(std::size_t *o_chunk_size):
+				m_chunk_size{o_chunk_size}
+			{}
 
 			void reset(std::size_t *o_chunk_size) {
 				v1x_line_parser<v1x_chunk_size_parser>::reset();
 				m_chunk_size = o_chunk_size;
 			}
+
+			static std::size_t constexpr capacity() { return 1024; }
 
 		private:
 			std::size_t parse_line(char const *p, std::size_t n);
@@ -177,7 +182,10 @@ namespace clane {
 			header_map *     m_hdrs;
 
 		public:
-			static std::size_t constexpr capacity() { return 16384; }
+
+			v1x_headers_parser(header_map *o_hdrs):
+				m_hdrs{o_hdrs}
+			{}
 
 			void reset(header_map *o_hdrs) {
 				v1x_line_parser<v1x_headers_parser>::reset();
@@ -185,6 +193,8 @@ namespace clane {
 				m_hdrs = o_hdrs;
 				m_hdrs->clear();
 			}
+
+			static std::size_t constexpr capacity() { return 16384; }
 
 		private:
 			std::size_t parse_line(char const *p, std::size_t n);
@@ -199,7 +209,12 @@ namespace clane {
 			protocol_version *m_ver;
 
 		public:
-			static std::size_t constexpr capacity() { return 8192; }
+
+			v1x_request_line_parser(std::string *o_method, uri_type *o_uri, protocol_version *o_ver):
+				m_method{o_method},
+				m_uri{o_uri},
+				m_ver{o_ver}
+			{}
 
 			void reset(std::string *o_method, uri_type *o_uri, protocol_version *o_ver) {
 				v1x_line_parser<v1x_request_line_parser>::reset();
@@ -207,6 +222,8 @@ namespace clane {
 				m_uri = o_uri;
 				m_ver = o_ver;
 			}
+
+			static std::size_t constexpr capacity() { return 8192; }
 
 		private:
 			std::size_t parse_line(char const *p, std::size_t n);
