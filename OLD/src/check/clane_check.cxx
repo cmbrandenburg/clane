@@ -9,7 +9,6 @@
 #include "clane_check.hxx"
 #include <cstdlib>
 #include <iostream>
-#include <sstream>
 
 namespace {
 	thread_local char const *g_src_filename{};
@@ -19,12 +18,12 @@ namespace {
 namespace clane {
 	namespace checker {
 
-		meta::~meta() {
+		source_stack::~source_stack() {
 			if (m_top)
 				g_src_filename = nullptr;
 		}
 
-		meta::meta(char const *src_filename, unsigned src_line_no) {
+		source_stack::source_stack(char const *src_filename, unsigned src_line_no) {
 			if (!g_src_filename) {
 				m_top = true;
 				g_src_filename = src_filename;
@@ -32,22 +31,20 @@ namespace clane {
 			}
 		}
 
-		char const *meta::source_filename() {
+		char const *source_stack::source_filename() {
 			return g_src_filename;
 		}
 
-		unsigned meta::source_line_number() {
+		unsigned source_stack::source_line_number() {
 			return g_src_line_no;
 		}
 
 		void check_ex(char const *src_filename, unsigned src_line_no, char const *msg, bool cond) {
 			if (!cond) {
-				meta ss{src_filename, src_line_no};
+				source_stack ss{src_filename, src_line_no};
 				if (!cond) {
-					std::ostringstream ss;
-					ss << meta::source_filename() << ":" << meta::source_line_number() <<
-						": Check failed: " << ": " << msg << "\n";
-					std::cerr << ss.rdbuf();
+					std::cerr << source_stack::source_filename() << ":" << source_stack::source_line_number() <<
+						": check failed: " << ": " << msg << "\n";
 					abort();
 				}
 			}

@@ -14,13 +14,13 @@
 namespace clane {
 	namespace checker {
 
-		class meta {
+		class source_stack {
 			bool m_top{};
 		public:
-			~meta();
-			meta(char const *src_filename, unsigned src_line_no);
-			meta(meta const &) = delete;
-			meta &operator=(meta const &) = delete;
+			~source_stack();
+			source_stack(char const *src_filename, unsigned src_line_no);
+			source_stack(source_stack const &) = delete;
+			source_stack &operator=(source_stack const &) = delete;
 			static char const *source_filename();
 			static unsigned source_line_number();
 		};
@@ -29,7 +29,7 @@ namespace clane {
 
 		template <typename Func, typename ...Args> void check_call_ex(char const *src_filename, unsigned src_line_no,
 				Func &&f, Args&&... args) {
-			meta m{src_filename, src_line_no};
+			source_stack ss{src_filename, src_line_no};
 			f(std::forward<Args>(args)...);
 		}
 
