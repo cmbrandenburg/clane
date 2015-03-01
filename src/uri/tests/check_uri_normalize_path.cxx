@@ -5,7 +5,7 @@
 // vim: set noet:
 
 #include "check/clane_check.hxx"
-#include "../clane_uri.hxx"
+#include "uri/clane_uri.hxx"
 
 int main() {
 	auto u = clane::uri::parse_uri_reference("http://alpha/bravo/../charlie//delta");

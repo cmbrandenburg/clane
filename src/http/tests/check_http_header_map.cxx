@@ -5,7 +5,7 @@
 // vim: set noet:
 
 #include "check/clane_check.hxx"
-#include "../clane_http_message.hxx"
+#include "http/clane_http_message.hxx"
 
 using namespace clane;
 

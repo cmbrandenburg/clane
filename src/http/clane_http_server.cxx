@@ -6,8 +6,8 @@
 
 /** @file */
 
-#include "clane/clane_http_server.hpp"
 #include "clane_http_message.hxx"
+#include "clane_http_server.hpp"
 #include "clane_http_server.hxx"
 
 namespace clane {

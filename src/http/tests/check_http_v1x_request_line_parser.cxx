@@ -5,7 +5,7 @@
 // vim: set noet:
 
 #include "clane_http_check_parser.hxx"
-#include "../clane_http_message.hxx"
+#include "http/clane_http_message.hxx"
 #include <cstring>
 
 void ok(clane::http::v1x_request_line_parser &parser, char const *good, char const *exp_method, char const *exp_uri,

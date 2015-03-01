@@ -7,7 +7,7 @@
 /** @file */
 
 #include "ascii/clane_ascii.hxx"
-#include "clane/clane_http_message.hpp"
+#include "clane_http_message.hpp"
 #include "clane_http_message.hxx"
 #include <algorithm>
 #include <iterator>

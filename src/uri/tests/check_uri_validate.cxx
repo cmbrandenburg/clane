@@ -5,7 +5,7 @@
 // vim: set noet:
 
 #include "check/clane_check.hxx"
-#include "../clane_uri.hxx"
+#include "uri/clane_uri.hxx"
 
 void okay(clane::uri::uri const &u) {
 	std::error_code e;

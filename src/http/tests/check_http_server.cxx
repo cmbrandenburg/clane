@@ -4,7 +4,7 @@
 
 // vim: set noet:
 
-#include "../clane_http_server.hxx"
+#include "http/clane_http_server.hxx"
 #include <iostream>
 
 #if 0

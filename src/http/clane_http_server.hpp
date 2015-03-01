@@ -9,7 +9,7 @@
 
 /** @file */
 
-#include "clane_uri.hpp"
+#include "uri/clane_uri.hpp"
 #include <boost/asio.hpp>
 #include <memory>
 

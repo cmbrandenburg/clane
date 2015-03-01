@@ -4,8 +4,8 @@
 
 // vim: set noet:
 
+#include "ascii/clane_ascii.hxx"
 #include "check/clane_check.hxx"
-#include "../clane_ascii.hxx"
 #include <cstring>
 
 int main() {

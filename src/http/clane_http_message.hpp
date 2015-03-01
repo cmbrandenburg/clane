@@ -9,7 +9,7 @@
 
 /** @file */
 
-#include "clane_ascii.hpp"
+#include "ascii/clane_ascii.hpp"
 #include <map>
 #include <string>
 

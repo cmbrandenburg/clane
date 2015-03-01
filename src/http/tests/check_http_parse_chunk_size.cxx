@@ -5,7 +5,7 @@
 // vim: set noet:
 
 #include "check/clane_check.hxx"
-#include "../clane_http_message.hxx"
+#include "http/clane_http_message.hxx"
 #include <cstring>
 
 void ok(char const *in, std::size_t exp_chunk_size) {

@@ -4,8 +4,8 @@
 
 // vim: set noet:
 
+#include "ascii/clane_ascii.hpp"
 #include "check/clane_check.hxx"
-#include "clane/clane_ascii.hpp"
 
 #define check_eq(a, b) \
 	do { \

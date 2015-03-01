@@ -5,7 +5,7 @@
 // vim: set noet:
 
 #include "clane_http_check_parser.hxx"
-#include "../clane_http_message.hxx"
+#include "http/clane_http_message.hxx"
 #include <cstring>
 
 void ok(clane::http::v1x_empty_line_parser &parser, char const *good, std::size_t exp_chunk_size) {

@@ -7,12 +7,14 @@
 #ifndef CLANE_HPP
 #define CLANE_HPP
 
-/** @file */
+/** @file
+ *
+ * Master header file */
 
-#include "clane/clane_ascii.hpp"
-#include "clane/clane_http_message.hpp"
-#include "clane/clane_http_server.hpp"
-#include "clane/clane_uri.hpp"
+#include "ascii/clane_ascii.hpp"
+#include "http/clane_http_message.hpp"
+#include "http/clane_http_server.hpp"
+#include "uri/clane_uri.hpp"
 
 /** Top-level project namespace */
 namespace clane {}

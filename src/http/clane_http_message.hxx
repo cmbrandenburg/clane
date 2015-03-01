@@ -9,8 +9,8 @@
 
 /** @file */
 
-#include "clane/clane_http_message.hpp"
-#include "clane/clane_uri.hpp"
+#include "clane_http_message.hpp"
+#include "uri/clane_uri.hpp"
 #include <cassert>
 
 namespace clane {

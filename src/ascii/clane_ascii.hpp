@@ -9,8 +9,9 @@
 
 /** @file */
 
+#include <algorithm>
 #include <cctype>
-#include <string>
+#include <cstring>
 
 namespace clane {
 
@@ -18,7 +19,7 @@ namespace clane {
 	namespace ascii {
 
 		/** @brief Case-insensitive string comparison */
-		template <typename InputIter> int icase_compare(InputIter abeg, InputIter aend, InputIter bbeg, InputIter bend) {
+		template<typename InputIter> int icase_compare(InputIter abeg, InputIter aend, InputIter bbeg, InputIter bend) {
 			size_t const alen = aend - abeg;
 			size_t const blen = bend - bbeg;
 			size_t n = std::min(alen, blen);
@@ -42,8 +43,15 @@ namespace clane {
 		}
 
 		/** @brief Case-insensitive string comparison */
-		inline int icase_compare(std::string const &a, std::string const &b) {
-			return icase_compare(a.begin(), a.end(), b.begin(), b.end());
+		template<typename String> int icase_compare(String const &a, String const &b) {
+			using std::begin;
+			using std::end;
+			return icase_compare(begin(a), end(a), begin(b), end(b));
+		}
+
+		/** @brief Case-insensitive string comparison */
+		inline int icase_compare(char const *a, char const *b) {
+			return icase_compare(a, a+std::strlen(a), b, b+std::strlen(b));
 		}
 	}
 }

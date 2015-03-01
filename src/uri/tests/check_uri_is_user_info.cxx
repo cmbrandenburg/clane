@@ -5,7 +5,7 @@
 // vim: set noet:
 
 #include "check/clane_check.hxx"
-#include "../clane_uri.hxx"
+#include "uri/clane_uri.hxx"
 #include <cstring>
 
 #define check_ok(in) check(clane::uri::is_user_info(in, in+strlen(in)))

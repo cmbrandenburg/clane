@@ -10,7 +10,7 @@
 /** @file */
 
 #include "ascii/clane_ascii.hxx"
-#include "clane/clane_uri.hpp"
+#include "uri/clane_uri.hpp"
 #include <cctype>
 
 namespace clane {

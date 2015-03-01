@@ -10,7 +10,7 @@
 /** @file */
 
 #include "clane_http_message.hpp"
-#include "clane_uri.hpp"
+#include "uri/clane_uri.hpp"
 #include <array>
 #include <boost/asio.hpp>
 #include <istream>
