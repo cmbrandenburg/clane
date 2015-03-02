@@ -12,7 +12,9 @@
 #include <utility>
 
 namespace clane {
-	namespace checker {
+
+	/** Unit test utilities */
+	namespace utest {
 
 		class meta {
 			bool m_top{};
@@ -38,12 +40,12 @@ namespace clane {
 
 #define check(cond) \
 	do { \
-		clane::checker::check_ex(__FILE__, __LINE__, #cond, static_cast<bool>(cond)); \
+		clane::utest::check_ex(__FILE__, __LINE__, #cond, static_cast<bool>(cond)); \
 	} while (false)
 
 #define check_call(f, ...) \
 	do { \
-		clane::checker::check_call_ex(__FILE__, __LINE__, f, ## __VA_ARGS__); \
+		clane::utest::check_call_ex(__FILE__, __LINE__, f, ## __VA_ARGS__); \
 	} while (false)
 
 #endif // #ifndef CLANE_CHECK_HXX

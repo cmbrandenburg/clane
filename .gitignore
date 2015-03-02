@@ -1,3 +1,5 @@
+!check_*.cxx
+check_*
 .deps
 .dirstamp
 .libs
@@ -15,6 +17,7 @@ config.status
 config.sub
 configure
 depcomp
+doc/api
 install-sh
 libtool
 ltmain.sh

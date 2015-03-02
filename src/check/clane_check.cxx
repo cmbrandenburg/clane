@@ -17,7 +17,7 @@ namespace {
 }
 
 namespace clane {
-	namespace checker {
+	namespace utest {
 
 		meta::~meta() {
 			if (m_top)
